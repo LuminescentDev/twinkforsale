@@ -7,6 +7,7 @@ import {
   zod$,
 } from "@builder.io/qwik-city";
 import { Plus, Edit, Trash2, Globe } from "lucide-icons-qwik";
+import { Toggle } from "@luminescent/ui-qwik";
 import { db } from "~/lib/db";
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
   const session = requestEvent.sharedMap.get("session");
@@ -78,7 +79,8 @@ export const useCreateDomainAction = routeAction$(
         domain: values.domain,
         name: values.name,
         isActive: true,
-        isDefault: values.isDefault,
+        isDefault: values.isDefault ?? false,
+        supportsSubdomains: values.supportsSubdomains ?? false,
       },
     });
 
@@ -87,7 +89,8 @@ export const useCreateDomainAction = routeAction$(
   zod$({
     domain: z.string().min(1, "Domain is required"),
     name: z.string().min(1, "Name is required"),
-    isDefault: z.boolean().default(false),
+    isDefault: z.string().optional().transform((val) => val === "on"),
+    supportsSubdomains: z.string().optional().transform((val) => val === "on"),
   }),
 );
 
@@ -120,8 +123,9 @@ export const useUpdateDomainAction = routeAction$(
       data: {
         domain: values.domain,
         name: values.name,
-        isActive: values.isActive,
-        isDefault: values.isDefault,
+        isActive: values.isActive ?? true,
+        isDefault: values.isDefault ?? false,
+        supportsSubdomains: values.supportsSubdomains ?? false,
       },
     });
 
@@ -131,8 +135,9 @@ export const useUpdateDomainAction = routeAction$(
     id: z.string(),
     domain: z.string().min(1, "Domain is required"),
     name: z.string().min(1, "Name is required"),
-    isActive: z.boolean().default(true),
-    isDefault: z.boolean().default(false),
+    isActive: z.string().optional().transform((val) => val === "on"),
+    isDefault: z.string().optional().transform((val) => val === "on"),
+    supportsSubdomains: z.string().optional().transform((val) => val === "on"),
   }),
 );
 
@@ -184,6 +189,11 @@ export default component$(() => {
 
   const showCreateForm = useSignal(false);
   const editingDomain = useSignal<string | null>(null);
+  
+  // Signals for edit form toggle states
+  const editIsActive = useSignal(false);
+  const editIsDefault = useSignal(false);
+  const editSupportsSubdomains = useSignal(false);
 
   const inputClasses =
     "w-full px-3 sm:px-4 py-2 sm:py-3 glass rounded-full placeholder:theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-sm sm:text-base text-theme-primary";
@@ -201,13 +211,17 @@ export default component$(() => {
 
       {/* Create Domain Button */}
       <div class="mb-6">
-        <button
-          onClick$={() => {
-            showCreateForm.value = !showCreateForm.value;
-            editingDomain.value = null;
-          }}
-          class="btn-cute text-theme-text-primary flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-        >
+                 <button
+           onClick$={() => {
+             showCreateForm.value = !showCreateForm.value;
+             editingDomain.value = null;
+             // Reset edit form signals when switching to create form
+             editIsActive.value = false;
+             editIsDefault.value = false;
+             editSupportsSubdomains.value = false;
+           }}
+           class="btn-cute text-theme-text-primary flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+         >
           <Plus class="h-4 w-4" />
           Add New Domain
         </button>
@@ -256,20 +270,27 @@ export default component$(() => {
               </div>
 
               <div class="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  name="isDefault"
+                <Toggle
                   id="isDefault"
-                  class="glass border-theme-accent-primary/30 checked:bg-theme-accent-primary checked:border-theme-accent-primary focus:ring-theme-accent-primary/50 rounded border-2 focus:ring-2"
+                  label="Set as default domain~ ⭐"
+                  checkbox
+                  name="isDefault"
                 />
-                <label
-                  for="isDefault"
-                  class="text-theme-text-secondary text-xs sm:text-sm"
-                >
-                  Set as default domain~ ⭐
-                </label>
               </div>
 
+              <div class="flex items-center gap-3">
+                <Toggle
+                  id="supportsSubdomains"
+                  label="Supports subdomains~ 🌐"
+                  checkbox
+                  name="supportsSubdomains"
+                />
+              </div>
+
+              {/* Hidden inputs to ensure checkbox values are always submitted */}
+              <input type="hidden" name="isDefault" value="off" />
+              <input type="hidden" name="supportsSubdomains" value="off" />
+              
               <div class="flex gap-3">
                 <button
                   type="submit"
@@ -277,13 +298,19 @@ export default component$(() => {
                 >
                   Create Domain~ 💾✨
                 </button>
-                <button
-                  type="button"
-                  onClick$={() => (showCreateForm.value = false)}
-                  class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-                >
-                  Cancel
-                </button>
+                                 <button
+                   type="button"
+                   onClick$={() => {
+                     showCreateForm.value = false;
+                     // Reset edit form signals
+                     editIsActive.value = false;
+                     editIsDefault.value = false;
+                     editSupportsSubdomains.value = false;
+                   }}
+                   class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                 >
+                   Cancel
+                 </button>
               </div>
             </div>
           </Form>
@@ -348,30 +375,49 @@ export default component$(() => {
                         />
                       </div>
                     </div>
-                    <div class="flex flex-wrap gap-4">
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          name="isActive"
-                          checked={domain.isActive}
-                          class="glass border-theme-accent-primary/30 rounded border-2"
-                        />
-                        <label class="text-theme-text-secondary text-xs">
-                          Active
-                        </label>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          name="isDefault"
-                          checked={domain.isDefault}
-                          class="glass border-theme-accent-primary/30 rounded border-2"
-                        />
-                        <label class="text-theme-text-secondary text-xs">
-                          Default
-                        </label>
-                      </div>
-                    </div>
+                                         <div class="flex flex-wrap gap-4">
+                       <div class="flex items-center gap-2">
+                         <Toggle
+                           id={`isActive-${domain.id}`}
+                           label="Active"
+                           checkbox
+                           name="isActive"
+                           checked={editIsActive.value}
+                           onChange$={(e, el) => {
+                             editIsActive.value = el.checked;
+                           }}
+                         />
+                       </div>
+                       <div class="flex items-center gap-2">
+                         <Toggle
+                           id={`isDefault-${domain.id}`}
+                           label="Default"
+                           checkbox
+                           name="isDefault"
+                           checked={editIsDefault.value}
+                           onChange$={(e, el) => {
+                             editIsDefault.value = el.checked;
+                           }}
+                         />
+                       </div>
+                       <div class="flex items-center gap-2">
+                         <Toggle
+                           id={`supportsSubdomains-${domain.id}`}
+                           label="Supports Subdomains"
+                           checkbox
+                           name="supportsSubdomains"
+                           checked={editSupportsSubdomains.value}
+                           onChange$={(e, el) => {
+                             editSupportsSubdomains.value = el.checked;
+                           }}
+                         />
+                       </div>
+                     </div>
+                                         {/* Hidden inputs to ensure checkbox values are always submitted */}
+                     <input type="hidden" name="isActive" value={editIsActive.value ? "on" : "off"} />
+                     <input type="hidden" name="isDefault" value={editIsDefault.value ? "on" : "off"} />
+                     <input type="hidden" name="supportsSubdomains" value={editSupportsSubdomains.value ? "on" : "off"} />
+                    
                     <div class="flex gap-2">
                       <button
                         type="submit"
@@ -379,13 +425,19 @@ export default component$(() => {
                       >
                         Save
                       </button>
-                      <button
-                        type="button"
-                        onClick$={() => (editingDomain.value = null)}
-                        class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 rounded-full px-4 py-2 text-xs font-medium transition-all duration-300"
-                      >
-                        Cancel
-                      </button>
+                                             <button
+                         type="button"
+                         onClick$={() => {
+                           editingDomain.value = null;
+                           // Reset edit form signals
+                           editIsActive.value = false;
+                           editIsDefault.value = false;
+                           editSupportsSubdomains.value = false;
+                         }}
+                         class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 rounded-full px-4 py-2 text-xs font-medium transition-all duration-300"
+                       >
+                         Cancel
+                       </button>
                     </div>
                   </div>
                 </Form>
@@ -404,6 +456,11 @@ export default component$(() => {
                               Default
                             </span>
                           )}
+                          {domain.supportsSubdomains && (
+                            <span class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary rounded-full px-2 py-1 text-xs">
+                              Subdomains
+                            </span>
+                          )}
                           {!domain.isActive && (
                             <span class="bg-gradient-to-br from-theme-deny to-theme-deny-hover text-theme-error rounded-full px-2 py-1 text-xs">
                               Inactive
@@ -420,12 +477,18 @@ export default component$(() => {
                     </div>
                   </div>
                   <div class="flex gap-2">
-                    <button
-                      onClick$={() => (editingDomain.value = domain.id)}
-                      class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 hover:text-theme-accent-primary rounded-full p-2 transition-all duration-300"
-                    >
-                      <Edit class="h-4 w-4" />
-                    </button>
+                                         <button
+                       onClick$={() => {
+                         editingDomain.value = domain.id;
+                         // Initialize edit form signals with current domain values
+                         editIsActive.value = domain.isActive;
+                         editIsDefault.value = domain.isDefault;
+                         editSupportsSubdomains.value = domain.supportsSubdomains;
+                       }}
+                       class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 hover:text-theme-accent-primary rounded-full p-2 transition-all duration-300"
+                     >
+                       <Edit class="h-4 w-4" />
+                     </button>
                     <Form action={deleteAction}>
                       <input type="hidden" name="id" value={domain.id} />
                       <button

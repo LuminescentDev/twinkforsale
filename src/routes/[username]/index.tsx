@@ -151,7 +151,7 @@ export const head: DocumentHead = ({ resolveValue }) => {
       },
       {
         property: "og:image",
-        content: bioPage.profileImage || "/favicon.svg",
+        content: bioPage.profileImage || "/favicon.ico",
       },
       {
         property: "og:type",
@@ -171,7 +171,7 @@ export const head: DocumentHead = ({ resolveValue }) => {
       },
       {
         name: "twitter:image",
-        content: bioPage.profileImage || "/favicon.svg",
+        content: bioPage.profileImage || "/favicon.ico",
       },
       {
         name: "theme-color",

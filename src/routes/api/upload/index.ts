@@ -64,32 +64,34 @@ export const onPost: RequestHandler = async ({ request, json }) => {
     }
   });
 
-  if (user) {
-    // Check upload count limit
-    const maxUploads = user.settings?.maxUploads || 100;
-    if (user.uploads.length >= maxUploads) {
-      throw json(429, { error: "Upload limit exceeded" });
-    }
+  if(!user) {
+    throw json(401, { error: "User not found" });
+  }
+  // Check upload count limit
+  const maxUploads = user.settings?.maxUploads || 100;
+  if (user.uploads.length >= maxUploads) {
+    throw json(429, { error: "Upload limit exceeded" });
+  }
 
-    // Check file size limit
-    const maxFileSize = user.settings?.maxFileSize || BigInt(10485760); // 10MB default
-    if (file.size > Number(maxFileSize)) {
-      throw json(413, { error: "File too large" });
-    }
-    // Check storage limit (user's custom limit or env default)
-    const config = getEnvConfig();
-    const userStorageLimit = user.settings?.maxStorageLimit || BigInt(config.BASE_STORAGE_LIMIT);
-    const currentStorageUsed = user.settings?.storageUsed || BigInt(0);
-    const totalStorage = currentStorageUsed + BigInt(file.size);
-    if (totalStorage > userStorageLimit) {
-      throw json(413, { error: "Storage quota exceeded" });
-    }
-  }  // Generate unique identifiers
+  // Check file size limit
+  const maxFileSize = user.settings?.maxFileSize || BigInt(10485760); // 10MB default
+  if (file.size > Number(maxFileSize)) {
+    throw json(413, { error: "File too large" });
+  }
+  const config = getEnvConfig();
+  const userStorageLimit = user.settings?.maxStorageLimit || BigInt(config.BASE_STORAGE_LIMIT);
+  const currentStorageUsed = user.settings?.storageUsed || BigInt(0);
+  const totalStorage = currentStorageUsed + BigInt(file.size);
+  if (totalStorage > userStorageLimit) {
+    throw json(413, { error: "Storage quota exceeded" });
+  }
   let useCuteWords = false;
   
   // Get user's preferences if authenticated
   let userExpirationDays = null;
   let userMaxViews = null;
+  let userUploadDomain = null;
+  let userCustomSubdomain = null;
   if (userId) {
     const userWithSettings = await db.user.findUnique({
       where: { id: userId },
@@ -98,7 +100,9 @@ export const onPost: RequestHandler = async ({ request, json }) => {
           select: {
             useCustomWords: true, 
             defaultExpirationDays: true,
-            defaultMaxViews: true
+            defaultMaxViews: true,
+            uploadDomainId: true,
+            customSubdomain: true
           }
         }
       }
@@ -106,6 +110,8 @@ export const onPost: RequestHandler = async ({ request, json }) => {
     useCuteWords = userWithSettings?.settings?.useCustomWords || false;
     userExpirationDays = userWithSettings?.settings?.defaultExpirationDays;
     userMaxViews = userWithSettings?.settings?.defaultMaxViews;
+    userUploadDomain = userWithSettings?.settings?.uploadDomainId;
+    userCustomSubdomain = userWithSettings?.settings?.customSubdomain;
   }// Check for custom expiration and view limit overrides from form data
   const customExpirationDays = formData.get('expirationDays');
   const customMaxViews = formData.get('maxViews');
@@ -137,10 +143,28 @@ export const onPost: RequestHandler = async ({ request, json }) => {
     ? new Date(Date.now() + finalExpirationDays * 24 * 60 * 60 * 1000)
     : null;
 
-  // Always use the application URL format for embeds (twink.forsale/f/shortCode)
-  const config = getEnvConfig();
+
   const baseUrl = config.BASE_URL || 'https://twink.forsale';
-  const applicationUrl = `${baseUrl}/f/${shortCode}`;
+  
+  // Generate the appropriate URL based on user's domain settings
+  let uploadUrl = `${baseUrl}/f/${shortCode}`;
+  
+  if (userUploadDomain) {
+    // Get the user's selected domain
+    const selectedDomain = await db.uploadDomain.findUnique({
+      where: { id: userUploadDomain, isActive: true }
+    });
+    
+    if (selectedDomain) {
+      if (userCustomSubdomain && selectedDomain.supportsSubdomains) {
+        // Use custom subdomain
+        uploadUrl = `https://${userCustomSubdomain}.${selectedDomain.domain}/f/${shortCode}`;
+      } else {
+        // Use the base domain
+        uploadUrl = `https://${selectedDomain.domain}/f/${shortCode}`;
+      }
+    }
+  }
 
   const upload = await db.upload.create({
     data: {
@@ -148,7 +172,7 @@ export const onPost: RequestHandler = async ({ request, json }) => {
       originalName: file.name,
       mimeType: file.type,
       size: BigInt(file.size),
-      url: applicationUrl, // Use application URL for embeds
+      url: uploadUrl, // Use the generated URL
       shortCode,
       deletionKey,
       userId,
@@ -176,13 +200,13 @@ export const onPost: RequestHandler = async ({ request, json }) => {
   }
 
   // Monitor upload event for potential alerts
-  await monitorUploadEvent(userId, file.size);  // Return ShareX-compatible response with application URL for embeds
+  await monitorUploadEvent(userId, file.size);  // Return ShareX-compatible response
   const response: any = {
-    url: upload.url, // This will be the twink.forsale/f/shortCode URL for embeds
+    url: upload.url, // Use the generated URL
     deletion_url: `${baseUrl}/delete/${upload.deletionKey}`
   };
   
-  // Add thumbnail URL for images (also use application URL)
+  // Add thumbnail URL for images
   if (file.type.startsWith("image/")) {
     response.thumbnail_url = upload.url;
   }

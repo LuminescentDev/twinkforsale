@@ -267,6 +267,7 @@ model UploadDomain {
   name        String   // Display name e.g., "Files", "CDN"
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
+  supportsSubdomains Boolean @default(false) // Whether this domain supports custom subdomains (e.g., "files.luminescent.dev" allows "cdn.files.luminescent.dev")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

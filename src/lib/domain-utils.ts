@@ -16,6 +16,35 @@ export function isValidDomain(domain: string): boolean {
 }
 
 /**
+ * Check if a subdomain is valid for a given domain
+ */
+export function isValidSubdomain(subdomain: string, baseDomain: string): boolean {
+  if (!subdomain || !baseDomain) return false;
+  
+  // Subdomain should be alphanumeric with hyphens, but not start/end with hyphen
+  const subdomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+  if (!subdomainRegex.test(subdomain)) return false;
+  
+  // Subdomain should be reasonable length
+  if (subdomain.length < 1 || subdomain.length > 63) return false;
+  
+  // Check if the resulting domain would be valid
+  const fullDomain = `${subdomain}.${baseDomain}`;
+  return isValidDomain(fullDomain);
+}
+
+/**
+ * Generate a URL with custom subdomain
+ */
+export function generateSubdomainUrl(subdomain: string, baseDomain: string, path: string = ''): string {
+  if (!subdomain || !baseDomain) {
+    return `https://${baseDomain}${path}`;
+  }
+  
+  return `https://${subdomain}.${baseDomain}${path}`;
+}
+
+/**
  * Determine the appropriate upload domain based on request and user preferences
  */
 export function determineUploadDomain(

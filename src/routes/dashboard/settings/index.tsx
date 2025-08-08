@@ -68,7 +68,7 @@ export const useUploadDomainsLoader = routeLoader$(async () => {
     where: { isActive: true },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
   });
-
+  console.log("domains", domains);
   return domains;
 });
 
@@ -98,6 +98,23 @@ export const useUpdateSettingsAction = routeAction$(
         return requestEvent.fail(400, {
           message: "Invalid upload domain selected",
         });
+      }
+
+      // Validate custom subdomain if provided
+      if (values.customSubdomain && values.customSubdomain.trim()) {
+        if (!domain.supportsSubdomains) {
+          return requestEvent.fail(400, {
+            message: "This domain does not support custom subdomains",
+          });
+        }
+
+        // Import and use the validation function
+        const { isValidSubdomain } = await import("~/lib/domain-utils");
+        if (!isValidSubdomain(values.customSubdomain.trim(), domain.domain)) {
+          return requestEvent.fail(400, {
+            message: "Invalid custom subdomain format",
+          });
+        }
       }
     }
     // Update or create user settings
@@ -254,6 +271,7 @@ export default component$(() => {
   // Set default to first available domain if no domain is selected
   const getDefaultDomainId = () => {
     if (userData.value.user.uploadDomainId) {
+      console.log("userData.value.user.uploadDomainId", userData.value.user.uploadDomainId);
       return userData.value.user.uploadDomainId;
     }
     // Find the default domain first, otherwise use the first available domain
@@ -404,11 +422,15 @@ export default component$(() => {
     if (!selectedDomain) return "No domain selected";
 
     const subdomain = customSubdomain.value.trim();
-    if (subdomain) {
+    if (subdomain && selectedDomain.supportsSubdomains) {
       return `${subdomain}.${selectedDomain.domain}`;
     }
     return selectedDomain.domain;
   };
+
+  const selectedDomain = uploadDomains.value.find(
+    (d) => d.id === selectedDomainId.value,
+  );
   return (
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div class="mb-6 text-center sm:mb-8">
@@ -446,7 +468,7 @@ export default component$(() => {
                   <option value="">No domains available</option>
                 )}
                 {uploadDomains.value.map((domain) => (
-                  <option key={domain.id} value={domain.id}>
+                  <option key={domain.id} value={domain.id} selected={domain.id === selectedDomainId.value}>
                     {`${domain.name} (${domain.domain})${domain.isDefault ? " - Default" : ""}`}
                   </option>
                 ))}
@@ -456,27 +478,29 @@ export default component$(() => {
               </p>
             </div>
 
-            <div>
-              <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Custom Subdomain (Optional)~ 🎀
-              </label>
-              <input
-                type="text"
-                name="customSubdomain"
-                value={customSubdomain.value}
-                placeholder="files, cdn, cute, etc..."
-                class={inputClasses}
-                onInput$={(event) => {
-                  customSubdomain.value = (
-                    event.target as HTMLInputElement
-                  ).value;
-                }}
-              />
-              <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                Add a custom subdomain to your uploads (e.g., "files" →
-                files.domain.com)~ 💕
-              </p>
-            </div>
+            {selectedDomain?.supportsSubdomains && (
+              <div>
+                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
+                  Custom Subdomain (Optional)~ 🎀
+                </label>
+                <input
+                  type="text"
+                  name="customSubdomain"
+                  value={customSubdomain.value}
+                  placeholder="files, cdn, cute, etc..."
+                  class={inputClasses}
+                  onInput$={(event) => {
+                    customSubdomain.value = (
+                      event.target as HTMLInputElement
+                    ).value;
+                  }}
+                />
+                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+                  Add a custom subdomain to your uploads (e.g., "files" →
+                  files.{selectedDomain.domain})~ 💕
+                </p>
+              </div>
+            )}
 
             {/* File Expiration Settings */}
             <div>
