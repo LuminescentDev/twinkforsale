@@ -30,10 +30,13 @@ export default component$(() => {
       <head>
         <meta charset="utf-8" />
         {!isDev && (
-          <link
-            rel="manifest"
-            href={`${import.meta.env.BASE_URL}manifest.json`}
-          />
+          <>
+            <link
+              rel="manifest"
+              href={`${import.meta.env.BASE_URL}manifest.json`}
+            />
+            <script defer src="https://umami.bwmp.dev/script.js" data-website-id="bb1fc7c0-9baf-43d2-a16d-dcb5c6138617" />
+          </>
         )}
         <RouterHead />
       </head>
