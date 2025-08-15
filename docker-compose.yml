@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  app:
+  twinkforsale:
     build: .
     environment:
       - NODE_ENV=production
