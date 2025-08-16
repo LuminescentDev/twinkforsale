@@ -35,7 +35,7 @@ export default component$(() => {
               rel="manifest"
               href={`${import.meta.env.BASE_URL}manifest.json`}
             />
-            <script defer src="https://umami.bwmp.dev/script.js" data-website-id="bb1fc7c0-9baf-43d2-a16d-dcb5c6138617" />
+            <script defer src="https://umami.bwmp.dev/script.js" data-website-id="999be449-668c-4557-a5bd-6b8a27eb28e1" />
           </>
         )}
         <RouterHead />
