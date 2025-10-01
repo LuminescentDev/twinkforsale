@@ -39,6 +39,16 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// Utility function to clean filename (matches server-side logic)
+const cleanFilename = (filename: string): string => {
+  return filename
+    .replace(/\s+/g, '-')  // Replace spaces with hyphens
+    .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace other special chars with underscores
+    .replace(/-+/g, '-')  // Replace multiple consecutive hyphens with single hyphen
+    .replace(/_+/g, '_')  // Replace multiple consecutive underscores with single underscore
+    .replace(/^[-_]+|[-_]+$/g, '');  // Remove leading/trailing hyphens and underscores
+};
+
 export const useUserSession = routeLoader$(async (requestEvent) => {
   const session = requestEvent.sharedMap.get("session");
   
@@ -532,6 +542,11 @@ export default component$(() => {
                       <h4 class="text-theme-text-primary truncate font-medium">
                         {fileUpload.name}
                       </h4>
+                      {fileUpload.name.includes(' ') && (
+                        <p class="text-theme-text-muted text-xs">
+                          Will be saved as: {cleanFilename(fileUpload.name)}
+                        </p>
+                      )}
                       <p class="text-theme-text-secondary text-sm">
                         {formatFileSize(fileUpload.size)} • {fileUpload.type}
                       </p>

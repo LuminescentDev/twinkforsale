@@ -124,7 +124,16 @@ export const onPost: RequestHandler = async ({ request, json }) => {
     : userMaxViews;
   const shortCode = await generateUniqueShortCode(useCuteWords);
   const deletionKey = nanoid(32);
-  const filename = `${shortCode}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  
+  // Clean filename: replace spaces with hyphens, other special chars with underscores
+  const cleanFilename = file.name
+    .replace(/\s+/g, '-')  // Replace spaces (and multiple spaces) with hyphens
+    .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace other special chars with underscores
+    .replace(/-+/g, '-')  // Replace multiple consecutive hyphens with single hyphen
+    .replace(/_+/g, '_')  // Replace multiple consecutive underscores with single underscore
+    .replace(/^[-_]+|[-_]+$/g, '');  // Remove leading/trailing hyphens and underscores
+  
+  const filename = `${shortCode}_${cleanFilename}`;
 
   // Save file to storage (supports both filesystem and R2)
   const { getStorageProvider } = await import("~/lib/storage-server");
