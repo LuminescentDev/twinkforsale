@@ -10,6 +10,7 @@ import {
   LogOut,
   User,
   Link as LinkIcon,
+  Plus,
 } from "lucide-icons-qwik";
 import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
@@ -66,6 +67,13 @@ export default component$(() => {
           >
             <Upload class="h-4 w-4" />
             Files
+          </Link>
+          <Link
+            href="/upload"
+            class={getNavLinkClasses(isCurrentPage("/upload"))}
+          >
+            <Plus class="h-4 w-4" />
+            Upload
           </Link>
           <Link
             href="/dashboard/api-keys"
@@ -144,6 +152,14 @@ export default component$(() => {
           >
             <Upload class="h-5 w-5" />
             Files
+          </Link>
+          <Link
+            href="/upload"
+            q:slot="mobile"
+            class={getNavLinkClasses(isCurrentPage("/upload"), true)}
+          >
+            <Plus class="h-5 w-5" />
+            Upload
           </Link>
           <Link
             href="/dashboard/api-keys"
