@@ -27,6 +27,7 @@ interface FileUpload {
   error?: string;
   url?: string;
   deletionUrl?: string;
+  uploadProgress?: number;
 }
 
 // Utility function to format file size
@@ -94,6 +95,7 @@ export default component$(() => {
 
   // State management
   const files = useSignal<FileUpload[]>([]);
+  const fileObjects = useSignal<Map<string, File>>(new Map());
   const isDragOver = useSignal(false);
   const showAdvancedSettings = useSignal(false);
   
@@ -118,10 +120,25 @@ export default component$(() => {
   const handleFiles = $(async (fileList: FileList) => {
     const user = sessionData.value.user;
     const newFiles: FileUpload[] = [];
+    const newFileObjects = new Map(fileObjects.value);
     
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
+      
+      // Check for duplicate files (same name and size)
+      const isDuplicate = files.value.some(f => 
+        f.name === file.name && f.size === file.size
+      );
+      
+      if (isDuplicate) {
+        console.warn(`Duplicate file skipped: ${file.name}`);
+        continue;
+      }
+      
       const id = await generateId();
+      
+      // Store the original File object
+      newFileObjects.set(id, file);
       
       // Create preview for images
       let preview: string | undefined;
@@ -138,11 +155,20 @@ export default component$(() => {
         }
       }
       
-      // Validate file size
-      const status: FileUpload['status'] = file.size > user.maxFileSize ? 'error' : 'pending';
-      const error = file.size > user.maxFileSize 
-        ? `File too large. Max: ${formatFileSize(user.maxFileSize)}` 
-        : undefined;
+      // Validate file
+      let status: FileUpload['status'] = 'pending';
+      let error: string | undefined;
+      
+      if (file.size > user.maxFileSize) {
+        status = 'error';
+        error = `File too large. Max: ${formatFileSize(user.maxFileSize)}`;
+      } else if (file.size === 0) {
+        status = 'error';
+        error = 'File is empty';
+      } else if (file.name.length > 255) {
+        status = 'error';
+        error = 'Filename too long (max 255 characters)';
+      }
       
       newFiles.push({
         id,
@@ -155,15 +181,24 @@ export default component$(() => {
       });
     }
     
+    // Update both files and file objects
     files.value = [...files.value, ...newFiles];
+    fileObjects.value = newFileObjects;
   });
 
-  // Upload a single file (simplified for demo)
+  // Upload a single file
   const uploadFile = $(async (fileUpload: FileUpload) => {
-    // This is a simplified version - in a real implementation
-    // you'd need to store File objects or use a different approach
-    console.log('Upload file:', fileUpload.name);
+    const originalFile = fileObjects.value.get(fileUpload.id);
     
+    if (!originalFile) {
+      files.value = files.value.map(f => 
+        f.id === fileUpload.id 
+          ? { ...f, status: 'error' as const, error: 'File not found' }
+          : f
+      );
+      return;
+    }
+
     // Update status to uploading
     files.value = files.value.map(f => 
       f.id === fileUpload.id 
@@ -171,29 +206,87 @@ export default component$(() => {
         : f
     );
 
-    // Simulate upload delay
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', originalFile);
+      
+      // Add advanced settings if specified
+      if (expirationDays.value) {
+        formData.append('expirationDays', expirationDays.value.toString());
+      }
+      
+      if (maxViews.value) {
+        formData.append('maxViews', maxViews.value.toString());
+      }
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionData.value.apiKey}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      // Update file with success data
       files.value = files.value.map(f => 
         f.id === fileUpload.id 
           ? { 
               ...f, 
               status: 'success' as const, 
-              url: `${sessionData.value.origin}/f/demo-${fileUpload.id}`,
-              deletionUrl: `${sessionData.value.origin}/delete/demo-${fileUpload.id}`
+              url: result.url,
+              deletionUrl: result.deletion_url
             }
           : f
       );
-    }, 2000);
+
+      // Remove file object from memory after successful upload
+      const newFileObjects = new Map(fileObjects.value);
+      newFileObjects.delete(fileUpload.id);
+      fileObjects.value = newFileObjects;
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      files.value = files.value.map(f => 
+        f.id === fileUpload.id 
+          ? { 
+              ...f, 
+              status: 'error' as const, 
+              error: error instanceof Error ? error.message : 'Upload failed'
+            }
+          : f
+      );
+    }
   });
 
   // Remove file from list
   const removeFile = $((id: string) => {
     files.value = files.value.filter(f => f.id !== id);
+    // Also remove from file objects
+    const newFileObjects = new Map(fileObjects.value);
+    newFileObjects.delete(id);
+    fileObjects.value = newFileObjects;
   });
 
   // Clear all files
   const clearAll = $(() => {
     files.value = [];
+    fileObjects.value = new Map();
+  });
+
+  // Upload all pending files
+  const uploadAll = $(async () => {
+    const pendingFiles = files.value.filter(f => f.status === 'pending');
+    
+    // Upload files sequentially to avoid overwhelming the server
+    for (const fileUpload of pendingFiles) {
+      await uploadFile(fileUpload);
+    }
   });
 
   // Copy URL to clipboard
@@ -357,11 +450,47 @@ export default component$(() => {
         {/* File List */}
         {files.value.length > 0 && (
           <div class="card-cute rounded-2xl p-6">
+            {/* Summary Stats */}
+            <div class="mb-4 grid grid-cols-2 gap-4 rounded-lg bg-theme-bg-secondary/30 p-3 sm:grid-cols-4">
+              <div class="text-center">
+                <p class="text-theme-text-primary text-lg font-semibold">
+                  {files.value.length}
+                </p>
+                <p class="text-theme-text-muted text-xs">Total</p>
+              </div>
+              <div class="text-center">
+                <p class="text-theme-accent-secondary text-lg font-semibold">
+                  {files.value.filter(f => f.status === 'pending').length}
+                </p>
+                <p class="text-theme-text-muted text-xs">Pending</p>
+              </div>
+              <div class="text-center">
+                <p class="text-green-400 text-lg font-semibold">
+                  {files.value.filter(f => f.status === 'success').length}
+                </p>
+                <p class="text-theme-text-muted text-xs">Uploaded</p>
+              </div>
+              <div class="text-center">
+                <p class="text-red-400 text-lg font-semibold">
+                  {files.value.filter(f => f.status === 'error').length}
+                </p>
+                <p class="text-theme-text-muted text-xs">Errors</p>
+              </div>
+            </div>
+            
             <div class="mb-4 flex items-center justify-between">
               <h3 class="text-theme-text-primary text-lg font-medium">
                 Files ({files.value.length})
               </h3>
               <div class="flex gap-2">
+                <button
+                  onClick$={uploadAll}
+                  disabled={!files.value.some(f => f.status === 'pending')}
+                  class="btn-cute flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  <Upload class="h-4 w-4" />
+                  Upload All
+                </button>
                 <button
                   onClick$={clearAll}
                   class="text-theme-accent-primary hover:bg-theme-accent-primary/10 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
@@ -409,13 +538,28 @@ export default component$(() => {
                       
                       {/* Status */}
                       {fileUpload.status === 'error' && fileUpload.error && (
-                        <p class="text-red-400 mt-1 text-sm">{fileUpload.error}</p>
+                        <p class="text-red-400 mt-1 text-sm flex items-center gap-1">
+                          <span class="text-xs">❌</span>
+                          {fileUpload.error}
+                        </p>
                       )}
                       {fileUpload.status === 'uploading' && (
-                        <p class="text-theme-accent-secondary mt-1 text-sm">Uploading...</p>
+                        <p class="text-theme-accent-secondary mt-1 text-sm flex items-center gap-1">
+                          <span class="animate-spin text-xs">⏳</span>
+                          Uploading...
+                        </p>
                       )}
                       {fileUpload.status === 'success' && (
-                        <p class="text-green-400 mt-1 text-sm">Uploaded successfully!</p>
+                        <p class="text-green-400 mt-1 text-sm flex items-center gap-1">
+                          <span class="text-xs">✅</span>
+                          Uploaded successfully!
+                        </p>
+                      )}
+                      {fileUpload.status === 'pending' && (
+                        <p class="text-theme-text-muted mt-1 text-sm flex items-center gap-1">
+                          <span class="text-xs">⏸️</span>
+                          Ready to upload
+                        </p>
                       )}
                     </div>
 
@@ -495,14 +639,15 @@ export default component$(() => {
             <p>• Drag and drop files directly onto the upload area</p>
             <p>• Click the upload area to select files from your computer</p>
             <p>• Set expiration dates and view limits in Advanced Settings</p>
-            <p>• Files are uploaded individually - click "Upload" for each file</p>
+            <p>• Click "Upload" for individual files or "Upload All" for batch uploads</p>
+            <p>• Files are uploaded to your account using your API key</p>
             <p>• Supported formats depend on your account settings</p>
           </div>
           
-          <div class="bg-yellow-500/10 border-yellow-500/20 mt-4 rounded-lg border p-3">
-            <p class="text-yellow-400 text-sm">
-              <strong>Note:</strong> This is a demo interface. The actual upload functionality requires 
-              integration with the File API to handle the real uploads to your API endpoint.
+          <div class="bg-blue-500/10 border-blue-500/20 mt-4 rounded-lg border p-3">
+            <p class="text-blue-400 text-sm">
+              <strong>✨ Pro Tip:</strong> Your files are uploaded directly to the same API endpoint used by ShareX and other tools. 
+              URLs and deletion keys will be generated automatically!
             </p>
           </div>
         </div>
