@@ -77,6 +77,7 @@ model User {
   systemEvents SystemEvent[]
   bioLinks BioLink[] // Bio links
   bioViewLogs BioView[] // Bio view logs
+  shortLinks ShortLink[] // Shortened URLs
   
   // User settings relation
   settings UserSettings?
@@ -94,6 +95,9 @@ model UserSettings {
   maxFileSize   BigInt  @default(10485760) // 10MB
   maxStorageLimit BigInt? // Custom storage limit, null means use default from env
   storageUsed   BigInt  @default(0)
+  
+  // URL shortener limits
+  maxShortLinks Int     @default(500)
   
   // Discord embed settings
   embedTitle    String?   @default("File Upload")
@@ -365,4 +369,24 @@ model BioView {
   @@index([viewedAt])
   @@index([ipAddress, userId, viewedAt])
   @@map("bio_views")
+}
+
+// Shortened URLs
+model ShortLink {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  url         String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
+  // Optional click limits
+  maxClicks   Int?
+  clicks      Int      @default(0)
+  lastClicked DateTime?
+
+  // User association (nullable for future anonymous links)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("short_links")
 }

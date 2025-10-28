@@ -46,6 +46,7 @@ export default component$(() => {
     !location.url.pathname.startsWith("/admin") &&
     !location.url.pathname.startsWith("/setup") &&
     !location.url.pathname.startsWith("/f/") &&
+    !location.url.pathname.startsWith("/upload") &&
     location.url.pathname !== "/";
   // Apply server-side theme only on initial load to prevent flash
   // Don't track serverThemeData to avoid overriding client-side theme changes on navigation

@@ -13,6 +13,7 @@ import {
   Sliders,
   Upload,
   Link as LinkIcon,
+  Link2 as ChainIcon,
 } from "lucide-icons-qwik";
 import { createSystemEvent } from "~/lib/system-events";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
@@ -312,6 +313,22 @@ export default component$(() => {
         </h2>{" "}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           {" "}
+          <Link
+            href="/dashboard/links"
+            class="card-cute group rounded-3xl p-4 sm:p-6"
+          >
+            <div class="mb-3 flex items-center sm:mb-4">
+              <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
+                <ChainIcon class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
+              </div>
+              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
+                Short Links
+              </h3>
+            </div>
+            <p class="text-theme-text-secondary text-xs sm:text-sm">
+              Create and manage /l/&lt;code&gt; short URLs with limits and expiry.
+            </p>
+          </Link>
           <Link
             href="/dashboard/uploads"
             class="card-cute group rounded-3xl p-4 sm:p-6"

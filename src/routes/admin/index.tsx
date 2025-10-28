@@ -192,11 +192,10 @@ export default component$(() => {
   const sortOrder = useSignal("desc"); // asc, desc
 
   const getEffectiveStorageLimit = (user: any): number => {
-    return (
-      user.settings?.maxStorageLimit ||
+    const limit = user.settings?.maxStorageLimit ||
       userData.value?.config.BASE_STORAGE_LIMIT ||
-      10737418240
-    );
+      10737418240;
+    return typeof limit === 'bigint' ? Number(limit) : limit;
   }; // Filter and sort users based on all criteria
   const filteredUsers = useComputed$(() => {
     let users = userData.value?.users || [];
@@ -509,7 +508,7 @@ export default component$(() => {
                 onInput$={(e) => {
                   searchQuery.value = (e.target as HTMLInputElement).value;
                 }}
-                class="text-theme-text-primary from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 border-theme-card-border placeholder:theme-text-muted focus:border-theme-accent-primary/60 focus:from-theme-accent-primary/20 focus:to-theme-accent-secondary/20 focus:ring-theme-accent-primary/30 focus:shadow-theme-accent-primary/20 hover:border-theme-accent-primary/40 hover:shadow-theme-accent-primary/10 w-full rounded-full border bg-gradient-to-br py-2 pr-4 pl-10 text-sm backdrop-blur-sm transition-all duration-500 hover:shadow-md focus:bg-gradient-to-br focus:shadow-lg focus:ring-2 focus:outline-none"
+                class="text-theme-text-primary bg-theme-accent-primary/10 border-theme-card-border placeholder:theme-text-muted focus:border-theme-accent-primary/60 focus:from-theme-accent-primary/20 focus:to-theme-accent-secondary/20 focus:ring-theme-accent-primary/30 focus:shadow-theme-accent-primary/20 hover:border-theme-accent-primary/40 hover:shadow-theme-accent-primary/10 w-full rounded-full border bg-gradient-to-br py-2 pr-4 pl-10 text-sm backdrop-blur-sm transition-all duration-500 hover:shadow-md focus:bg-gradient-to-br focus:shadow-lg focus:ring-2 focus:outline-none"
               />
               <div class="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-pink-400/5 via-purple-400/5 to-cyan-400/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
             </div>
@@ -706,237 +705,308 @@ export default component$(() => {
                 </p>
               </div>
             ) : (
-              <div class="space-y-3 p-3 sm:space-y-4 sm:p-4">
+              <div class="space-y-4 p-4">
                 {filteredUsers.value.map((user: any) => (
                   <div
                     key={user.id}
-                    class="glass border-theme-card-border hover:border-theme-accent-primary/40 rounded-2xl p-3 transition-all duration-300 sm:p-4"
+                    class="glass border-theme-card-border hover:border-theme-accent-primary/40 group relative overflow-hidden rounded-3xl border transition-all duration-300 hover:shadow-lg"
                   >
-                    <div class="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      {/* User Info */}
-                      <div class="flex min-w-0 flex-1 items-center space-x-3">
-                        {user.image && (
-                          <img
-                            class="border-theme-card-border h-10 w-10 rounded-full border-2"
-                            src={user.image}
-                            alt=""
-                            width="40"
-                            height="40"
-                          />
-                        )}
-                        <div class="min-w-0 flex-1">
-                          <div class="text-theme-text-primary truncate text-sm font-medium sm:text-base">
-                            {user.name || "Anonymous Cutie"}
-                          </div>
-                          <div class="text-theme-text-secondary truncate text-xs sm:text-sm">
-                            {user.email}
-                          </div>
-                          {user.accounts?.[0]?.providerAccountId && (
-                            <div class="text-theme-accent-primary truncate text-xs">
-                              Discord ID: {user.accounts[0].providerAccountId}
+                    {/* Main User Card */}
+                    <div class="p-5">
+                      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        {/* Left Section: User Info */}
+                        <div class="flex flex-1 items-start gap-4">
+                          {/* Avatar */}
+                          {user.image && (
+                            <div class="relative flex-shrink-0">
+                              <img
+                                class="border-theme-accent-primary/20 h-14 w-14 rounded-2xl border-2 shadow-lg transition-transform duration-300 group-hover:scale-105"
+                                src={user.image}
+                                alt={user.name || "User"}
+                                width="56"
+                                height="56"
+                              />
+                              {/* Status Indicator */}
+                              <div
+                                class={`absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 border-white ${
+                                  user.isApproved
+                                    ? "bg-green-500"
+                                    : "bg-orange-500"
+                                }`}
+                              />
                             </div>
                           )}
-                          <div class="text-theme-accent-primary mt-1 text-xs">
-                            Joined
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </div>
-                          <div class="text-theme-accent-primary mt-1 text-xs">
-                            {user.id}
+                          
+                          {/* User Details */}
+                          <div class="min-w-0 flex-1">
+                            <div class="mb-2 flex flex-wrap items-center gap-2">
+                              <h3 class="text-theme-text-primary text-lg font-semibold">
+                                {user.name || "Anonymous Cutie"}
+                              </h3>
+                              {/* Badges */}
+                              <span
+                                class={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                  user.isApproved
+                                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                    : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                }`}
+                              >
+                                {user.isApproved ? "✅ Approved" : "⏳ Pending"}
+                              </span>
+                              {user.isAdmin && (
+                                <span class="bg-purple-500/20 text-purple-400 border-purple-500/30 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+                                  👑 Admin
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Contact Info */}
+                            <div class="text-theme-text-secondary space-y-1 text-sm">
+                              <div class="flex items-center gap-2">
+                                <span class="text-theme-accent-primary">✉️</span>
+                                <span class="truncate">{user.email}</span>
+                              </div>
+                              {user.accounts?.[0]?.providerAccountId && (
+                                <div class="flex items-center gap-2">
+                                  <span class="text-theme-accent-secondary">
+                                    💬
+                                  </span>
+                                  <span class="font-mono text-xs">
+                                    {user.accounts[0].providerAccountId}
+                                  </span>
+                                </div>
+                              )}
+                              <div class="flex items-center gap-2">
+                                <span class="text-theme-accent-tertiary">📅</span>
+                                <span class="text-xs">
+                                  Joined{" "}
+                                  {new Date(user.createdAt).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Status & Activity */}
-                      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                        {/* Status Badge */}
-                        <div class="flex flex-col items-start sm:items-center">
-                          <span
-                            class={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                              user.isApproved
-                                ? "from-theme-confirm to-theme-confirm-hover border-theme-success text-theme-success bg-gradient-to-br"
-                                : "from-theme-[#f59e0b] to-theme-[#d97706] border-theme-warning text-theme-warning bg-gradient-to-br"
-                            }`}
-                          >
-                            {user.isApproved ? "✅ Approved" : "⏳ Pending"}
-                          </span>
-                          {user.approvedAt && (
-                            <div class="text-theme-accent-primary mt-1 text-xs">
-                              by {user.approvedBy?.name || "Admin"}
+                        {/* Right Section: Stats & Actions */}
+                        <div class="flex flex-col gap-4 lg:items-end">
+                          {/* Stats Grid */}
+                          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                            {/* Uploads */}
+                            <div class="glass rounded-xl p-3 text-center">
+                              <div class="text-theme-accent-primary text-2xl font-bold">
+                                {user._count.uploads}
+                              </div>
+                              <div class="text-theme-text-secondary text-xs">
+                                Uploads
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        {/* Role Badge */}
-                        <span
-                          class={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                            user.isAdmin
-                              ? "from-theme-accent-secondary to-theme-accent-tertiary border-theme-accent-primary/40 text-theme-text-primary border bg-gradient-to-br"
-                              : "from-theme-accent-secondary/60 to-theme-accent-tertiary/60 border-theme-card-border text-theme-text-secondary border bg-gradient-to-br"
-                          }`}
-                        >
-                          {user.isAdmin ? "👑 Admin" : "🌸 User"}
-                        </span>
-                        {/* Activity & Storage Stats */}
-                        <div class="text-theme-text-secondary space-y-1 text-xs">
-                          <div>📁 {user._count.uploads} uploads</div>
-                          <div>🔑 {user._count.apiKeys} API keys</div>
-                          <div>
-                            💾 {formatBytes(user.settings?.storageUsed || 0)} /
-                            {formatBytes(getEffectiveStorageLimit(user))}
+                            
+                            {/* API Keys */}
+                            <div class="glass rounded-xl p-3 text-center">
+                              <div class="text-theme-accent-secondary text-2xl font-bold">
+                                {user._count.apiKeys}
+                              </div>
+                              <div class="text-theme-text-secondary text-xs">
+                                API Keys
+                              </div>
+                            </div>
+                            
+                            {/* Storage Used */}
+                            <div class="glass rounded-xl p-3 text-center lg:col-span-2">
+                              <div class="text-theme-accent-tertiary mb-1 text-lg font-bold">
+                                {formatBytes(user.settings?.storageUsed || 0)}
+                              </div>
+                              <div class="text-theme-text-secondary text-xs">
+                                of {formatBytes(getEffectiveStorageLimit(user))}
+                              </div>
+                              {/* Storage Bar */}
+                              <div class="bg-theme-accent-primary/10 mt-2 h-1.5 overflow-hidden rounded-full">
+                                <div
+                                  class="from-theme-accent-primary to-theme-accent-secondary h-full rounded-full bg-gradient-to-r transition-all duration-300"
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (Number(user.settings?.storageUsed || 0) /
+                                        getEffectiveStorageLimit(user)) *
+                                        100,
+                                    )}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div class="text-theme-accent-primary text-xs">
-                            {user.settings?.maxStorageLimit
-                              ? "Custom limit"
-                              : "Default limit"}
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Action Buttons */}
-                      <div class="flex flex-wrap gap-2">
-                        {!user.isApproved && (
-                          <button
-                            onClick$={() => {
-                              updateUser.submit({
-                                userId: user.id,
-                                isApproved: true,
-                              });
-                            }}
-                            class="btn-cute rounded-full px-3 py-1 text-xs font-medium text-white sm:text-sm"
-                          >
-                            ✅ Approve
-                          </button>
-                        )}
-                        {user.isApproved && (
-                          <button
-                            onClick$={() => {
-                              updateUser.submit({
-                                userId: user.id,
-                                isApproved: false,
-                              });
-                            }}
-                            class="from-theme-deny to-theme-deny-hover border-theme-error text-theme-error rounded-full border bg-gradient-to-br px-3 py-1 text-xs font-medium transition-all duration-300 hover:bg-gradient-to-br sm:text-sm"
-                          >
-                            ❌ Revoke
-                          </button>
-                        )}
-                        <button
-                          onClick$={() => {
-                            updateUser.submit({
-                              userId: user.id,
-                              isAdmin: !user.isAdmin,
-                            });
-                          }}
-                          class={`rounded-full px-3 py-1 text-xs font-medium transition-all duration-300 sm:text-sm ${
-                            user.isAdmin
-                              ? "from-theme-deny to-theme-deny-hover border-theme-error text-theme-error border bg-gradient-to-br hover:bg-gradient-to-br"
-                              : "from-theme-accent-secondary to-theme-accent-tertiary border-theme-accent-primary/40 text-theme-text-primary hover:from-theme-accent-primary/20 hover:to-theme-accent-secondary/20 border bg-gradient-to-br hover:bg-gradient-to-br"
-                          }`}
-                        >
-                          {user.isAdmin
-                            ? "👑➡️👤 Remove Admin"
-                            : "👤➡️👑 Make Admin"}
-                        </button>
-                      </div>
-                    </div>
-                    {/* Expandable Limits Editor */}
-                    <details class="group mt-3">
-                      <summary class="text-theme-accent-primary hover:text-theme-text-primary flex cursor-pointer items-center gap-1 text-xs font-medium">
-                        <span class="transition-transform group-open:rotate-90">
-                          ▶
-                        </span>
-                        Edit User Limits
-                      </summary>
-                      <div class="glass border-theme-card-border mt-3 rounded-xl border p-3">
-                        <form
-                          class="grid grid-cols-1 gap-3 md:grid-cols-3"
-                          preventdefault:submit
-                          onSubmit$={(e, currentTarget) => {
-                            const formData = new FormData(currentTarget);
-                            updateUser.submit({
-                              userId: user.id,
-                              maxUploads: formData.get("maxUploads") as string,
-                              maxFileSize: formData.get(
-                                "maxFileSize",
-                              ) as string,
-                              maxStorageLimit: formData.get(
-                                "maxStorageLimit",
-                              ) as string,
-                            });
-                          }}
-                        >
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs font-medium">
-                              Max Uploads
-                            </label>
-                            <input
-                              type="number"
-                              name="maxUploads"
-                              value={user.settings?.maxUploads || 100}
-                              class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 w-full rounded border bg-transparent px-2 py-1 text-xs focus:outline-none"
-                              min="1"
-                            />
-                          </div>
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs font-medium">
-                              Max File Size (bytes)
-                            </label>
-                            <input
-                              type="number"
-                              name="maxFileSize"
-                              value={user.settings?.maxFileSize || 10485760}
-                              class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 w-full rounded border bg-transparent px-2 py-1 text-xs focus:outline-none"
-                              min="1"
-                            />
-                            <div class="text-theme-accent-primary mt-1 text-xs">
-                              Current: {formatBytes(user.settings?.maxFileSize || 10485760)}
-                            </div>
-                          </div>
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs font-medium">
-                              Storage Limit (bytes)
-                            </label>
-                            <input
-                              type="number"
-                              name="maxStorageLimit"
-                              value={user.settings?.maxStorageLimit || ""}
-                              placeholder={`Default: ${formatBytes(userData.value?.config.BASE_STORAGE_LIMIT || 10737418240)}`}
-                              class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 w-full rounded border bg-transparent px-2 py-1 text-xs focus:outline-none"
-                              min="1"
-                            />
-                            <div class="text-theme-accent-primary mt-1 text-xs">
-                              {user.settings?.maxStorageLimit
-                                ? `Custom: ${formatBytes(user.settings.maxStorageLimit)}`
-                                : `Using default: ${formatBytes(userData.value?.config.BASE_STORAGE_LIMIT || 10737418240)}`}
-                            </div>
-                          </div>
-                          <div class="flex gap-2 pt-2 md:col-span-3">
+                          {/* Action Buttons */}
+                          <div class="flex flex-wrap gap-2 lg:justify-end">
+                            {!user.isApproved ? (
+                              <button
+                                onClick$={() => {
+                                  updateUser.submit({
+                                    userId: user.id,
+                                    isApproved: true,
+                                  });
+                                }}
+                                class="from-green-500 to-emerald-500 flex-1 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
+                              >
+                                ✅ Approve User
+                              </button>
+                            ) : (
+                              <button
+                                onClick$={() => {
+                                  updateUser.submit({
+                                    userId: user.id,
+                                    isApproved: false,
+                                  });
+                                }}
+                                class="from-orange-500 to-red-500 flex-1 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
+                              >
+                                ❌ Revoke Access
+                              </button>
+                            )}
+                            
                             <button
-                              type="submit"
-                              class="btn-cute rounded-full px-3 py-1 text-xs font-medium text-white"
-                            >
-                              💾 Save Limits
-                            </button>
-                            <button
-                              type="button"
                               onClick$={() => {
                                 updateUser.submit({
                                   userId: user.id,
-                                  maxStorageLimit: "",
+                                  isAdmin: !user.isAdmin,
                                 });
                               }}
-                              class="from-theme-accent-secondary/60 to-theme-accent-tertiary/60 border-theme-card-border text-theme-text-secondary hover:from-theme-accent-primary/20 hover:to-theme-accent-secondary/20 rounded-full border bg-gradient-to-br px-3 py-1 text-xs font-medium transition-all duration-300 hover:bg-gradient-to-br"
+                              class={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial ${
+                                user.isAdmin
+                                  ? "from-purple-500 to-pink-500 bg-gradient-to-br text-white"
+                                  : "glass border-theme-accent-primary/40 text-theme-text-primary border"
+                              }`}
                             >
-                              🔄 Reset to Default
+                              {user.isAdmin ? "Remove Admin" : "Make Admin"}
                             </button>
                           </div>
-                        </form>
+                        </div>
                       </div>
-                    </details>
-                    {/* User Analytics */}
-                    <UserAnalytics
-                      userId={user.id}
-                      userName={user.name || "Anonymous Cutie"}
-                    />
+                    </div>
+
+                    {/* Expandable Sections */}
+                    <div class="border-theme-card-border/50 border-t">
+                      {/* Limits Editor */}
+                      <details class="group/limits">
+                        <summary class="text-theme-accent-primary hover:bg-theme-accent-primary/5 flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-medium transition-colors">
+                          <span class="flex items-center gap-2">
+                            <span class="transition-transform group-open/limits:rotate-90">
+                              ▶
+                            </span>
+                            ⚙️ Edit User Limits
+                          </span>
+                        </summary>
+                        <div class="bg-theme-card/30 p-5">
+                          <form
+                            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            preventdefault:submit
+                            onSubmit$={(e, currentTarget) => {
+                              const formData = new FormData(currentTarget);
+                              updateUser.submit({
+                                userId: user.id,
+                                maxUploads: formData.get("maxUploads") as string,
+                                maxFileSize: formData.get("maxFileSize") as string,
+                                maxStorageLimit: formData.get("maxStorageLimit") as string,
+                              });
+                            }}
+                          >
+                            {/* Max Uploads */}
+                            <div class="space-y-2">
+                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
+                                <span>📁</span>
+                                Max Uploads
+                              </label>
+                              <input
+                                type="number"
+                                name="maxUploads"
+                                value={user.settings?.maxUploads || 100}
+                                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
+                                min="1"
+                              />
+                              <p class="text-theme-text-secondary text-xs">
+                                Current: {user.settings?.maxUploads || 100} files
+                              </p>
+                            </div>
+
+                            {/* Max File Size */}
+                            <div class="space-y-2">
+                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
+                                <span>📦</span>
+                                Max File Size
+                              </label>
+                              <input
+                                type="number"
+                                name="maxFileSize"
+                                value={user.settings?.maxFileSize || 10485760}
+                                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
+                                min="1"
+                              />
+                              <p class="text-theme-text-secondary text-xs">
+                                Current: {formatBytes(user.settings?.maxFileSize || 10485760)}
+                              </p>
+                            </div>
+
+                            {/* Storage Limit */}
+                            <div class="space-y-2">
+                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
+                                <span>💾</span>
+                                Storage Limit
+                              </label>
+                              <input
+                                type="number"
+                                name="maxStorageLimit"
+                                value={user.settings?.maxStorageLimit || ""}
+                                placeholder="Leave empty for default"
+                                class="glass border-theme-card-border text-theme-text-primary placeholder:text-theme-text-secondary/50 focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
+                                min="1"
+                              />
+                              <p class="text-theme-text-secondary text-xs">
+                                {user.settings?.maxStorageLimit
+                                  ? `Custom: ${formatBytes(user.settings.maxStorageLimit)}`
+                                  : `Default: ${formatBytes(userData.value?.config.BASE_STORAGE_LIMIT || 10737418240)}`}
+                              </p>
+                            </div>
+
+                            {/* Buttons */}
+                            <div class="flex flex-col gap-2 sm:col-span-2 lg:col-span-1 lg:justify-center">
+                              <button
+                                type="submit"
+                                class="from-theme-accent-primary to-theme-accent-secondary flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                              >
+                                💾 Save Changes
+                              </button>
+                              <button
+                                type="button"
+                                onClick$={() => {
+                                  updateUser.submit({
+                                    userId: user.id,
+                                    maxStorageLimit: "",
+                                  });
+                                }}
+                                class="glass border-theme-card-border text-theme-text-secondary hover:text-theme-text-primary rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-300"
+                              >
+                                🔄 Reset to Default
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </details>
+
+                      {/* User Analytics */}
+                      <div class="border-theme-card-border/50 border-t p-5">
+                        <UserAnalytics
+                          userId={user.id}
+                          userName={user.name || "Anonymous Cutie"}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
