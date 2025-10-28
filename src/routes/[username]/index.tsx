@@ -2,7 +2,6 @@ import { component$, $ } from "@builder.io/qwik";
 import { routeLoader$, routeAction$, z, zod$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Eye } from "lucide-icons-qwik";
-import { getBioPageByUsername, trackBioView, trackLinkClick } from "~/lib/bio";
 import { BioPageDisplay, type BioPageData } from "~/components/bio/bio-page-display";
 import { getGradientCSS, type GradientConfig } from "~/components/ui/gradient-config-panel";
 
@@ -13,6 +12,8 @@ export const useBioPage = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/");
   }
 
+  // Import server functions inside the loader to ensure they're never bundled for client
+  const { getBioPageByUsername, trackBioView } = await import("~/lib/bio.server");
   const bioPage = await getBioPageByUsername(username);
   
   if (!bioPage) {
@@ -45,6 +46,7 @@ export const useLinkClickAction = routeAction$(async (data) => {
   }
 
   try {
+    const { trackLinkClick } = await import("~/lib/bio.server");
     await trackLinkClick(linkId);
     return { success: true };
   } catch (error) {

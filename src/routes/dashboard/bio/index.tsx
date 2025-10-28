@@ -34,17 +34,6 @@ import {
 } from "lucide-icons-qwik";
 import { db } from "~/lib/db";
 import {
-  validateBioUsername,
-  isBioUsernameAvailable,
-  getBioAnalytics,
-} from "~/lib/bio";
-import {
-  getBioLimits,
-  validateBioData,
-  validateBioLinkData,
-  canCreateBioLink,
-} from "~/lib/bio-limits";
-import {
   BioPageDisplay,
   type BioPageData,
 } from "~/components/bio/bio-page-display";
@@ -60,7 +49,7 @@ import {
   getGradientCSS,
   type GradientConfig,
 } from "~/components/ui/gradient-config-panel";
-import { autoPopulateDiscordId, getLanyardData } from "~/lib/discord";
+import { getLanyardData } from "~/lib/discord";
 import { sanitizeCSS, hasDangerousCSS } from "~/lib/css-sanitizer";
 
 export const useBioData = routeLoader$(async (requestEvent) => {
@@ -89,6 +78,7 @@ export const useBioData = routeLoader$(async (requestEvent) => {
 
   // Auto-populate Discord ID if user logged in with Discord and doesn't have one set
   if (!user.settings?.bioDiscordUserId) {
+    const { autoPopulateDiscordId } = await import("~/lib/discord.server");
     await autoPopulateDiscordId(user.id);
     // Refetch user data to get the updated Discord ID
     const updatedUser = await db.userSettings.findUnique({
@@ -108,10 +98,12 @@ export const useBioData = routeLoader$(async (requestEvent) => {
   // Get analytics if bio is set up
   let analytics = null;
   if (user.settings?.bioUsername) {
+    const { getBioAnalytics } = await import("~/lib/bio.server");
     analytics = await getBioAnalytics(user.id, 7);
   }
 
   // Get user bio limits
+  const { getBioLimits } = await import("~/lib/bio-limits.server");
   const bioLimits = await getBioLimits(user.id);
   return {
     user: {
@@ -162,6 +154,7 @@ export const useUpdateBio = routeAction$(
       });
     } // Validate username if provided
     if (values.bioUsername) {
+      const { validateBioUsername, isBioUsernameAvailable } = await import("~/lib/bio.server");
       const validation = await validateBioUsername(values.bioUsername, user.id);
       if (!validation.isValid) {
         return requestEvent.fail(400, { message: validation.error });
@@ -175,6 +168,7 @@ export const useUpdateBio = routeAction$(
         return requestEvent.fail(400, { message: "Username is already taken" });
       }
     } // Validate bio data against user limits
+    const { validateBioData } = await import("~/lib/bio-limits.server");
     const validation = await validateBioData(user.id, values);
     if (!validation.isValid) {
       return requestEvent.fail(400, { message: validation.errors.join(", ") });
@@ -257,6 +251,7 @@ export const useCreateBioLink = routeAction$(
     }
 
     // Check if user can create more links
+    const { canCreateBioLink, validateBioLinkData } = await import("~/lib/bio-limits.server");
     const linkCheck = await canCreateBioLink(user.id);
     if (!linkCheck.canCreate) {
       return requestEvent.fail(400, {
@@ -324,6 +319,7 @@ export const useUpdateBioLink = routeAction$(
     }
 
     // Validate link data against user limits
+    const { validateBioLinkData } = await import("~/lib/bio-limits.server");
     const validation = await validateBioLinkData(user.id, values);
     if (!validation.isValid) {
       return requestEvent.fail(400, { message: validation.errors.join(", ") });

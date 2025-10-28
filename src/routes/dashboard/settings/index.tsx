@@ -68,7 +68,6 @@ export const useUploadDomainsLoader = routeLoader$(async () => {
     where: { isActive: true },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
   });
-  console.log("domains", domains);
   return domains;
 });
 

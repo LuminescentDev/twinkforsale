@@ -33,7 +33,9 @@ export default defineConfig(({ command, mode }): UserConfig => {
         'os', 
         'sharp',
         '@aws-sdk/client-s3',
-        '@aws-sdk/s3-request-presigner'
+        '@aws-sdk/s3-request-presigner',
+        '@prisma/client',
+        '.prisma/client'
       ],
     },
     build: {
@@ -45,7 +47,9 @@ export default defineConfig(({ command, mode }): UserConfig => {
           'os', 
           'sharp',
           '@aws-sdk/client-s3',
-          '@aws-sdk/s3-request-presigner'
+          '@aws-sdk/s3-request-presigner',
+          '@prisma/client',
+          '.prisma/client'
         ],
       },
     },

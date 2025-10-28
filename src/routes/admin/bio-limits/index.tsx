@@ -3,7 +3,7 @@ import { routeLoader$, Form, routeAction$, z, zod$ } from "@builder.io/qwik-city
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { db } from "~/lib/db";
-import { updateUserBioLimits, DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
+import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 
 export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
   const session = requestEvent.sharedMap.get("session");
@@ -109,6 +109,7 @@ export const useUpdateUserBioLimits = routeAction$(
       limitsUpdate.maxIconLength = values.maxIconLength;
     }
 
+    const { updateUserBioLimits } = await import("~/lib/bio-limits.server");
     await updateUserBioLimits(values.userId, limitsUpdate);
 
     return { success: true, message: "Bio limits updated successfully" };

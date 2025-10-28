@@ -51,6 +51,10 @@ export const DiscordProfile = component$<DiscordProfileProps>(
             try {
               const wsCleanup = connectLanyardSocket(
                 discordId,
+                (data) => {
+                  // Handle real-time WebSocket updates
+                  console.log("WebSocket update received:", data);
+                },
                 (error) => {
                   console.warn("WebSocket error:", error);
                 }
