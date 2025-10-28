@@ -109,15 +109,15 @@ export async function trackLinkClick(linkId: string): Promise<void> {
  * Validate bio username availability
  */
 export async function isBioUsernameAvailable(username: string, userId?: string): Promise<boolean> {
-  const existingUser = await db.userSettings.findUnique({
+  const existing = await db.userSettings.findUnique({
     where: { bioUsername: username },
-    select: { id: true }
+    select: { userId: true }
   });
 
-  if (!existingUser) return true;
-  
-  // If checking for current user, it's available
-  return existingUser.id === userId;
+  if (!existing) return true;
+
+  // If the username belongs to the same user, it's available for them
+  return !!userId && existing.userId === userId;
 }
 
 /**

@@ -152,22 +152,36 @@ export const useUpdateBio = routeAction$(
       return requestEvent.fail(403, {
         message: "Account not approved for bio service",
       });
-    } // Validate username if provided
-    if (values.bioUsername) {
+    }
+
+    // If making the bio public, require a valid, available username
+    if (values.bioIsPublic) {
+      const username = (values.bioUsername || "").trim();
+      if (!username) {
+        return requestEvent.fail(400, { message: "Set a username (3+ characters) before making your bio public." });
+      }
+      const { validateBioUsername, isBioUsernameAvailable } = await import("~/lib/bio.server");
+      const validation = await validateBioUsername(username, user.id);
+      if (!validation.isValid) {
+        return requestEvent.fail(400, { message: validation.error });
+      }
+      const isAvailable = await isBioUsernameAvailable(username, user.id);
+      if (!isAvailable) {
+        return requestEvent.fail(400, { message: "Username is already taken" });
+      }
+    } else if (values.bioUsername) {
+      // If not publishing but a username is provided, validate format/length too
       const { validateBioUsername, isBioUsernameAvailable } = await import("~/lib/bio.server");
       const validation = await validateBioUsername(values.bioUsername, user.id);
       if (!validation.isValid) {
         return requestEvent.fail(400, { message: validation.error });
       }
-
-      const isAvailable = await isBioUsernameAvailable(
-        values.bioUsername,
-        user.id,
-      );
+      const isAvailable = await isBioUsernameAvailable(values.bioUsername, user.id);
       if (!isAvailable) {
         return requestEvent.fail(400, { message: "Username is already taken" });
       }
-    } // Validate bio data against user limits
+    }
+    // Validate bio data against user limits
     const { validateBioData } = await import("~/lib/bio-limits.server");
     const validation = await validateBioData(user.id, values);
     if (!validation.isValid) {
@@ -753,6 +767,20 @@ export default component$(() => {
             Create your custom bio link page for sharing all your important
             links
           </p>
+          {updateBio.value?.success && (
+            <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 glass mt-4 rounded-2xl border border-theme-accent-secondary/30 bg-gradient-to-br p-3">
+              <p class="text-theme-accent-secondary text-sm">
+                ✅ {updateBio.value.message}
+              </p>
+            </div>
+          )}
+          {updateBio.value?.failed && (
+            <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 glass mt-4 rounded-2xl border border-theme-accent-primary/30 bg-gradient-to-br p-3">
+              <p class="text-theme-accent-primary text-sm">
+                ❌ {updateBio.value.message}
+              </p>
+            </div>
+          )}
           {!bioData.value.user.isApproved && (
             <div class="glass mt-4 rounded-2xl border border-yellow-500/20 p-4">
               <p class="text-yellow-400">
@@ -866,16 +894,43 @@ export default component$(() => {
                       class={inputClasses}
                     />
                   </div>
-                  <div class="glass flex items-center gap-3 rounded-2xl p-3">
-                    <input
-                      type="checkbox"
-                      id="bioIsPublic"
-                      name="bioIsPublic"
-                      bind:checked={isPublic}
-                      value="true"
-                      class="text-theme-accent-primary border-theme-card-border focus:ring-theme-accent-primary h-4 w-4 rounded border-2 bg-transparent focus:ring-2"
-                    />
-                    <label for="bioIsPublic" class="flex-1 cursor-pointer">
+                  <div class="glass flex items-center justify-between gap-3 rounded-2xl p-3">
+                    {/* Fancy toggle switch */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isPublic.value ? "true" : "false"}
+                      onClick$={() => (isPublic.value = !isPublic.value)}
+                      onKeyDown$={(e) => {
+                        const key = (e as KeyboardEvent).key;
+                        if (key === "Enter" || key === " ") {
+                          e.preventDefault();
+                          isPublic.value = !isPublic.value;
+                        }
+                      }}
+                      class={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/60 ${
+                        isPublic.value
+                          ? "from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-r shadow-[0_0_0_3px_rgba(255,255,255,0.08)]"
+                          : "bg-theme-card-border/80"
+                      }`}
+                    >
+                      {/* Track icons */}
+                      <span class="pointer-events-none absolute left-2 flex h-4 w-4 items-center justify-center text-white/80">
+                        <Globe class={`h-3.5 w-3.5 transition-opacity ${isPublic.value ? "opacity-90" : "opacity-30"}`} />
+                      </span>
+                      <span class="pointer-events-none absolute right-2 flex h-4 w-4 items-center justify-center text-theme-text-muted">
+                        <Lock class={`h-3.5 w-3.5 transition-opacity ${isPublic.value ? "opacity-30" : "opacity-70"}`} />
+                      </span>
+                      {/* Knob */}
+                      <span
+                        class={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                          isPublic.value ? "translate-x-8" : "translate-x-2"
+                        }`}
+                      />
+                    </button>
+
+                    {/* Label and hint */}
+                    <div class="flex-1">
                       <div class="text-theme-text-primary font-medium">
                         {isPublic.value ? (
                           <span class="flex items-center gap-2">
@@ -894,8 +949,22 @@ export default component$(() => {
                           ? "Anyone can view your bio page"
                           : "Your bio page is hidden from public"}
                       </div>
-                    </label>
+                    </div>
+
+                    {/* Hidden input to submit with this form if used */}
+                    <input
+                      type="hidden"
+                      name="bioIsPublic"
+                      value={isPublic.value ? "true" : "false"}
+                    />
                   </div>
+                  {isPublic.value && !username.value && (
+                    <div class="mt-2 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-2">
+                      <p class="text-xs text-yellow-400">
+                        Set a username above to publish your bio.
+                      </p>
+                    </div>
+                  )}
                 </Form>
               )}
             </div>
