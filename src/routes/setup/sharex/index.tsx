@@ -83,35 +83,38 @@ export default component$(() => {
     }
   });
 
-  const generateShareXConfig = $((apiKey: string) => {
-    const baseUrl = userData.value.baseUrl;
+	const generateShareXConfig = $((apiKey: string) => {
+	  const baseUrl = userData.value.baseUrl;
 
-    const config = {
-      Version: "13.4.0",
-      Name: "twink.forsale",
-      DestinationType: "ImageUploader, TextUploader, FileUploader",
-      RequestMethod: "POST",
-      RequestURL: `${baseUrl}/api/upload`,
-      Headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      Body: "MultipartFormData",
-      FileFormName: "file",
-      URL: "$json:url$",
-      ThumbnailURL: "$json:thumbnail_url$",
-      DeletionURL: "$json:deletion_url$",
-    };
+ 	 const config = {
+ 	   Version: "18.0.1",
+ 	   Name: "twink.forsale",
+	    DestinationType: ["ImageUploader", "TextUploader", "FileUploader"],
+	    RequestMethod: "POST",
+	    RequestURL: `${baseUrl}/api/upload`,
+	    Headers: {
+	      Authorization: `Bearer ${apiKey}`,
+	    },
+	    Body: "MultipartFormData",
+	    Arguments: {},
+	    FileFormName: "file",
+	    ResponseType: "JSON",
+	    URL: "{json:url}",
+	    ThumbnailURL: "{json:thumbnail_url}",
+	    DeletionURL: "{json:deletion_url}",
+	  };
+	
+	  const blob = new Blob([JSON.stringify(config, null, 2)], {
+	    type: "application/json",
+	  });
+	  const url = URL.createObjectURL(blob);
+	  const a = document.createElement("a");
+	  a.href = url;
+	  a.download = "twink-forsale.sxcu";
+	  a.click();
+	  URL.revokeObjectURL(url);
+	});
 
-    const blob = new Blob([JSON.stringify(config, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "twink-forsale.sxcu";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
   return (
     <>
       <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
