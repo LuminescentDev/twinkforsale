@@ -1,8 +1,16 @@
-import { component$, $ } from "@builder.io/qwik";
+import { component$, $, useSignal } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Camera, Key, Sparkle, Shield } from "lucide-icons-qwik";
+import { SelectMenu } from "@luminescent/ui-qwik";
 import { db } from "~/lib/db";
+import {
+  generateShareXConfig,
+  downloadShareXConfig,
+  getRecommendedVersion,
+  SHAREX_VERSIONS,
+  type ShareXVersion,
+} from "~/lib/sharex-config";
 export const useUserApiKeys = routeLoader$(async (requestEvent) => {
   // Import server-side dependencies inside the loader
   
@@ -72,6 +80,7 @@ export const createApiKey = server$(async function (name: string) {
 
 export default component$(() => {
   const userData = useUserApiKeys();
+  const selectedVersion = useSignal<ShareXVersion>(getRecommendedVersion());
 
   const handleCreateApiKey = $(async () => {
     try {
@@ -83,37 +92,14 @@ export default component$(() => {
     }
   });
 
-	const generateShareXConfig = $((apiKey: string) => {
-	  const baseUrl = userData.value.baseUrl;
-
- 	 const config = {
- 	   Version: "18.0.1",
- 	   Name: "twink.forsale",
-	    DestinationType: ["ImageUploader", "TextUploader", "FileUploader"],
-	    RequestMethod: "POST",
-	    RequestURL: `${baseUrl}/api/upload`,
-	    Headers: {
-	      Authorization: `Bearer ${apiKey}`,
-	    },
-	    Body: "MultipartFormData",
-	    Arguments: {},
-	    FileFormName: "file",
-	    ResponseType: "JSON",
-	    URL: "{json:url}",
-	    ThumbnailURL: "{json:thumbnail_url}",
-	    DeletionURL: "{json:deletion_url}",
-	  };
-	
-	  const blob = new Blob([JSON.stringify(config, null, 2)], {
-	    type: "application/json",
-	  });
-	  const url = URL.createObjectURL(blob);
-	  const a = document.createElement("a");
-	  a.href = url;
-	  a.download = "twink-forsale.sxcu";
-	  a.click();
-	  URL.revokeObjectURL(url);
-	});
+  const handleDownloadConfig = $((apiKey: string) => {
+    const config = generateShareXConfig({
+      apiKey,
+      baseUrl: userData.value.baseUrl,
+      version: selectedVersion.value,
+    });
+    downloadShareXConfig(config);
+  });
 
   return (
     <>
@@ -149,21 +135,49 @@ export default component$(() => {
                   {userData.value.user.apiKeys.map((apiKey) => (
                     <div
                       key={apiKey.id}
-                      class="glass border-theme-card-border hover:border-theme-accent-primary/40 flex flex-col items-start justify-between gap-3 rounded-xl border p-3 transition-all duration-300 sm:flex-row sm:items-center sm:gap-4 sm:rounded-2xl sm:p-4"
+                      class="glass border-theme-card-border hover:border-theme-accent-primary/40 flex flex-col gap-4 rounded-xl border p-3 transition-all duration-300 sm:rounded-2xl sm:p-4"
                     >
-                      <div class="min-w-0 flex-1">
-                        {" "}
-                        <p class="text-theme-text-primary flex items-center gap-2 text-sm font-medium sm:text-base">
-                          <Shield class="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-                          <span class="truncate">{apiKey.name}</span>
-                        </p>
-                        <p class="text-theme-text-secondary mt-1 rounded bg-black/20 px-2 py-1 font-mono text-xs break-all sm:text-sm">
-                          {apiKey.key}
-                        </p>
+                      {/* API Key Info */}
+                      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0 flex-1">
+                          <p class="text-theme-text-primary flex items-center gap-2 text-sm font-medium sm:text-base">
+                            <Shield class="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
+                            <span class="truncate">{apiKey.name}</span>
+                          </p>
+                          <p class="text-theme-text-secondary mt-1 rounded bg-black/20 px-2 py-1 font-mono text-xs break-all sm:text-sm">
+                            {apiKey.key}
+                          </p>
+                        </div>
+                        
+                        {/* Version Selector */}
+                        <div class="flex flex-col gap-1 sm:min-w-[200px]">
+                          <label class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium">
+                            <Sparkle class="h-3 w-3" />
+                            <span>Version</span>
+                          </label>
+                          <SelectMenu
+                            id={`sharex-version-${apiKey.id}`}
+                            values={Object.entries(SHAREX_VERSIONS).map(([version, info]) => ({
+                              name: (
+                                <div class="flex items-center justify-between w-full">
+                                  <span>{info.label}</span>
+                                  {info.recommended && <span class="text-yellow-400">⭐</span>}
+                                </div>
+                              ),
+                              value: version,
+                            }))}
+                            value={selectedVersion.value}
+                            onChange$={(e, el) => {
+                              selectedVersion.value = el.value as ShareXVersion;
+                            }}
+                          />
+                        </div>
                       </div>
+                      
+                      {/* Download Button */}
                       <button
-                        onClick$={() => generateShareXConfig(apiKey.key)}
-                        class="btn-cute w-full flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium text-white sm:w-auto sm:px-6 sm:py-3 sm:text-base"
+                        onClick$={() => handleDownloadConfig(apiKey.key)}
+                        class="btn-cute w-full rounded-full px-4 py-2 text-sm font-medium text-white sm:px-6 sm:py-3 sm:text-base"
                       >
                         Download Config~ 📥✨
                       </button>
