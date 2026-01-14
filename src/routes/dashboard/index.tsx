@@ -50,6 +50,14 @@ export const useUserData = routeLoader$(async (requestEvent) => {
         orderBy: { order: "asc" },
       },
       settings: true, // Include user settings
+      accounts: {
+        where: {
+          provider: "discord",
+        },
+        select: {
+          providerAccountId: true,
+        },
+      },
     },
   });
   if (!user) {
@@ -67,22 +75,37 @@ export const useUserData = routeLoader$(async (requestEvent) => {
         apiKeys: true,
         bioLinks: true,
         settings: true,
+        accounts: {
+          where: {
+            provider: "discord",
+          },
+          select: {
+            providerAccountId: true,
+          },
+        },
       },
     });
 
     // Send notification for new user registration
     try {
+      const discordId = user.accounts?.[0]?.providerAccountId || "N/A";
+      const adminPanelUrl = `${requestEvent.url.origin}/admin`;
+      
       await createSystemEvent(
         "USER_REGISTRATION",
         "INFO",
-        "New User Registration",
-        `New user registered: ${user.email}`,
+        "New User Registration - Approval Required",
+        `A new user has registered and is awaiting approval!\n\n**User:** ${user.name || "Unknown"}\n**Email:** ${user.email}\n**Discord ID:** ${discordId}\n\n**Action Required:** Please review and approve this user in the [Admin Panel](${adminPanelUrl})`,
         {
           userId: user.id,
           metadata: {
-            name: user.name,
-            provider: "Discord", // Since this app only uses Discord OAuth
+            name: user.name || "Unknown",
+            email: user.email,
+            discordId: discordId,
+            provider: "Discord",
             registrationDate: new Date().toISOString(),
+            adminPanelUrl: adminPanelUrl,
+            needsApproval: true,
           },
         },
       );
@@ -99,7 +122,7 @@ export const useUserData = routeLoader$(async (requestEvent) => {
       }
     });
     // Re-fetch user with settings
-    user = await db.user.findUnique({
+    const updatedUser = await db.user.findUnique({
       where: { id: user.id },
       include: {
         uploads: {
@@ -115,8 +138,19 @@ export const useUserData = routeLoader$(async (requestEvent) => {
           orderBy: { order: "asc" },
         },
         settings: true,
+        accounts: {
+          where: {
+            provider: "discord",
+          },
+          select: {
+            providerAccountId: true,
+          },
+        },
       },
-    }) || user;
+    });
+    if (updatedUser) {
+      user = updatedUser;
+    }
   }
 
   // Calculate stats

@@ -125,6 +125,7 @@ export const useUpdateUser = routeAction$(async (data, { sharedMap }) => {
   }
   // Update user
   const updateData: any = {};
+  const settingsUpdateData: any = {};
 
   if (typeof data.isApproved === "boolean") {
     updateData.isApproved = data.isApproved;
@@ -145,7 +146,7 @@ export const useUpdateUser = routeAction$(async (data, { sharedMap }) => {
     console.log("Max uploads data:", data.maxUploads);
     const maxUploads = parseInt(data.maxUploads);
     if (!isNaN(maxUploads) && maxUploads > 0) {
-      updateData.maxUploads = maxUploads;
+      settingsUpdateData.maxUploads = maxUploads;
     }
   }
 
@@ -153,27 +154,43 @@ export const useUpdateUser = routeAction$(async (data, { sharedMap }) => {
     console.log("Max file size data:", data.maxFileSize);
     const maxFileSize = parseInt(data.maxFileSize);
     if (!isNaN(maxFileSize) && maxFileSize > 0) {
-      updateData.maxFileSize = maxFileSize;
+      settingsUpdateData.maxFileSize = maxFileSize;
     }
   }
 
   if (typeof data.maxStorageLimit === "string") {
     console.log("Max storage limit data:", data.maxStorageLimit);
     if (data.maxStorageLimit.trim() === "") {
-      updateData.maxStorageLimit = null; // Use default
+      settingsUpdateData.maxStorageLimit = null; // Use default
     } else {
       const maxStorageLimit = parseInt(data.maxStorageLimit);
       if (!isNaN(maxStorageLimit) && maxStorageLimit > 0) {
-        updateData.maxStorageLimit = maxStorageLimit;
+        settingsUpdateData.maxStorageLimit = maxStorageLimit;
       }
     }
   }
   try {
     console.log("Updating user with data:", updateData);
+    
+    // Update user fields
     const result = await db.user.update({
       where: { id: data.userId as string },
       data: updateData,
     });
+    
+    // Update settings if there are any settings changes
+    if (Object.keys(settingsUpdateData).length > 0) {
+      console.log("Updating user settings with data:", settingsUpdateData);
+      await db.userSettings.upsert({
+        where: { userId: data.userId as string },
+        update: settingsUpdateData,
+        create: {
+          userId: data.userId as string,
+          ...settingsUpdateData,
+        },
+      });
+    }
+    
     console.log("Update result:", result);
     return { success: true };
   } catch (error) {
