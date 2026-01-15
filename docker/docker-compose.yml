@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-twinkforsale_dev}
       POSTGRES_DB: ${POSTGRES_DB:-twinkforsale}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "2345:2345"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,7 +27,7 @@ services:
     container_name: twinkforsale-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST:-postgres};${POSTGRES_PORT:-5432};${POSTGRES_DB:-twinkforsale};Username=${POSTGRES_USER:-twinkforsale};Password=${POSTGRES_PASSWORD:-twinkforsale_dev}
+      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST:-postgres};${POSTGRES_PORT:-2345};${POSTGRES_DB:-twinkforsale};Username=${POSTGRES_USER:-twinkforsale};Password=${POSTGRES_PASSWORD:-twinkforsale_dev}
       - Loki__Url=${LOKI_URL:-http://loki:3100}
       - Jwt__Secret=${JWT_SECRET:-twinkforsale_dev_secret_key_please_change}
       - Jwt__Issuer=${JWT_ISSUER:-twinkforsale}
