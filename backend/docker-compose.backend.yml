@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     container_name: twinkforsale-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-twinkforsale}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-twinkforsale_dev}
-      POSTGRES_DB: ${POSTGRES_DB:-twinkforsale}
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - 'POSTGRES_DB=${POSTGRES_DB:-twinkforsale}'
     ports:
       - "2345:2345"
     volumes:
