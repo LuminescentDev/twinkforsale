@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: twinkforsale-postgres
+    environment:
+      POSTGRES_USER: twinkforsale
+      POSTGRES_PASSWORD: twinkforsale_dev
+      POSTGRES_DB: twinkforsale
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twinkforsale -d twinkforsale"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (for production/staging)
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: twinkforsale-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=twinkforsale;Username=twinkforsale;Password=twinkforsale_dev
+      - Loki__Url=http://loki:3100
+      - Jwt__Secret=your-super-secret-jwt-key-change-in-production-minimum-32-chars
+      - Jwt__Issuer=twinkforsale
+      - Jwt__Audience=twinkforsale
+      - Discord__ClientId=${DISCORD_CLIENT_ID}
+      - Discord__ClientSecret=${DISCORD_CLIENT_SECRET}
+      - Storage__UploadDir=/app/uploads
+      - Storage__MaxFileSize=104857600
+      - BaseUrl=http://localhost:5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    profiles:
+      - full
+
+  # Frontend (for production/staging)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: twinkforsale-frontend
+    environment:
+      - PUBLIC_API_URL=http://backend:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  uploads:

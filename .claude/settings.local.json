@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move src frontend )",
+      "Bash(move public frontend )",
+      "Bash(move adapters frontend )",
+      "Bash(move package.json frontend )",
+      "Bash(move pnpm-lock.yaml frontend )",
+      "Bash(move tsconfig.json frontend )",
+      "Bash(move vite.config.ts frontend )",
+      "Bash(move qwik.env.d.ts frontend )",
+      "Bash(move eslint.config.js frontend )",
+      "Bash(move .prettierrc.js frontend )",
+      "Bash(move .prettierignore frontend )",
+      "Bash(move .pnpmrc frontend )",
+      "Bash(move:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(cmd /c \"move src frontend\\\\ && move public frontend\\\\ && move adapters frontend\\\\ && move package.json frontend\\\\ && move pnpm-lock.yaml frontend\\\\ && move tsconfig.json frontend\\\\ && move vite.config.ts frontend\\\\ && move qwik.env.d.ts frontend\\\\ && move eslint.config.js frontend\"\")",
+      "Bash(git mv:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln add:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)"
+    ]
+  }
+}
