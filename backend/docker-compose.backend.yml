@@ -6,15 +6,15 @@ services:
     image: postgres:15-alpine
     container_name: twinkforsale-postgres
     environment:
-      - POSTGRES_USER=$SERVICE_USER_POSTGRES
-      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
-      - 'POSTGRES_DB=${POSTGRES_DB:-twinkforsale}'
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-twinkforsale}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES:-twinkforsale_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-twinkforsale}
     ports:
       - "2345:2345"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-twinkforsale} -d ${POSTGRES_DB:-twinkforsale}"]
+      test: ["CMD-SHELL", "pg_isready -U ${SERVICE_USER_POSTGRES:-twinkforsale} -d ${POSTGRES_DB:-twinkforsale}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +27,7 @@ services:
     container_name: twinkforsale-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST:-postgres};${POSTGRES_PORT:-2345};${POSTGRES_DB:-twinkforsale};Username=${POSTGRES_USER:-twinkforsale};Password=${POSTGRES_PASSWORD:-twinkforsale_dev}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB:-twinkforsale};Username=${SERVICE_USER_POSTGRES:-twinkforsale};Password=${SERVICE_PASSWORD_POSTGRES:-twinkforsale_dev}
       - Loki__Url=${LOKI_URL:-http://loki:3100}
       - Jwt__Secret=${JWT_SECRET:-twinkforsale_dev_secret_key_please_change}
       - Jwt__Issuer=${JWT_ISSUER:-twinkforsale}
