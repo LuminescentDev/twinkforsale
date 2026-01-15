@@ -22,8 +22,10 @@ RUN dotnet publish "src/TwinkForSale.Api/TwinkForSale.Api.csproj" -c Release -o 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Install libgdiplus for ImageSharp
-RUN apt-get update && apt-get install -y libgdiplus && rm -rf /var/lib/apt/lists/*
+# Install native dependencies (ImageSharp + GSSAPI for Postgres)
+RUN apt-get update \
+    && apt-get install -y libgdiplus libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy published application
 COPY --from=publish /app/publish .
