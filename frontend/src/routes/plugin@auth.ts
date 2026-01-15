@@ -38,6 +38,7 @@ export const onRequest: RequestHandler = async (requestEvent) => {
       const api = createServerApi(requestEvent);
       const user = await api.auth.getCurrentUser();
       sharedMap.set("user", user);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Token invalid or expired
       sharedMap.set("user", null);
@@ -61,6 +62,15 @@ import { routeLoader$ } from "@builder.io/qwik-city";
 export const useSession = routeLoader$(async (requestEvent) => {
   const user = requestEvent.sharedMap.get("user");
   return { user };
+});
+
+export const useSignIn = routeLoader$(async (requestEvent) => {
+  return {
+    signIn: async () => {
+      const apiUrl = requestEvent.env.get("VITE_API_URL") || "http://localhost:5000";
+      window.location.href = `${apiUrl}/api/auth/discord`;
+    },
+  };
 });
 
 export const useSignOut = routeLoader$(async () => {
