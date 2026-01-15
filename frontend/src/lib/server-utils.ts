@@ -10,45 +10,18 @@ import os from 'os';
  */
 async function getDiskUsageFallback(dirPath: string): Promise<{
   total: number;
-  used: number;
-  free: number;
-  usedPercentage: number;
-}> {
-  try {
+  /**
+   * Get disk usage information using Node.js built-ins
+   * @param uploadsPath - Path to the uploads directory
+   * @returns Object containing total, used, and free space in bytes
+   */
     const absolutePath = path.resolve(dirPath);
     
     // Ensure the directory exists
     if (!fs.existsSync(absolutePath)) {
       fs.mkdirSync(absolutePath, { recursive: true });
     }
-
-    // Calculate directory size recursively
-    function calculateDirectorySize(dirPath: string): number {
-      let size = 0;
-      try {
-        const items = fs.readdirSync(dirPath);
-        for (const item of items) {
-          const itemPath = path.join(dirPath, item);
-          const stat = fs.statSync(itemPath);
-          if (stat.isDirectory()) {
-            size += calculateDirectorySize(itemPath);
-          } else {
-            size += stat.size;
-          }
-        }
-      } catch (error) {
-        // Ignore permission errors and continue
-      }
-      return size;
-    }
-
-    const used = calculateDirectorySize(absolutePath);
-    
-    // Estimate available space based on system memory and typical disk ratios
-    const totalMemory = os.totalmem();
-    const freeMemory = os.freemem();
-    
-    // Estimate total disk space as 10x total memory (typical for cloud instances)
+    return getDiskUsageFallback(uploadsPath);
     const estimatedTotal = totalMemory * 10;
     // Estimate free space based on memory usage patterns
     const estimatedFree = Math.max(estimatedTotal - used, freeMemory * 5);
@@ -95,7 +68,7 @@ export async function getFreeSpace(uploadsPath: string = './uploads'): Promise<n
 }
 
 /**
- * Get disk usage information with diskusage package and fallback
+ * Get disk usage information using Node.js built-ins
  * @param uploadsPath - Path to the uploads directory
  * @returns Object containing total, used, and free space in bytes
  */
@@ -105,34 +78,7 @@ export async function getDiskUsage(uploadsPath: string = './uploads'): Promise<{
   free: number;
   usedPercentage: number;
 }> {
-  try {
-    // Try to dynamically import and use diskusage package
-    const diskusage = await import('diskusage');
-    
-    const absolutePath = path.resolve(uploadsPath);
-    
-    // Ensure the directory exists
-    if (!fs.existsSync(absolutePath)) {
-      fs.mkdirSync(absolutePath, { recursive: true });
-    }
-
-    // Use diskusage to check disk usage
-    const info = await diskusage.default.check(absolutePath);
-    const { total, free } = info;
-    const used = total - free;
-    const usedPercentage = total > 0 ? (used / total) * 100 : 0;
-
-    return {
-      total,
-      used,
-      free,
-      usedPercentage
-    };
-  } catch (error) {
-    console.warn('diskusage package not available, using fallback method:', error instanceof Error ? error.message : String(error));
-    // Fall back to built-in Node.js implementation
-    return getDiskUsageFallback(uploadsPath);
-  }
+  return getDiskUsageFallback(uploadsPath);
 }
 
 /**

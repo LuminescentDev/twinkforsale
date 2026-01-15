@@ -61,7 +61,6 @@
     "@aws-sdk/client-s3": "^3.839.0",
     "@aws-sdk/s3-request-presigner": "^3.839.0",
     "@prisma/client": "^6.9.0",
-    "diskusage": "^1.2.0",
     "dotenv": "^17.0.0",
     "rehype-stringify": "^10.0.1",
     "remark": "^15.0.1",

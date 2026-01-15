@@ -27,7 +27,6 @@ export default defineConfig(({ command, mode }): UserConfig => {
       // Put problematic deps that break bundling here, mostly those with binaries.
       // For example ['better-sqlite3'] if you use that in server functions.
       exclude: [
-        'diskusage', 
         'fs', 
         'path', 
         'os', 
@@ -41,7 +40,6 @@ export default defineConfig(({ command, mode }): UserConfig => {
     build: {
       rollupOptions: {
         external: mode === 'development' ? [] : [
-          'diskusage', 
           'fs', 
           'path', 
           'os', 

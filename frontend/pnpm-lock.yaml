@@ -17,9 +17,6 @@ importers:
       '@prisma/client':
         specifier: ^6.9.0
         version: 6.11.1(prisma@6.11.1(typescript@5.4.5))(typescript@5.4.5)
-      diskusage:
-        specifier: ^1.2.0
-        version: 1.2.0
       dotenv:
         specifier: ^17.0.0
         version: 17.2.0
@@ -1634,9 +1631,6 @@ packages:
 
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
-
-  diskusage@1.2.0:
-    resolution: {integrity: sha512-2u3OG3xuf5MFyzc4MctNRUKjjwK+UkovRYdD2ed/NZNZPrt0lqHnLKxGhlFVvAb4/oufIgQG3nWgwmeTbHOvXA==}
 
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
@@ -4784,11 +4778,6 @@ snapshots:
   devlop@1.1.0:
     dependencies:
       dequal: 2.0.3
-
-  diskusage@1.2.0:
-    dependencies:
-      es6-promise: 4.2.8
-      nan: 2.23.0
 
   dom-serializer@2.0.0:
     dependencies:
