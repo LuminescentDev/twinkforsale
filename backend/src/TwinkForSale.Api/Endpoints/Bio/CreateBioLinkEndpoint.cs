@@ -24,17 +24,12 @@ public class CreateBioLinkResponse
     public bool IsActive { get; set; }
 }
 
-public class CreateBioLinkEndpoint : Endpoint<CreateBioLinkRequest>
+public class CreateBioLinkEndpoint(AppDbContext db) : Endpoint<CreateBioLinkRequest>
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
     private const int MaxLinks = 20;
 
-    public CreateBioLinkEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Post("/bio/links");
         AuthSchemes("JWT");

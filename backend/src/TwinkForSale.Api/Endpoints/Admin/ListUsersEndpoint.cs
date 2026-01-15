@@ -38,16 +38,11 @@ public class ListUsersResponse
     public int TotalPages { get; set; }
 }
 
-public class ListUsersEndpoint : Endpoint<ListUsersRequest>
+public class ListUsersEndpoint(AppDbContext db) : Endpoint<ListUsersRequest>
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public ListUsersEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/admin/users");
         AuthSchemes("JWT");

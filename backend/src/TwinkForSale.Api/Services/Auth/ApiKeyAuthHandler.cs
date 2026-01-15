@@ -7,21 +7,15 @@ using TwinkForSale.Api.Data;
 
 namespace TwinkForSale.Api.Services.Auth;
 
-public class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+public class ApiKeyAuthHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder,
+    AppDbContext db) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public ApiKeyAuthHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger,
-        UrlEncoder encoder,
-        AppDbContext db)
-        : base(options, logger, encoder)
-    {
-        _db = db;
-    }
-
-    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+  protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             return AuthenticateResult.NoResult();

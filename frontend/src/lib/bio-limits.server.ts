@@ -1,35 +1,107 @@
-import { db } from './db';
+import type { RequestEvent } from '@builder.io/qwik-city';
 import { DEFAULT_BIO_LIMITS } from './bio-limits';
+
+const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
+
+async function serverRequest<T>(
+  endpoint: string,
+  requestEvent?: RequestEvent,
+  options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
+): Promise<T> {
+  const { params, ...fetchOptions } = options;
+
+  let url = `${API_BASE_URL}${endpoint}`;
+
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+  }
+
+  const cookies = requestEvent?.request.headers.get('cookie') || '';
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookies ? { Cookie: cookies } : {}),
+      ...fetchOptions.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || response.statusText);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json();
+}
 
 /**
  * Get bio limits for a user
  */
-export async function getBioLimits(userId: string) {
-  const user = await db.userSettings.findUnique({
-    where: { userId: userId },
-    select: {
-      maxBioLinks: true,
-      maxUsernameLength: true,
-      maxDisplayNameLength: true,
-      maxDescriptionLength: true,
-      maxUrlLength: true,
-      maxLinkTitleLength: true,
-      maxIconLength: true,
-    },
-  });
-
-  if (!user) {
+export async function getBioLimits(userId?: string, requestEvent?: RequestEvent) {
+  if (!requestEvent) {
     return DEFAULT_BIO_LIMITS;
   }
 
+  if (userId) {
+    try {
+      const user = await serverRequest<{
+        limits?: {
+          maxBioLinks?: number | null;
+          maxUsernameLength?: number | null;
+          maxDisplayNameLength?: number | null;
+          maxDescriptionLength?: number | null;
+          maxUrlLength?: number | null;
+          maxLinkTitleLength?: number | null;
+          maxIconLength?: number | null;
+        };
+      }>(`/admin/bio-limits/${userId}`, requestEvent);
+
+      return {
+        maxBioLinks: user.limits?.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
+        maxUsernameLength: user.limits?.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
+        maxDisplayNameLength: user.limits?.maxDisplayNameLength ?? DEFAULT_BIO_LIMITS.maxDisplayNameLength,
+        maxDescriptionLength: user.limits?.maxDescriptionLength ?? DEFAULT_BIO_LIMITS.maxDescriptionLength,
+        maxUrlLength: user.limits?.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
+        maxLinkTitleLength: user.limits?.maxLinkTitleLength ?? DEFAULT_BIO_LIMITS.maxLinkTitleLength,
+        maxIconLength: user.limits?.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
+      };
+    } catch {
+      // Fall back to current user's limits if admin endpoint is not available
+    }
+  }
+
+  const limits = await serverRequest<{
+    maxBioLinks: number;
+    maxUsernameLength: number;
+    maxDisplayNameLength: number;
+    maxDescriptionLength: number;
+    maxUrlLength: number;
+    maxLinkTitleLength: number;
+    maxIconLength: number;
+  }>("/bio/limits", requestEvent);
+
   return {
-    maxBioLinks: user.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
-    maxUsernameLength: user.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
-    maxDisplayNameLength: user.maxDisplayNameLength ?? DEFAULT_BIO_LIMITS.maxDisplayNameLength,
-    maxDescriptionLength: user.maxDescriptionLength ?? DEFAULT_BIO_LIMITS.maxDescriptionLength,
-    maxUrlLength: user.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
-    maxLinkTitleLength: user.maxLinkTitleLength ?? DEFAULT_BIO_LIMITS.maxLinkTitleLength,
-    maxIconLength: user.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
+    maxBioLinks: limits.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
+    maxUsernameLength: limits.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
+    maxDisplayNameLength: limits.maxDisplayNameLength ?? DEFAULT_BIO_LIMITS.maxDisplayNameLength,
+    maxDescriptionLength: limits.maxDescriptionLength ?? DEFAULT_BIO_LIMITS.maxDescriptionLength,
+    maxUrlLength: limits.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
+    maxLinkTitleLength: limits.maxLinkTitleLength ?? DEFAULT_BIO_LIMITS.maxLinkTitleLength,
+    maxIconLength: limits.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
   };
 }
 
@@ -43,8 +115,8 @@ export async function validateBioData(userId: string, data: {
   bioProfileImage?: string;
   bioBackgroundImage?: string;
   bioSpotifyTrack?: string;
-}) {
-  const limits = await getBioLimits(userId);
+}, requestEvent?: RequestEvent) {
+  const limits = await getBioLimits(userId, requestEvent);
   const errors: string[] = [];
 
   // Validate username length
@@ -89,8 +161,8 @@ export async function validateBioLinkData(userId: string, data: {
   title: string;
   url: string;
   icon?: string;
-}) {
-  const limits = await getBioLimits(userId);
+}, requestEvent?: RequestEvent) {
+  const limits = await getBioLimits(userId, requestEvent);
   const errors: string[] = [];
 
   // Validate title length
@@ -118,16 +190,16 @@ export async function validateBioLinkData(userId: string, data: {
 /**
  * Check if user can create more bio links
  */
-export async function canCreateBioLink(userId: string): Promise<{ canCreate: boolean; currentCount: number; maxAllowed: number }> {
-  const limits = await getBioLimits(userId);
-  
-  const currentCount = await db.bioLink.count({
-    where: { userId },
-  });
+export async function canCreateBioLink(userId: string, requestEvent?: RequestEvent): Promise<{ canCreate: boolean; currentCount: number; maxAllowed: number }> {
+  if (!requestEvent) {
+    return { canCreate: true, currentCount: 0, maxAllowed: DEFAULT_BIO_LIMITS.maxBioLinks };
+  }
+
+  const limits = await serverRequest<{ maxBioLinks: number; currentBioLinks: number }>("/bio/limits", requestEvent);
 
   return {
-    canCreate: currentCount < limits.maxBioLinks,
-    currentCount,
+    canCreate: limits.currentBioLinks < limits.maxBioLinks,
+    currentCount: limits.currentBioLinks,
     maxAllowed: limits.maxBioLinks,
   };
 }
@@ -143,9 +215,13 @@ export async function updateUserBioLimits(userId: string, limits: {
   maxUrlLength?: number;
   maxLinkTitleLength?: number;
   maxIconLength?: number;
-}) {
-  return await db.userSettings.update({
-    where: { id: userId },
-    data: limits,
+}, requestEvent?: RequestEvent) {
+  if (!requestEvent) {
+    throw new Error("Request event required to update bio limits");
+  }
+
+  return serverRequest(`/admin/bio-limits/${userId}`, requestEvent, {
+    method: 'PUT',
+    body: JSON.stringify(limits),
   });
 }

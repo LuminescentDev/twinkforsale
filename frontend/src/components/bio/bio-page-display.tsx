@@ -3,7 +3,7 @@ import {
   type QRL,
 } from "@builder.io/qwik";
 import { Music } from "lucide-icons-qwik";
-import type { BioLink } from "@prisma/client";
+import type { BioLinkData } from "~/lib/bio";
 import {
   ParticleBackground,
   type ParticleConfig,
@@ -24,7 +24,7 @@ export interface BioPageData {
   accentColor: string;
   customCss?: string | null;
   spotifyTrack?: string | null;
-  bioLinks: BioLink[];
+  bioLinks: BioLinkData[];
   gradientConfig?: string | null;
   particleConfig?: string | null;
   discordUserId?: string | null;

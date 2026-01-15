@@ -10,18 +10,12 @@ public class DeleteApiKeyRequest
     public string Id { get; set; } = null!;
 }
 
-public class DeleteApiKeyEndpoint : Endpoint<DeleteApiKeyRequest>
+public class DeleteApiKeyEndpoint(AppDbContext db, ILogger<DeleteApiKeyEndpoint> logger) : Endpoint<DeleteApiKeyRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<DeleteApiKeyEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<DeleteApiKeyEndpoint> _logger = logger;
 
-    public DeleteApiKeyEndpoint(AppDbContext db, ILogger<DeleteApiKeyEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/api-keys/{Id}");
         AuthSchemes("JWT");

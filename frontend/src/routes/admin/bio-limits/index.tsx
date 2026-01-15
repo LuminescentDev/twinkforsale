@@ -1,67 +1,90 @@
 import { component$, useSignal } from "@builder.io/qwik";
-import { routeLoader$, Form, routeAction$, z, zod$ } from "@builder.io/qwik-city";
+import { routeLoader$, Form, routeAction$, z, zod$, type RequestEvent } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
-import { db } from "~/lib/db";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 
-export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+const API_BASE_URL = process.env.API_URL || "http://localhost:5000/api";
 
-  if (!session?.user?.email) {
+async function serverRequest<T>(
+  requestEvent: RequestEvent,
+  endpoint: string,
+  options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
+): Promise<T> {
+  const { params, ...fetchOptions } = options;
+
+  let url = `${API_BASE_URL}${endpoint}`;
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, String(value));
+    });
+    const queryString = searchParams.toString();
+    if (queryString) url += `?${queryString}`;
+  }
+
+  const cookies = requestEvent.request.headers.get("cookie") || "";
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookies ? { Cookie: cookies } : {}),
+      ...fetchOptions.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || response.statusText);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json();
+}
+
+export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
+  const user = requestEvent.sharedMap.get("user");
+
+  if (!user?.isAdmin) {
     throw requestEvent.redirect(302, "/");
   }
 
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
-    throw requestEvent.redirect(302, "/dashboard");
-  }
-
-  // Get users with their current bio limits
-  const users = await db.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      isApproved: true,
-      settings: {
-        select: {
-          bioUsername: true,
-          maxBioLinks: true,
-          maxUsernameLength: true,
-          maxDisplayNameLength: true,
-          maxDescriptionLength: true,
-          maxUrlLength: true,
-          maxLinkTitleLength: true,
-          maxIconLength: true,
-        },
-      },
-      _count: {
-        select: {
-          bioLinks: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const data = await serverRequest<{
+    users: Array<{
+      id: string;
+      name?: string | null;
+      email: string;
+      isApproved: boolean;
+      bioUsername?: string | null;
+      bioLinksCount: number;
+      limits: {
+        maxBioLinks?: number | null;
+        maxUsernameLength?: number | null;
+        maxDisplayNameLength?: number | null;
+        maxDescriptionLength?: number | null;
+        maxUrlLength?: number | null;
+        maxLinkTitleLength?: number | null;
+        maxIconLength?: number | null;
+      };
+    }>;
+  }>(requestEvent, "/admin/bio-limits");
 
   return {
-    users: users.map(user => ({
+    users: data.users.map(user => ({
       ...user,
-      bioLinksCount: user._count.bioLinks,
       // Show effective limits (user override or default)
       effectiveLimits: {
-        maxBioLinks: user.settings?.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
-        maxUsernameLength: user.settings?.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
-        maxDisplayNameLength: user.settings?.maxDisplayNameLength ?? DEFAULT_BIO_LIMITS.maxDisplayNameLength,
-        maxDescriptionLength: user.settings?.maxDescriptionLength ?? DEFAULT_BIO_LIMITS.maxDescriptionLength,
-        maxUrlLength: user.settings?.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
-        maxLinkTitleLength: user.settings?.maxLinkTitleLength ?? DEFAULT_BIO_LIMITS.maxLinkTitleLength,
-        maxIconLength: user.settings?.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
+        maxBioLinks: user.limits?.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
+        maxUsernameLength: user.limits?.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
+        maxDisplayNameLength: user.limits?.maxDisplayNameLength ?? DEFAULT_BIO_LIMITS.maxDisplayNameLength,
+        maxDescriptionLength: user.limits?.maxDescriptionLength ?? DEFAULT_BIO_LIMITS.maxDescriptionLength,
+        maxUrlLength: user.limits?.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
+        maxLinkTitleLength: user.limits?.maxLinkTitleLength ?? DEFAULT_BIO_LIMITS.maxLinkTitleLength,
+        maxIconLength: user.limits?.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
       },
     })),
     defaultLimits: DEFAULT_BIO_LIMITS,
@@ -70,17 +93,12 @@ export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
 
 export const useUpdateUserBioLimits = routeAction$(
   async (values, requestEvent) => {
-    const session = requestEvent.sharedMap.get("session");
-    if (!session?.user?.email) {
+    const user = requestEvent.sharedMap.get("user");
+    if (!user) {
       return requestEvent.fail(401, { message: "Not authenticated" });
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
+    if (!user.isAdmin) {
       return requestEvent.fail(403, { message: "Admin access required" });
     }
 
@@ -109,8 +127,10 @@ export const useUpdateUserBioLimits = routeAction$(
       limitsUpdate.maxIconLength = values.maxIconLength;
     }
 
-    const { updateUserBioLimits } = await import("~/lib/bio-limits.server");
-    await updateUserBioLimits(values.userId, limitsUpdate);
+    await serverRequest(requestEvent, `/admin/bio-limits/${values.userId}`, {
+      method: "PUT",
+      body: JSON.stringify(limitsUpdate),
+    });
 
     return { success: true, message: "Bio limits updated successfully" };
   },
@@ -134,7 +154,7 @@ export default component$(() => {
   const filteredUsers = data.value.users.filter(user => 
     user.name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    user.settings?.bioUsername?.toLowerCase().includes(searchQuery.value.toLowerCase())
+    user.bioUsername?.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 
   return (
@@ -259,9 +279,9 @@ export default component$(() => {
                       <div class="text-sm text-gray-500 dark:text-gray-400">
                         {user.email}
                       </div>
-                      {user.settings?.bioUsername && (
+                      {user.bioUsername && (
                         <div class="text-sm text-blue-600 dark:text-blue-400">
-                          @{user.settings.bioUsername}
+                          @{user.bioUsername}
                         </div>
                       )}
                       <div class="text-xs text-gray-400">

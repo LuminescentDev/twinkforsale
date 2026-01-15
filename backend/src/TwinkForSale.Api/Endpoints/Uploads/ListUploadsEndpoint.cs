@@ -39,18 +39,12 @@ public class ListUploadsResponse
     public int TotalPages { get; set; }
 }
 
-public class ListUploadsEndpoint : Endpoint<ListUploadsRequest>
+public class ListUploadsEndpoint(AppDbContext db, IConfiguration config) : Endpoint<ListUploadsRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
+    private readonly AppDbContext _db = db;
+    private readonly IConfiguration _config = config;
 
-    public ListUploadsEndpoint(AppDbContext db, IConfiguration config)
-    {
-        _db = db;
-        _config = config;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/uploads");
         AuthSchemes("JWT", "ApiKey");

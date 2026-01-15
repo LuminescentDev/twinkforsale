@@ -18,7 +18,6 @@ import {
 } from "lucide-icons-qwik";
 import { formatDate } from "~/lib/utils";
 import { useAlert } from "~/lib/use-alert";
-import { db } from "~/lib/db";
 import {
   checkSystemAlerts,
   checkUserStorageAlerts,
@@ -32,18 +31,13 @@ import {
 import { sendAdminActionNotification } from "~/lib/discord-notifications";
 import { getMonitoringStatus } from "~/lib/system-monitoring";
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+  const user = requestEvent.sharedMap.get("user");
 
-  if (!session?.user?.email) {
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
+  if (!user.isAdmin) {
     throw requestEvent.redirect(302, "/dashboard");
   }
   return { isAdmin: true };
@@ -52,39 +46,35 @@ export const useAdminCheck = routeLoader$(async (requestEvent) => {
 // Server action to trigger system checks
 export const useTriggerSystemCheck = routeAction$(
   async (data, requestEvent) => {
-    const session = requestEvent.sharedMap.get("session");
-    if (!session?.user?.email) {
+    const user = requestEvent.sharedMap.get("user");
+    if (!user) {
       return { success: false, error: "Unauthorized" };
     }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
+    if (!user.isAdmin) {
       return { success: false, error: "Admin access required" };
     }
 
     try {
       // Check system alerts
-      await checkSystemAlerts();
+      await checkSystemAlerts(requestEvent);
 
-      // Check all users
-      const users = await db.user.findMany({
-        select: { id: true },
+      const apiUrl = process.env.API_URL || "http://localhost:5000";
+      const cookies = requestEvent.request.headers.get("cookie") || "";
+      const usersResponse = await fetch(`${apiUrl}/api/admin/users?pageSize=1000`, {
+        headers: { Cookie: cookies }
       });
+      const usersData = usersResponse.ok ? await usersResponse.json() : { items: [] };
 
-      for (const user of users) {
-        await checkUserStorageAlerts(user.id);
+      for (const userItem of usersData.items || []) {
+        await checkUserStorageAlerts(userItem.id, requestEvent);
       }
 
       // Send Discord notification for admin action
       await sendAdminActionNotification(
         "Manual System Check",
-        session.user.email,
-        `Manually triggered system check for ${users.length} users`,
-        { userCount: users.length },
+        user.email,
+        `Manually triggered system check for ${usersData.items?.length || 0} users`,
+        { userCount: usersData.items?.length || 0 },
       );
 
       return {
@@ -103,27 +93,21 @@ export const useTriggerSystemCheck = routeAction$(
 
 // Server action to cleanup old events
 export const useCleanupEvents = routeAction$(async (data, requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
-  if (!session?.user?.email) {
+  const user = requestEvent.sharedMap.get("user");
+  if (!user) {
     return { success: false, error: "Unauthorized" };
   }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
+  if (!user.isAdmin) {
     return { success: false, error: "Admin access required" };
   }
 
   try {
-    const deletedCount = await cleanupOldEvents();
+    const deletedCount = await cleanupOldEvents(requestEvent);
 
     // Send Discord notification for admin action
     await sendAdminActionNotification(
       "Event Cleanup",
-      session.user.email,
+        user.email,
       `Cleaned up ${deletedCount} old system events`,
       { deletedCount },
     );
@@ -143,17 +127,11 @@ export const useCleanupEvents = routeAction$(async (data, requestEvent) => {
 
 // Server action to delete a specific event
 export const useDeleteEvent = routeAction$(async (data, requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
-  if (!session?.user?.email) {
+  const user = requestEvent.sharedMap.get("user");
+  if (!user) {
     return { success: false, error: "Unauthorized" };
   }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
+  if (!user.isAdmin) {
     return { success: false, error: "Admin access required" };
   }
 
@@ -163,12 +141,12 @@ export const useDeleteEvent = routeAction$(async (data, requestEvent) => {
   }
 
   try {
-    const success = await deleteSystemEvent(eventId);
+    const success = await deleteSystemEvent(eventId, requestEvent);
     if (success) {
       // Send Discord notification for admin action
       await sendAdminActionNotification(
         "Event Deletion",
-        session.user.email,
+        user.email,
         `Deleted system event with ID: ${eventId}`,
         { eventId },
       );
@@ -194,27 +172,21 @@ export const useDeleteEvent = routeAction$(async (data, requestEvent) => {
 
 // Server action to clear all events
 export const useClearAllEvents = routeAction$(async (data, requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
-  if (!session?.user?.email) {
+  const user = requestEvent.sharedMap.get("user");
+  if (!user) {
     return { success: false, error: "Unauthorized" };
   }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
+  if (!user.isAdmin) {
     return { success: false, error: "Admin access required" };
   }
 
   try {
-    const deletedCount = await clearAllSystemEvents();
+    const deletedCount = await clearAllSystemEvents(undefined, requestEvent);
 
     // Send Discord notification for admin action
     await sendAdminActionNotification(
       "Clear All Events",
-      session.user.email,
+        user.email,
       `Cleared ALL system events (${deletedCount} events deleted)`,
       { deletedCount, severity: "ALL" },
     );
@@ -235,27 +207,21 @@ export const useClearAllEvents = routeAction$(async (data, requestEvent) => {
 // Server action to clear non-critical events
 export const useClearNonCriticalEvents = routeAction$(
   async (data, requestEvent) => {
-    const session = requestEvent.sharedMap.get("session");
-    if (!session?.user?.email) {
+    const user = requestEvent.sharedMap.get("user");
+    if (!user) {
       return { success: false, error: "Unauthorized" };
     }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
+    if (!user.isAdmin) {
       return { success: false, error: "Admin access required" };
     }
 
     try {
-      const deletedCount = await clearNonCriticalEvents();
+      const deletedCount = await clearNonCriticalEvents(requestEvent);
 
       // Send Discord notification for admin action
       await sendAdminActionNotification(
         "Clear Non-Critical Events",
-        session.user.email,
+        user.email,
         `Cleared non-critical events (${deletedCount} INFO/WARNING events deleted)`,
         { deletedCount, severity: "INFO, WARNING" },
       );
@@ -276,8 +242,8 @@ export const useClearNonCriticalEvents = routeAction$(
 
 export const useSystemEventsData = routeLoader$(async () => {
   try {
-    const recentEvents = await getRecentSystemEvents(100); // Get more events for management
-    const eventStats = await getSystemEventsStats(24);
+    const recentEvents = await getRecentSystemEvents(100, undefined, undefined, requestEvent); // Get more events for management
+    const eventStats = await getSystemEventsStats(24, requestEvent);
     const monitoringStatus = getMonitoringStatus();
 
     return {

@@ -29,16 +29,11 @@ public class DailyStatDto
     public int UsersRegistered { get; set; }
 }
 
-public class GetAnalyticsEndpoint : EndpointWithoutRequest
+public class GetAnalyticsEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public GetAnalyticsEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/admin/analytics");
         AuthSchemes("JWT");

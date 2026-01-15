@@ -22,7 +22,6 @@ import {
   Info,
 } from "lucide-icons-qwik";
 import { formatBytes } from "~/lib/utils";
-import { db } from "~/lib/db";
 import { getEnvConfig } from "~/lib/env";
 import { getAnalyticsData } from "~/lib/analytics";
 import { getDiskUsage, getFreeSpace } from "~/lib/server-utils";
@@ -34,18 +33,12 @@ import {
 } from "~/lib/system-events";
 import os from "os";
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+  const user = requestEvent.sharedMap.get("user");
 
-  if (!session?.user?.email) {
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    select: { isAdmin: true },
-  });
-
-  if (!user?.isAdmin) {
+  if (!user.isAdmin) {
     throw requestEvent.redirect(302, "/dashboard");
   }
   return { isAdmin: true };
@@ -54,29 +47,26 @@ export const useAdminCheck = routeLoader$(async (requestEvent) => {
 // Server action to trigger system checks from health dashboard
 export const useTriggerSystemCheck = routeAction$(
   async (data, requestEvent) => {
-    const session = requestEvent.sharedMap.get("session");
-    if (!session?.user?.email) {
+    const user = requestEvent.sharedMap.get("user");
+    if (!user) {
       return { success: false, error: "Unauthorized" };
     }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
+    if (!user.isAdmin) {
       return { success: false, error: "Admin access required" };
     }
 
     try {
-      await checkSystemAlerts();
+      await checkSystemAlerts(requestEvent);
 
-      const users = await db.user.findMany({
-        select: { id: true },
+      const apiUrl = process.env.API_URL || "http://localhost:5000";
+      const cookies = requestEvent.request.headers.get("cookie") || "";
+      const usersResponse = await fetch(`${apiUrl}/api/admin/users?pageSize=1000`, {
+        headers: { Cookie: cookies }
       });
+      const usersData = usersResponse.ok ? await usersResponse.json() : { items: [] };
 
-      for (const user of users) {
-        await checkUserStorageAlerts(user.id);
+      for (const userItem of usersData.items || []) {
+        await checkUserStorageAlerts(userItem.id, requestEvent);
       }
 
       return { success: true, message: `System check completed` };
@@ -87,14 +77,20 @@ export const useTriggerSystemCheck = routeAction$(
   },
 );
 
-export const useHealthData = routeLoader$(async () => {
+export const useHealthData = routeLoader$(async (requestEvent) => {
   const config = getEnvConfig();
 
   try {
     // Database Health
     const dbStart = Date.now();
-    await db.user.count();
-    const dbResponseTime = Date.now() - dbStart;    // Storage Analytics
+    const apiUrl = process.env.API_URL || "http://localhost:5000";
+    const cookies = requestEvent.request.headers.get("cookie") || "";
+    const dbResponse = await fetch(`${apiUrl}/api/admin/health-stats`, {
+      headers: { Cookie: cookies }
+    });
+    const dbResponseTime = Date.now() - dbStart;
+    const healthStats = dbResponse.ok ? await dbResponse.json() : null;
+    // Storage Analytics
     const uploadsDir = config.UPLOAD_DIR;
     const isUsingR2 = config.USE_R2_STORAGE;
     const storageStats = {
@@ -109,13 +105,8 @@ export const useHealthData = routeLoader$(async () => {
     };
 
     try {
-      const totalUploads = await db.upload.count();
-      const totalSize = await db.upload.aggregate({
-        _sum: { size: true },
-      });
-
-      storageStats.totalFiles = totalUploads;
-      storageStats.totalSize = totalSize._sum.size ? Number(totalSize._sum.size) : 0;
+      storageStats.totalFiles = healthStats?.totalUploads || 0;
+      storageStats.totalSize = healthStats?.totalStorageUsed || 0;
       storageStats.usedSpace = storageStats.totalSize;
 
       if (isUsingR2) {
@@ -146,23 +137,14 @@ export const useHealthData = routeLoader$(async () => {
     }
 
     // User Statistics
-    const totalUsers = await db.user.count();
-    const approvedUsers = await db.user.count({
-      where: { isApproved: true },
-    });
-    const pendingUsers = totalUsers - approvedUsers;
+    const totalUsers = healthStats?.totalUsers || 0;
+    const approvedUsers = healthStats?.approvedUsers || 0;
+    const pendingUsers = healthStats?.pendingUsers || 0;
 
     // Recent Activity (last 24 hours)
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentUploads = await db.upload.count({
-      where: { createdAt: { gte: last24h } },
-    });
-    const recentViews = await db.viewLog.count({
-      where: { viewedAt: { gte: last24h } },
-    });
-    const recentDownloads = await db.downloadLog.count({
-      where: { downloadedAt: { gte: last24h } },
-    });
+    const recentUploads = healthStats?.recentUploads || 0;
+    const recentViews = healthStats?.recentViews || 0;
+    const recentDownloads = healthStats?.recentDownloads || 0;
 
     // System Performance
     const cpuUsage = process.cpuUsage();
@@ -171,26 +153,7 @@ export const useHealthData = routeLoader$(async () => {
     const uptime = process.uptime();
 
     // Top Active Users (last 7 days)
-    const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const topUsers = await db.user.findMany({
-      include: {
-        uploads: {
-          where: { createdAt: { gte: last7Days } },
-        },
-        settings: true,
-        _count: {
-          select: {
-            uploads: true,
-          },
-        },
-      },
-      orderBy: {
-        uploads: {
-          _count: "desc",
-        },
-      },
-      take: 5,
-    });
+    const topUsers = healthStats?.topUsers || [];
 
     // Error Logs (simulate - in a real app you'd have proper error logging)
     const errorLogs = [
@@ -204,8 +167,8 @@ export const useHealthData = routeLoader$(async () => {
     const analyticsData = await getAnalyticsData(7);
 
     // System Events (last 24 hours)
-    const recentEvents = await getRecentSystemEvents(20);
-    const eventStats = await getSystemEventsStats(24);
+    const recentEvents = await getRecentSystemEvents(20, undefined, undefined, requestEvent);
+    const eventStats = await getSystemEventsStats(24, requestEvent);
 
     return {
       database: {
@@ -236,12 +199,12 @@ export const useHealthData = routeLoader$(async () => {
         nodeVersion: process.version,
         environment: process.env.NODE_ENV || "development",
       },
-      topUsers: topUsers.map((user) => ({
+      topUsers: topUsers.map((user: any) => ({
         name: user.name || "Anonymous",
         email: user.email,
-        uploadsLast7Days: user.uploads.length,
-        totalUploads: user._count.uploads,
-        storageUsed: user.settings ? Number(user.settings.storageUsed) : 0, // Convert BigInt to number
+        uploadsLast7Days: user.uploadsLast7Days,
+        totalUploads: user.totalUploads,
+        storageUsed: user.storageUsed,
       })),
       errorLogs,
       analytics: analyticsData,

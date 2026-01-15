@@ -14,18 +14,12 @@ public class UpdateDomainRequest
     public bool IsActive { get; set; }
 }
 
-public class UpdateDomainEndpoint : Endpoint<UpdateDomainRequest>
+public class UpdateDomainEndpoint(AppDbContext db, ILogger<UpdateDomainEndpoint> logger) : Endpoint<UpdateDomainRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<UpdateDomainEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<UpdateDomainEndpoint> _logger = logger;
 
-    public UpdateDomainEndpoint(AppDbContext db, ILogger<UpdateDomainEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Put("/admin/domains/{Id}");
         AuthSchemes("JWT");

@@ -19,18 +19,12 @@ public class ShortLinkDto
     public DateTime? ExpiresAt { get; set; }
 }
 
-public class ListShortLinksEndpoint : EndpointWithoutRequest
+public class ListShortLinksEndpoint(AppDbContext db, IConfiguration config) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
+    private readonly AppDbContext _db = db;
+    private readonly IConfiguration _config = config;
 
-    public ListShortLinksEndpoint(AppDbContext db, IConfiguration config)
-    {
-        _db = db;
-        _config = config;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/short-links");
         AuthSchemes("JWT", "ApiKey");

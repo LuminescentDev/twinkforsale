@@ -11,23 +11,16 @@ public class DeleteAccountRequest
     public string ConfirmationText { get; set; } = null!;
 }
 
-public class DeleteAccountEndpoint : Endpoint<DeleteAccountRequest>
+public class DeleteAccountEndpoint(
+    AppDbContext db,
+    IStorageService storage,
+    ILogger<DeleteAccountEndpoint> logger) : Endpoint<DeleteAccountRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IStorageService _storage;
-    private readonly ILogger<DeleteAccountEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly IStorageService _storage = storage;
+    private readonly ILogger<DeleteAccountEndpoint> _logger = logger;
 
-    public DeleteAccountEndpoint(
-        AppDbContext db,
-        IStorageService storage,
-        ILogger<DeleteAccountEndpoint> logger)
-    {
-        _db = db;
-        _storage = storage;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/users/me");
         AuthSchemes("JWT");

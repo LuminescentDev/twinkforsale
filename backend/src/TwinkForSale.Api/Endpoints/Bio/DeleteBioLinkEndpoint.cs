@@ -10,16 +10,11 @@ public class DeleteBioLinkRequest
     public string Id { get; set; } = null!;
 }
 
-public class DeleteBioLinkEndpoint : Endpoint<DeleteBioLinkRequest>
+public class DeleteBioLinkEndpoint(AppDbContext db) : Endpoint<DeleteBioLinkRequest>
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public DeleteBioLinkEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/bio/links/{Id}");
         AuthSchemes("JWT");

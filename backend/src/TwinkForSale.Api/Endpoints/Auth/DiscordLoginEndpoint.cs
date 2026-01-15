@@ -3,16 +3,11 @@ using TwinkForSale.Api.Services.Auth;
 
 namespace TwinkForSale.Api.Endpoints.Auth;
 
-public class DiscordLoginEndpoint : EndpointWithoutRequest
+public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithoutRequest
 {
-    private readonly IDiscordOAuthService _discord;
+    private readonly IDiscordOAuthService _discord = discord;
 
-    public DiscordLoginEndpoint(IDiscordOAuthService discord)
-    {
-        _discord = discord;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/auth/discord");
         AllowAnonymous();

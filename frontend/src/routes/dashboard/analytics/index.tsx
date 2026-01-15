@@ -9,39 +9,30 @@ import {
   Zap,
 } from "lucide-icons-qwik";
 import { DetailedAnalyticsChart } from "~/components/charts/detailed-analytics-chart";
-import { db } from "~/lib/db";
 import { getUploadAnalytics, getUserAnalytics } from "~/lib/analytics";
+import { createServerApi } from "~/lib/api/server";
 import { formatBytes } from "~/lib/utils";
 export const useAnalyticsOverview = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+  const user = requestEvent.sharedMap.get("user");
 
-  if (!session?.user?.email) {
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Find the user and their uploads
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      uploads: {
-        orderBy: { views: "desc" },
-        take: 10, // Top 10 most viewed files
-      },
-      settings: true,
-    },
-  });
-
-  if (!user) {
-    throw requestEvent.redirect(302, "/dashboard/uploads");
-  }
+  const api = createServerApi(requestEvent);
+  const uploadsResponse = await api.uploads.list({ pageSize: 1000 });
+  const uploads = uploadsResponse.items
+    .slice()
+    .sort((a, b) => b.viewCount - a.viewCount)
+    .slice(0, 10);
 
   // Get user analytics for the last 30 days
-  const userAnalytics = await getUserAnalytics(user.id, 30);
+  const userAnalytics = await getUserAnalytics(user.id, 30, requestEvent);
 
   // Get analytics for top files
   const topUploadsAnalytics = await Promise.all(
-    user.uploads.map(async (upload) => {
-      const analytics = await getUploadAnalytics(upload.id, 7);
+    uploads.map(async (upload) => {
+      const analytics = await getUploadAnalytics(upload.id, 7, requestEvent);
       const weeklyViews = analytics.reduce(
         (sum, day) => sum + day.totalViews,
         0,
@@ -53,7 +44,6 @@ export const useAnalyticsOverview = routeLoader$(async (requestEvent) => {
 
       return {
         ...upload,
-        size: Number(upload.size), // Convert BigInt to number
         analytics,
         weeklyViews,
         weeklyDownloads,
@@ -62,34 +52,27 @@ export const useAnalyticsOverview = routeLoader$(async (requestEvent) => {
   );
 
   // Calculate summary statistics
-  const totalFiles = await db.upload.count({
-    where: { userId: user.id },
-  });
-
-  const totalViews = await db.upload.aggregate({
-    where: { userId: user.id },
-    _sum: { views: true },
-  });
-
-  const totalDownloads = await db.upload.aggregate({
-    where: { userId: user.id },
-    _sum: { downloads: true },
-  });
+  const totalFiles = uploadsResponse.totalCount;
+  const totalViews = uploadsResponse.items.reduce(
+    (sum, upload) => sum + upload.viewCount,
+    0,
+  );
+  const totalDownloads = 0;
 
   return {
     user: {
       ...user,
-      maxFileSize: user.settings ? Number(user.settings.maxFileSize) : 10485760, // Convert BigInt to number
-      maxStorageLimit: user.settings?.maxStorageLimit ? Number(user.settings.maxStorageLimit) : null, // Convert BigInt to number
-      storageUsed: user.settings ? Number(user.settings.storageUsed) : 0, // Convert BigInt to number
+      maxFileSize: user.settings?.maxFileSize || 10485760,
+      maxStorageLimit: user.settings?.maxStorageLimit || null,
+      storageUsed: user.settings?.storageUsed || 0,
       uploads: topUploadsAnalytics // Already converted above
     },
     userAnalytics,
     topUploadsAnalytics,
     summary: {
       totalFiles,
-      totalViews: totalViews._sum.views || 0,
-      totalDownloads: totalDownloads._sum.downloads || 0,
+      totalViews,
+      totalDownloads,
     },
   };
 });

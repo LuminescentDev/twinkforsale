@@ -7,92 +7,70 @@ import {
   zod$,
 } from "@builder.io/qwik-city";
 import { ColorPicker, Toggle } from "@luminescent/ui-qwik";
-import { db } from "~/lib/db";
+import { createServerApi } from "~/lib/api/server";
 export const useUserLoader = routeLoader$(async (requestEvent) => {
-  // Import server-side dependencies inside the loader
-
-  const session = requestEvent.sharedMap.get("session");
-
-  if (!session?.user?.email) {
-    throw requestEvent.redirect(302, "/");
-  }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      settings: true,
-    },
-  });
+  const user = requestEvent.sharedMap.get("user");
 
   if (!user) {
     throw requestEvent.redirect(302, "/");
   }
+
+  const api = createServerApi(requestEvent);
+  const settings = await api.settings.get();
 
   return {
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
-      embedTitle: user.settings?.embedTitle,
-      embedDescription: user.settings?.embedDescription,
-      embedColor: user.settings?.embedColor,
-      embedAuthor: user.settings?.embedAuthor,
-      embedFooter: user.settings?.embedFooter,
-      showFileInfo: Boolean(user.settings?.showFileInfo),
-      showUploadDate: Boolean(user.settings?.showUploadDate),
-      showUserStats: Boolean(user.settings?.showUserStats),
-      customDomain: user.settings?.customDomain,
-      useCustomWords: Boolean(user.settings?.useCustomWords),
+      embedTitle: settings.embedTitle,
+      embedDescription: settings.embedDescription,
+      embedColor: settings.embedColor,
+      embedAuthor: settings.embedAuthor,
+      embedFooter: settings.embedFooter,
+      showFileInfo: Boolean(settings.showFileInfo),
+      showUploadDate: Boolean(settings.showUploadDate),
+      showUserStats: Boolean(settings.showUserStats),
+      customDomain: settings.customDomain,
+      useCustomWords: Boolean(settings.useCustomWords),
     },
   };
 });
 
 export const useUpdateEmbedSettings = routeAction$(
   async (values, requestEvent) => {
-    // Import server-side dependencies inside the action
+    const user = requestEvent.sharedMap.get("user");
 
-    const session = requestEvent.sharedMap.get("session");
-
-    if (!session?.user?.email) {
+    if (!user) {
       return requestEvent.fail(401, { message: "Unauthorized" });
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
+    const apiUrl = process.env.API_URL || "http://localhost:5000";
+    const cookies = requestEvent.request.headers.get("cookie") || "";
+    const response = await fetch(`${apiUrl}/api/settings`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookies,
+      },
+      body: JSON.stringify({
+        embedTitle: values.embedTitle || null,
+        embedDescription: values.embedDescription || null,
+        embedColor: values.embedColor || null,
+        embedAuthor: values.embedAuthor || null,
+        embedFooter: values.embedFooter || null,
+        showFileInfo: Boolean(values.showFileInfo),
+        showUploadDate: Boolean(values.showUploadDate),
+        showUserStats: Boolean(values.showUserStats),
+        customDomain: values.customDomain || null,
+        useCustomWords: Boolean(values.useCustomWords),
+      }),
     });
 
-    if (!user) {
-      return requestEvent.fail(404, { message: "User not found" });
+    if (!response.ok) {
+      const errorText = await response.text();
+      return requestEvent.fail(response.status, { message: errorText || "Failed to update settings" });
     }
-
-    await db.userSettings.upsert({
-      where: { userId: user.id },
-      update: {
-        embedTitle: values.embedTitle || null,
-        embedDescription: values.embedDescription || null,
-        embedColor: values.embedColor || null,
-        embedAuthor: values.embedAuthor || null,
-        embedFooter: values.embedFooter || null,
-        showFileInfo: Boolean(values.showFileInfo),
-        showUploadDate: Boolean(values.showUploadDate),
-        showUserStats: Boolean(values.showUserStats),
-        customDomain: values.customDomain || null,
-        useCustomWords: Boolean(values.useCustomWords),
-      },
-      create: {
-        userId: user.id,
-        embedTitle: values.embedTitle || null,
-        embedDescription: values.embedDescription || null,
-        embedColor: values.embedColor || null,
-        embedAuthor: values.embedAuthor || null,
-        embedFooter: values.embedFooter || null,
-        showFileInfo: Boolean(values.showFileInfo),
-        showUploadDate: Boolean(values.showUploadDate),
-        showUserStats: Boolean(values.showUserStats),
-        customDomain: values.customDomain || null,
-        useCustomWords: Boolean(values.useCustomWords),
-      },
-    });
 
     return { success: true, message: "Embed settings updated successfully" };
   },

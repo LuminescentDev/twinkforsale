@@ -21,26 +21,18 @@ public class ShortenResponse
     public string OriginalUrl { get; set; } = null!;
 }
 
-public class ShortenUrlEndpoint : Endpoint<ShortenRequest>
+public class ShortenUrlEndpoint(
+    AppDbContext db,
+    IShortCodeService shortCodeService,
+    IConfiguration config,
+    ILogger<ShortenUrlEndpoint> logger) : Endpoint<ShortenRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IShortCodeService _shortCodeService;
-    private readonly IConfiguration _config;
-    private readonly ILogger<ShortenUrlEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly IShortCodeService _shortCodeService = shortCodeService;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger<ShortenUrlEndpoint> _logger = logger;
 
-    public ShortenUrlEndpoint(
-        AppDbContext db,
-        IShortCodeService shortCodeService,
-        IConfiguration config,
-        ILogger<ShortenUrlEndpoint> logger)
-    {
-        _db = db;
-        _shortCodeService = shortCodeService;
-        _config = config;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Post("/shorten");
         AuthSchemes("ApiKey");

@@ -27,7 +27,7 @@ services:
     container_name: twinkforsale-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB:-twinkforsale};Username=${SERVICE_USER_POSTGRES:-twinkforsale};Password=${SERVICE_PASSWORD_POSTGRES:-twinkforsale_dev};GssEncMode=Disable
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB:-twinkforsale};Username=${SERVICE_USER_POSTGRES:-twinkforsale};Password=${SERVICE_PASSWORD_POSTGRES:-twinkforsale_dev};
       - Loki__Url=${LOKI_URL:-http://loki:3100}
       - Jwt__Secret=${JWT_SECRET:-twinkforsale_dev_secret_key_please_change}
       - Jwt__Issuer=${JWT_ISSUER:-twinkforsale}

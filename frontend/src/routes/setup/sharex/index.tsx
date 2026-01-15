@@ -3,7 +3,6 @@ import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Camera, Key, Sparkle, Shield } from "lucide-icons-qwik";
 import { SelectMenu } from "@luminescent/ui-qwik";
-import { db } from "~/lib/db";
 import {
   generateShareXConfig,
   downloadShareXConfig,
@@ -12,70 +11,61 @@ import {
   type ShareXVersion,
 } from "~/lib/sharex-config";
 export const useUserApiKeys = routeLoader$(async (requestEvent) => {
-  // Import server-side dependencies inside the loader
-  
+  const user = requestEvent.sharedMap.get("user");
 
-  const session = requestEvent.sharedMap.get("session");
-
-  if (!session?.user?.email) {
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Find user
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      apiKeys: {
-        where: { isActive: true },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  const cookies = requestEvent.request.headers.get("cookie") || "";
+  let apiKey: { id: string; name: string; key: string; createdAt: string } | null = null;
+  try {
+    const response = await fetch(`${apiUrl}/api/api-keys/latest`, {
+      headers: { Cookie: cookies }
+    });
+    if (response.ok) {
+      apiKey = await response.json();
+    }
+  } catch {
+    apiKey = null;
+  }
 
   // Get the base URL from the request
   const baseUrl = requestEvent.url.origin;
-  return { user, baseUrl };
+  return { user, baseUrl, apiKey };
 });
 
 export const createApiKey = server$(async function (name: string) {
-  // Import server-side dependencies inside the server action
-  
-
-  const session = this.sharedMap.get("session");
-
-  if (!session?.user?.email) {
-    throw new Error("Not authenticated");
-  }
-  // Find user
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-  });
+  const user = this.sharedMap.get("user");
 
   if (!user) {
-    throw new Error("User not found");
+    throw new Error("Not authenticated");
   }
-
-  // Check if user is approved
   if (!user.isApproved) {
     throw new Error(
       "Account pending approval. Please wait for admin approval before creating API keys.",
     );
   }
 
-  // Create new API key
-  const apiKey = await db.apiKey.create({
-    data: {
-      name,
-      userId: user.id,
+  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  const cookies = this.request.headers.get("cookie") || "";
+
+  const response = await fetch(`${apiUrl}/api/api-keys`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookies,
     },
+    body: JSON.stringify({ name }),
   });
 
-  return {
-    id: apiKey.id,
-    key: apiKey.key,
-    name: apiKey.name,
-    createdAt: apiKey.createdAt,
-  };
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to create API key");
+  }
+
+  return response.json();
 });
 
 export default component$(() => {
@@ -129,10 +119,9 @@ export default component$(() => {
                   <Sparkle class="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </h2>{" "}
-              {userData.value.user?.apiKeys &&
-              userData.value.user.apiKeys.length > 0 ? (
+              {userData.value.apiKey ? (
                 <div class="space-y-3 sm:space-y-4">
-                  {userData.value.user.apiKeys.map((apiKey) => (
+                  {[userData.value.apiKey].map((apiKey) => (
                     <div
                       key={apiKey.id}
                       class="glass border-theme-card-border hover:border-theme-accent-primary/40 flex flex-col gap-4 rounded-xl border p-3 transition-all duration-300 sm:rounded-2xl sm:p-4"

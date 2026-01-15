@@ -3,7 +3,6 @@ using System.Text.Json;
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Data;
-using UserEntity = TwinkForSale.Api.Entities.User;
 
 namespace TwinkForSale.Api.Endpoints.User;
 
@@ -31,16 +30,11 @@ public class UserSettingsResponse
     public bool UseCustomWords { get; set; }
 }
 
-public class GetCurrentUserEndpoint : EndpointWithoutRequest
+public class GetCurrentUserEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public GetCurrentUserEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/users/me");
         AuthSchemes("JWT", "ApiKey");

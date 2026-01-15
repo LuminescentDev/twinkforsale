@@ -17,18 +17,12 @@ public class UpdateUserRequest
     public int? MaxShortLinks { get; set; }
 }
 
-public class UpdateUserEndpoint : Endpoint<UpdateUserRequest>
+public class UpdateUserEndpoint(AppDbContext db, ILogger<UpdateUserEndpoint> logger) : Endpoint<UpdateUserRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<UpdateUserEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<UpdateUserEndpoint> _logger = logger;
 
-    public UpdateUserEndpoint(AppDbContext db, ILogger<UpdateUserEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Put("/admin/users/{Id}");
         AuthSchemes("JWT");

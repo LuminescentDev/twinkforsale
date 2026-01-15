@@ -14,29 +14,20 @@ public class DiscordCallbackRequest
     public string State { get; set; } = null!;
 }
 
-public class DiscordCallbackEndpoint : Endpoint<DiscordCallbackRequest>
+public class DiscordCallbackEndpoint(
+    IDiscordOAuthService discord,
+    IJwtService jwt,
+    AppDbContext db,
+    IConfiguration config,
+    ILogger<DiscordCallbackEndpoint> logger) : Endpoint<DiscordCallbackRequest>
 {
-    private readonly IDiscordOAuthService _discord;
-    private readonly IJwtService _jwt;
-    private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
-    private readonly ILogger<DiscordCallbackEndpoint> _logger;
+    private readonly IDiscordOAuthService _discord = discord;
+    private readonly IJwtService _jwt = jwt;
+    private readonly AppDbContext _db = db;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger<DiscordCallbackEndpoint> _logger = logger;
 
-    public DiscordCallbackEndpoint(
-        IDiscordOAuthService discord,
-        IJwtService jwt,
-        AppDbContext db,
-        IConfiguration config,
-        ILogger<DiscordCallbackEndpoint> logger)
-    {
-        _discord = discord;
-        _jwt = jwt;
-        _db = db;
-        _config = config;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/auth/callback");
         AllowAnonymous();

@@ -10,18 +10,12 @@ public class DeleteDomainRequest
     public string Id { get; set; } = null!;
 }
 
-public class DeleteDomainEndpoint : Endpoint<DeleteDomainRequest>
+public class DeleteDomainEndpoint(AppDbContext db, ILogger<DeleteDomainEndpoint> logger) : Endpoint<DeleteDomainRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<DeleteDomainEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<DeleteDomainEndpoint> _logger = logger;
 
-    public DeleteDomainEndpoint(AppDbContext db, ILogger<DeleteDomainEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/admin/domains/{Id}");
         AuthSchemes("JWT");

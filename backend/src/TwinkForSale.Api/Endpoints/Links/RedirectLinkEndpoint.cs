@@ -10,18 +10,12 @@ public class RedirectLinkRequest
     public string Code { get; set; } = null!;
 }
 
-public class RedirectLinkEndpoint : Endpoint<RedirectLinkRequest>
+public class RedirectLinkEndpoint(AppDbContext db, ILogger<RedirectLinkEndpoint> logger) : Endpoint<RedirectLinkRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<RedirectLinkEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<RedirectLinkEndpoint> _logger = logger;
 
-    public RedirectLinkEndpoint(AppDbContext db, ILogger<RedirectLinkEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/l/{Code}");
         AllowAnonymous();

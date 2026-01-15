@@ -26,18 +26,12 @@ public class UpdateBioRequest
     public string? DiscordConfig { get; set; }
 }
 
-public class UpdateBioEndpoint : Endpoint<UpdateBioRequest>
+public class UpdateBioEndpoint(AppDbContext db, ILogger<UpdateBioEndpoint> logger) : Endpoint<UpdateBioRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<UpdateBioEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<UpdateBioEndpoint> _logger = logger;
 
-    public UpdateBioEndpoint(AppDbContext db, ILogger<UpdateBioEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Put("/bio");
         AuthSchemes("JWT");

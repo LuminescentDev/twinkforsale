@@ -1,59 +1,65 @@
-import { db } from './db';
+import type { RequestEvent } from '@builder.io/qwik-city';
 import { getBioLimits } from './bio-limits.server';
 import type { BioPageData } from './bio';
+
+const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
+
+async function serverRequest<T>(
+  endpoint: string,
+  requestEvent?: RequestEvent,
+  options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
+): Promise<T> {
+  const { params, ...fetchOptions } = options;
+
+  let url = `${API_BASE_URL}${endpoint}`;
+
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+  }
+
+  const cookies = requestEvent?.request.headers.get('cookie') || '';
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookies ? { Cookie: cookies } : {}),
+      ...fetchOptions.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || response.statusText);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json();
+}
 
 /**
  * Get bio page data by username
  */
 export async function getBioPageByUsername(username: string): Promise<BioPageData | null> {
-  const user = await db.user.findFirst({
-    where: { 
-      isApproved: true,    // Only approved users can have public bios
-      settings: {
-        bioUsername: username,
-        bioIsPublic: true,  // Only return public bio pages
-      }
-    },
-    include: {
-      bioLinks: {
-        where: { isActive: true },
-        orderBy: { order: 'asc' }
-      },
-      settings: true,
-    }
-  });
-
-  if (!user || !user.settings?.bioUsername) {
+  try {
+    const data = await serverRequest<BioPageData>(`/bio/public/${encodeURIComponent(username)}`);
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch bio page:', error);
     return null;
   }
-
-  return {
-    username: user.settings.bioUsername,
-    displayName: user.settings.bioDisplayName ?? undefined,
-    description: user.settings.bioDescription ?? undefined,
-    profileImage: user.settings.bioProfileImage ?? undefined,
-    backgroundImage: user.settings.bioBackgroundImage ?? undefined,
-    backgroundColor: user.settings.bioBackgroundColor || '#8B5CF6',
-    textColor: user.settings.bioTextColor || '#FFFFFF',
-    accentColor: user.settings.bioAccentColor || '#F59E0B',
-    customCss: user.settings.bioCustomCss ?? undefined,
-    spotifyTrack: user.settings.bioSpotifyTrack ?? undefined,
-    isPublic: user.settings.bioIsPublic,
-    views: user.settings.bioViews,
-    links: user.bioLinks.map(link => ({
-      id: link.id,
-      title: link.title,
-      url: link.url,
-      icon: link.icon ?? undefined,
-      order: link.order,
-      isActive: link.isActive
-    })),
-    gradientConfig: user.settings.bioGradientConfig ?? undefined,
-    particleConfig: user.settings.bioParticleConfig ?? undefined,
-    discordUserId: user.settings.bioDiscordUserId ?? undefined,
-    showDiscord: user.settings.bioShowDiscord ?? false,
-    discordConfig: user.settings.bioDiscordConfig ?? undefined,
-  };
 }
 
 /**
@@ -65,69 +71,42 @@ export async function trackBioView(
   userAgent?: string, 
   referer?: string
 ): Promise<void> {
-  const userSettings = await db.userSettings.findUnique({
-    where: { bioUsername: username },
-    select: { userId: true }
-  });
-
-  if (!userSettings) return;
-
-  // Update view count
-  await db.userSettings.update({
-    where: { userId: userSettings.userId },
-    data: {
-      bioViews: { increment: 1 },
-      bioLastViewed: new Date()
-    }
-  });
-
-  // Log the view for analytics
-  await db.bioView.create({
-    data: {
-      userId: userSettings.userId,
-      ipAddress,
-      userAgent,
-      referer,
-      viewedAt: new Date()
-    }
-  });
+  try {
+    await serverRequest(`/bio/public/${encodeURIComponent(username)}/view`, undefined, {
+      method: 'POST',
+      body: JSON.stringify({ ipAddress, userAgent, referer }),
+    });
+  } catch (error) {
+    console.error('Failed to track bio view:', error);
+  }
 }
 
 /**
  * Track bio link click
  */
 export async function trackLinkClick(linkId: string): Promise<void> {
-  await db.bioLink.update({
-    where: { id: linkId },
-    data: {
-      clicks: { increment: 1 }
-    }
-  });
+  await serverRequest(`/bio/links/${linkId}/click`, undefined, { method: 'POST' });
 }
 
 /**
  * Validate bio username availability
  */
 export async function isBioUsernameAvailable(username: string, userId?: string): Promise<boolean> {
-  const existing = await db.userSettings.findUnique({
-    where: { bioUsername: username },
-    select: { userId: true }
+  const result = await serverRequest<{ available: boolean }>("/bio/username-available", undefined, {
+    params: { username, userId }
   });
 
-  if (!existing) return true;
-
-  // If the username belongs to the same user, it's available for them
-  return !!userId && existing.userId === userId;
+  return result.available;
 }
 
 /**
  * Validate username format
  */
-export async function validateBioUsername(username: string, userId?: string): Promise<{ isValid: boolean; error?: string }> {
+export async function validateBioUsername(username: string, userId?: string, requestEvent?: RequestEvent): Promise<{ isValid: boolean; error?: string }> {
   // Get user limits if userId provided
   let maxLength = 20; // Default
   if (userId) {
-    const limits = await getBioLimits(userId);
+    const limits = await getBioLimits(userId, requestEvent);
     maxLength = limits.maxUsernameLength;
   }
 
@@ -165,40 +144,27 @@ export async function validateBioUsername(username: string, userId?: string): Pr
 /**
  * Get bio analytics for a user
  */
-export async function getBioAnalytics(userId: string, days: number = 7) {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
+export async function getBioAnalytics(userId: string, days: number = 7, requestEvent?: RequestEvent) {
+  if (!requestEvent) {
+    return {
+      totalViews: 0,
+      viewsByDate: {},
+      topLinks: [],
+      uniqueIPs: 0,
+    };
+  }
 
-  const viewLogs = await db.bioView.findMany({
-    where: {
-      userId,
-      viewedAt: { gte: startDate }
-    },
-    orderBy: { viewedAt: 'asc' }
-  });
-
-  const linkClicks = await db.bioLink.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      title: true,
-      url: true,
-      clicks: true
-    },
-    orderBy: { clicks: 'desc' }
-  });
-
-  // Group views by date
-  const viewsByDate: Record<string, number> = {};
-  viewLogs.forEach(log => {
-    const date = log.viewedAt.toISOString().split('T')[0];
-    viewsByDate[date] = (viewsByDate[date] || 0) + 1;
-  });
+  const data = await serverRequest<{
+    totalViews: number;
+    viewsByDate: Record<string, number>;
+    topLinks: Array<{ id: string; title: string; url: string; clicks: number }>;
+    uniqueIps: number;
+  }>("/bio/analytics", requestEvent, { params: { days } });
 
   return {
-    totalViews: viewLogs.length,
-    viewsByDate,
-    topLinks: linkClicks,
-    uniqueIPs: new Set(viewLogs.map(log => log.ipAddress).filter(Boolean)).size
+    totalViews: data.totalViews,
+    viewsByDate: data.viewsByDate,
+    topLinks: data.topLinks,
+    uniqueIPs: data.uniqueIps,
   };
 }

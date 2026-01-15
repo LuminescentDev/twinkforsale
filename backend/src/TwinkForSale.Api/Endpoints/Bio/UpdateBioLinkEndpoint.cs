@@ -15,16 +15,11 @@ public class UpdateBioLinkRequest
     public bool IsActive { get; set; }
 }
 
-public class UpdateBioLinkEndpoint : Endpoint<UpdateBioLinkRequest>
+public class UpdateBioLinkEndpoint(AppDbContext db) : Endpoint<UpdateBioLinkRequest>
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public UpdateBioLinkEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Put("/bio/links/{Id}");
         AuthSchemes("JWT");

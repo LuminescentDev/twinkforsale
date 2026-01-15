@@ -4,7 +4,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace TwinkForSale.Api.Services.Image;
 
-public class ImageSharpService : IImageService
+public class ImageSharpService(ILogger<ImageSharpService> logger) : IImageService
 {
     private static readonly HashSet<string> SupportedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -16,14 +16,9 @@ public class ImageSharpService : IImageService
         "image/bmp"
     };
 
-    private readonly ILogger<ImageSharpService> _logger;
+    private readonly ILogger<ImageSharpService> _logger = logger;
 
-    public ImageSharpService(ILogger<ImageSharpService> logger)
-    {
-        _logger = logger;
-    }
-
-    public bool IsImage(string contentType)
+  public bool IsImage(string contentType)
     {
         return SupportedContentTypes.Contains(contentType);
     }

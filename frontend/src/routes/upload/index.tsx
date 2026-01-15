@@ -50,27 +50,8 @@ const cleanFilename = (filename: string): string => {
 };
 
 export const useUserSession = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+  const user = requestEvent.sharedMap.get("user");
   
-  if (!session?.user?.email) {
-    throw requestEvent.redirect(302, "/");
-  }
-
-  // Get user's API key and settings
-  const { db } = await import("~/lib/db");
-  
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      apiKeys: {
-        where: { isActive: true },
-        orderBy: { createdAt: 'desc' },
-        take: 1
-      },
-      settings: true
-    }
-  });
-
   if (!user) {
     throw requestEvent.redirect(302, "/");
   }
@@ -79,8 +60,21 @@ export const useUserSession = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/dashboard?error=upload_not_approved");
   }
 
-  const apiKey = user.apiKeys[0]?.key;
-  
+  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  const cookies = requestEvent.request.headers.get("cookie") || "";
+  let apiKey: string | null = null;
+  try {
+    const response = await fetch(`${apiUrl}/api/api-keys/latest`, {
+      headers: { Cookie: cookies }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      apiKey = data.key;
+    }
+  } catch {
+    apiKey = null;
+  }
+
   if (!apiKey) {
     throw requestEvent.redirect(302, "/dashboard?error=no_api_key");
   }
@@ -90,10 +84,10 @@ export const useUserSession = routeLoader$(async (requestEvent) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      maxFileSize: user.settings?.maxFileSize ? Number(user.settings.maxFileSize) : 10485760,
+      maxFileSize: user.settings?.maxFileSize || 10485760,
       maxUploads: user.settings?.maxUploads || 100,
-      storageUsed: user.settings?.storageUsed ? Number(user.settings.storageUsed) : 0,
-      maxStorageLimit: user.settings?.maxStorageLimit ? Number(user.settings.maxStorageLimit) : 104857600,
+      storageUsed: user.settings?.storageUsed || 0,
+      maxStorageLimit: user.settings?.maxStorageLimit || 104857600,
     },
     apiKey,
     origin: requestEvent.url.origin

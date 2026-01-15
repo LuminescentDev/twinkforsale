@@ -18,18 +18,16 @@ import {
   Palette,
 } from "lucide-icons-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
-import { db } from "~/lib/db";
 import { getAnalyticsData } from "~/lib/analytics";
 export const usePublicStats = routeLoader$(async () => {
   try {
-    // Get total counts
-    const totalUploads = await db.upload.count();
-    const totalViews = await db.upload.aggregate({
-      _sum: { views: true },
-    });
-    const totalUsers = await db.user.count();
+    const apiUrl = process.env.API_URL || "http://localhost:5000/api";
+    const statsResponse = await fetch(`${apiUrl}/public/stats`);
+    if (!statsResponse.ok) {
+      throw new Error("Failed to fetch public stats");
+    }
 
-    // Get analytics data for the last 7 days
+    const stats = await statsResponse.json();
     const analyticsData = await getAnalyticsData(7);
 
     // Calculate 7-day totals
@@ -43,24 +41,13 @@ export const usePublicStats = routeLoader$(async () => {
     );
 
     // Get recent upload activity (anonymized)
-    const recentUploads = await db.upload.findMany({
-      select: {
-        id: true,
-        createdAt: true,
-        mimeType: true,
-        views: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    });
-
     return {
-      totalUploads,
-      totalViews: totalViews._sum.views || 0,
-      totalUsers,
+      totalUploads: stats.totalUploads || 0,
+      totalViews: stats.totalViews || 0,
+      totalUsers: stats.totalUsers || 0,
       weeklyStats,
       analyticsData,
-      recentUploads,
+      recentUploads: stats.recentUploads || [],
     };
   } catch (error) {
     console.error("Error fetching public stats:", error);

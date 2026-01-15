@@ -11,12 +11,16 @@ public class ServeFileRequest
     public string ShortCode { get; set; } = null!;
 }
 
-public class ServeFileEndpoint : Endpoint<ServeFileRequest>
+public class ServeFileEndpoint(
+    AppDbContext db,
+    IStorageService storage,
+    IConfiguration config,
+    ILogger<ServeFileEndpoint> logger) : Endpoint<ServeFileRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IStorageService _storage;
-    private readonly IConfiguration _config;
-    private readonly ILogger<ServeFileEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly IStorageService _storage = storage;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger<ServeFileEndpoint> _logger = logger;
 
     // Common bot user agents for embed detection
     private static readonly string[] BotUserAgents =
@@ -30,19 +34,7 @@ public class ServeFileEndpoint : Endpoint<ServeFileRequest>
         "whatsapp"
     ];
 
-    public ServeFileEndpoint(
-        AppDbContext db,
-        IStorageService storage,
-        IConfiguration config,
-        ILogger<ServeFileEndpoint> logger)
-    {
-        _db = db;
-        _storage = storage;
-        _config = config;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/f/{ShortCode}");
         AllowAnonymous();

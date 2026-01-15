@@ -11,23 +11,16 @@ public class DeleteUploadRequest
     public string Id { get; set; } = null!;
 }
 
-public class DeleteUploadEndpoint : Endpoint<DeleteUploadRequest>
+public class DeleteUploadEndpoint(
+    AppDbContext db,
+    IStorageService storage,
+    ILogger<DeleteUploadEndpoint> logger) : Endpoint<DeleteUploadRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IStorageService _storage;
-    private readonly ILogger<DeleteUploadEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly IStorageService _storage = storage;
+    private readonly ILogger<DeleteUploadEndpoint> _logger = logger;
 
-    public DeleteUploadEndpoint(
-        AppDbContext db,
-        IStorageService storage,
-        ILogger<DeleteUploadEndpoint> logger)
-    {
-        _db = db;
-        _storage = storage;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/uploads/{Id}");
         AuthSchemes("JWT", "ApiKey");

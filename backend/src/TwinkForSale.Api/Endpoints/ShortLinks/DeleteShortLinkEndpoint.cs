@@ -10,18 +10,12 @@ public class DeleteShortLinkRequest
     public string Id { get; set; } = null!;
 }
 
-public class DeleteShortLinkEndpoint : Endpoint<DeleteShortLinkRequest>
+public class DeleteShortLinkEndpoint(AppDbContext db, ILogger<DeleteShortLinkEndpoint> logger) : Endpoint<DeleteShortLinkRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<DeleteShortLinkEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<DeleteShortLinkEndpoint> _logger = logger;
 
-    public DeleteShortLinkEndpoint(AppDbContext db, ILogger<DeleteShortLinkEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Delete("/short-links/{Id}");
         AuthSchemes("JWT", "ApiKey");

@@ -1,76 +1,64 @@
-import fs from "fs";
-import path from "path";
-import { db } from "~/lib/db";
-import { getEnvConfig } from "~/lib/env";
+import type { RequestEvent } from "@builder.io/qwik-city";
+
+const API_BASE_URL = process.env.API_URL || "http://localhost:5000/api";
+
+async function serverRequest<T>(
+  endpoint: string,
+  requestEvent?: RequestEvent,
+  options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
+): Promise<T> {
+  const { params, ...fetchOptions } = options;
+
+  let url = `${API_BASE_URL}${endpoint}`;
+
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+  }
+
+  const cookies = requestEvent?.request.headers.get("cookie") || "";
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookies ? { Cookie: cookies } : {}),
+      ...fetchOptions.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || response.statusText);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json();
+}
 
 /**
  * Cleanup expired files and files that exceeded view limits
  */
-export async function cleanupExpiredFiles() {
+export async function cleanupExpiredFiles(requestEvent?: RequestEvent) {
   try {
-    const now = new Date();
-    const { getStorageProvider } = await import("~/lib/storage-server");
-    const storage = getStorageProvider();
-
-    // Find files that are expired or exceeded view limits
-    const allFiles = await db.upload.findMany({
-      where: {
-        OR: [
-          {
-            expiresAt: {
-              lte: now
-            }
-          },
-          {
-            maxViews: {
-              not: null
-            }
-          }
-        ]
-      }
-    });    // Filter files that exceeded view limits (since Prisma doesn't support field-to-field comparison)
-    const filesToDelete = allFiles.filter(file =>
-      (file.expiresAt && now > file.expiresAt) ||
-      (file.maxViews && file.views >= file.maxViews)
-    );
-
-    console.log(`Found ${filesToDelete.length} files to cleanup`);    if (filesToDelete.length === 0) {
+    if (!requestEvent) {
       return { cleaned: 0 };
     }
 
-    let cleanedCount = 0;
-
-    for (const file of filesToDelete) {
-      try {        // Delete from storage (R2 or filesystem)
-        const fileKey = storage.generateFileKey(file.filename, file.userId || "");
-        await storage.deleteFile(fileKey);
-
-        // Update user storage if the file had a user
-        if (file.userId) {
-          await db.userSettings.update({
-            where: { userId: file.userId },
-            data: {
-              storageUsed: {
-                decrement: file.size
-              }
-            }
-          });
-        }
-
-        // Delete database record
-        await db.upload.delete({
-          where: { id: file.id }
-        });
-
-        cleanedCount++;
-        console.log(`Cleaned up expired file: ${file.originalName} (${file.shortCode})`);
-      } catch (error: any) {
-        console.error(`Failed to cleanup file ${file.shortCode}:`, error);
-      }
-    }
-
-    console.log(`Cleanup completed. Cleaned ${cleanedCount} files.`);
-    return { cleaned: cleanedCount };
+    return await serverRequest<{ cleaned: number }>("/admin/uploads/cleanup", requestEvent, {
+      method: "POST",
+    });
   } catch (error: any) {
     console.error('Cleanup process failed:', error);
     throw error;
@@ -80,9 +68,9 @@ export async function cleanupExpiredFiles() {
 /**
  * Auto-cleanup function that can be called periodically
  */
-export async function autoCleanup() {
+export async function autoCleanup(requestEvent?: RequestEvent) {
   try {
-    const result = await cleanupExpiredFiles();
+    const result = await cleanupExpiredFiles(requestEvent);
     console.log(`Auto-cleanup completed: ${result.cleaned} files cleaned`);
     return result;
   } catch (error: any) {

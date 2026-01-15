@@ -38,16 +38,11 @@ public class BioSettingsDto
     public List<BioLinkDto> Links { get; set; } = [];
 }
 
-public class GetBioEndpoint : EndpointWithoutRequest
+public class GetBioEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public GetBioEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/bio");
         AuthSchemes("JWT");

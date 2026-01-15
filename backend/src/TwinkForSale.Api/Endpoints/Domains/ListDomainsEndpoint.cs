@@ -15,16 +15,11 @@ public class PublicDomainDto
     public bool SupportsSubdomains { get; set; }
 }
 
-public class ListDomainsEndpoint : EndpointWithoutRequest
+public class ListDomainsEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public ListDomainsEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/domains");
         AuthSchemes("JWT");

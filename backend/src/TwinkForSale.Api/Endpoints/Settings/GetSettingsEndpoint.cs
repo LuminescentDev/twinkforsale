@@ -36,16 +36,11 @@ public class UserSettingsDto
     public int? DefaultMaxViews { get; set; }
 }
 
-public class GetSettingsEndpoint : EndpointWithoutRequest
+public class GetSettingsEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public GetSettingsEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/settings");
         AuthSchemes("JWT", "ApiKey");

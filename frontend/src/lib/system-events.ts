@@ -1,8 +1,50 @@
+import type { RequestEvent } from '@builder.io/qwik-city';
 import { getDiskUsage } from './server-utils';
 import { sendCriticalEventNotification, sendDiscordNotification } from './discord-notifications';
-import { db } from './db';
 import { getEnvConfig } from './env';
 import os from 'os';
+
+const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
+
+async function serverRequest<T>(
+  endpoint: string,
+  requestEvent?: RequestEvent,
+  options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
+): Promise<T> {
+  const { params, ...fetchOptions } = options;
+
+  let url = `${API_BASE_URL}${endpoint}`;
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, String(value));
+    });
+    const queryString = searchParams.toString();
+    if (queryString) url += `?${queryString}`;
+  }
+
+  const cookies = requestEvent?.request.headers.get('cookie') || '';
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookies ? { Cookie: cookies } : {}),
+      ...fetchOptions.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || response.statusText);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json();
+}
 
 export type EventType =
   | 'USER_STORAGE_WARNING'
@@ -31,6 +73,22 @@ export interface SystemMetrics {
 
 export interface EventMetadata {
   [key: string]: any;
+}
+
+export interface SystemEventDto {
+  id: string;
+  type: string;
+  severity: string;
+  title: string;
+  message: string;
+  metadata?: string | null;
+  userId?: string | null;
+  userEmail?: string | null;
+  userName?: string | null;
+  cpuUsage?: number | null;
+  memoryUsage?: number | null;
+  diskUsage?: number | null;
+  createdAt: string;
 }
 
 /**
@@ -93,7 +151,8 @@ export async function createSystemEvent(
     userId?: string;
     metadata?: EventMetadata;
     includeMetrics?: boolean;
-  } = {}
+  } = {},
+  requestEvent?: RequestEvent
 ) {
   const { userId, metadata, includeMetrics = true } = options;
 
@@ -112,19 +171,24 @@ export async function createSystemEvent(
     }
   }
 
-  const event = await db.systemEvent.create({
-    data: {
-      type,
-      severity,
-      title,
-      message,
-      metadata: metadata ?? undefined,
-      userId,
-      cpuUsage: metrics.cpuUsage,
-      memoryUsage: metrics.memoryUsage,
-      diskUsage: metrics.diskUsage
+  const event = await serverRequest<{ id: string }>(
+    '/admin/system-events',
+    requestEvent,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        type,
+        severity,
+        title,
+        message,
+        userId,
+        metadata: metadata ?? undefined,
+        cpuUsage: metrics.cpuUsage,
+        memoryUsage: metrics.memoryUsage,
+        diskUsage: metrics.diskUsage
+      })
     }
-  });
+  );
   console.log(`[${severity}] ${type}: ${title}`);
 
   // Send Discord notification for critical/error events and user registrations
@@ -132,11 +196,12 @@ export async function createSystemEvent(
     // Get user email if userId is provided
     let userEmail: string | undefined;
     if (userId) {
-      const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { email: true }
-      });
-      userEmail = user?.email;
+      try {
+        const usage = await serverRequest<{ email: string }>('/admin/users/' + userId + '/usage', requestEvent);
+        userEmail = usage.email;
+      } catch {
+        userEmail = undefined;
+      }
     }
 
     // Send critical/error events through the critical notification function
@@ -181,107 +246,84 @@ export async function createSystemEvent(
 /**
  * Check user storage usage and create alerts if needed
  */
-export async function checkUserStorageAlerts(userId: string) {
+export async function checkUserStorageAlerts(userId: string, requestEvent?: RequestEvent) {
   try {
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      include: {
-        uploads: {
-          select: { size: true }
-        },
-        settings: true
-      }
-    });
-
-    if (!user) return;
-
-    const totalStorage = user.uploads.reduce((sum: number, upload: any) => sum + Number(upload.size), 0);
-    const storageLimit = Number(user.settings?.maxStorageLimit || BigInt(10737418240)); // 10GB default
-    const storageUsagePercent = (totalStorage / storageLimit) * 100;
-
-    // Update user's storage usage
-    if (user.settings) {
-      await db.userSettings.update({
-        where: { userId: userId },
-        data: { storageUsed: BigInt(totalStorage) }
-      });
-    } else {
-      // Create default settings if they don't exist
-      await db.userSettings.create({
-        data: {
-          userId: userId,
-          storageUsed: BigInt(totalStorage)
-        }
-      });
-    }
+    const limits = await serverRequest<{
+      storageUsed: number;
+      storageLimit: number;
+      storageUsagePercent: number;
+      fileCount: number;
+      fileLimit: number;
+      fileUsagePercent: number;
+    }>(`/admin/users/${userId}/limits`, requestEvent);
 
     // Storage alerts
-    if (storageUsagePercent >= 95) {
+    if (limits.storageUsagePercent >= 95) {
       await createSystemEvent(
         'USER_STORAGE_CRITICAL',
         'CRITICAL',
         'User Storage Critical',
-        `User ${user.email} is using ${storageUsagePercent.toFixed(1)}% of storage limit`,
+        `User ${userId} is using ${limits.storageUsagePercent.toFixed(1)}% of storage limit`,
         {
           userId,
           metadata: {
-            storageUsed: totalStorage,
-            storageLimit,
-            usagePercent: storageUsagePercent
+            storageUsed: limits.storageUsed,
+            storageLimit: limits.storageLimit,
+            usagePercent: limits.storageUsagePercent
           }
-        }
+        },
+        requestEvent
       );
-    } else if (storageUsagePercent >= 80) {
+    } else if (limits.storageUsagePercent >= 80) {
       await createSystemEvent(
         'USER_STORAGE_WARNING',
         'WARNING',
         'User Storage Warning',
-        `User ${user.email} is using ${storageUsagePercent.toFixed(1)}% of storage limit`,
+        `User ${userId} is using ${limits.storageUsagePercent.toFixed(1)}% of storage limit`,
         {
           userId,
           metadata: {
-            storageUsed: totalStorage,
-            storageLimit,
-            usagePercent: storageUsagePercent
+            storageUsed: limits.storageUsed,
+            storageLimit: limits.storageLimit,
+            usagePercent: limits.storageUsagePercent
           }
-        }
+        },
+        requestEvent
       );
     }
 
     // File count alerts
-    const fileCount = user.uploads.length;
-    const fileLimit = user.settings?.maxUploads || 1000; // Default limit
-    const fileUsagePercent = (fileCount / fileLimit) * 100;
-
-    if (fileUsagePercent >= 95) {
+    if (limits.fileUsagePercent >= 95) {
       await createSystemEvent(
         'USER_FILE_LIMIT_CRITICAL',
         'CRITICAL',
         'User File Limit Critical',
-        `User ${user.email} has ${fileCount}/${fileLimit} files (${fileUsagePercent.toFixed(1)}%)`,
+        `User ${userId} has ${limits.fileCount}/${limits.fileLimit} files (${limits.fileUsagePercent.toFixed(1)}%)`,
         {
           userId,
           metadata: {
-            fileCount,
-            fileLimit,
-            usagePercent: fileUsagePercent
+            fileCount: limits.fileCount,
+            fileLimit: limits.fileLimit,
+            usagePercent: limits.fileUsagePercent
           }
-        }
+        },
+        requestEvent
       );
-    } else if (fileUsagePercent >= 80) {
+    } else if (limits.fileUsagePercent >= 80) {
       await createSystemEvent(
         'USER_FILE_LIMIT_WARNING',
         'WARNING',
         'User File Limit Warning',
-        `User ${user.email} has ${fileCount}/${fileLimit} files (${fileUsagePercent.toFixed(1)}%)`,
+        `User ${userId} has ${limits.fileCount}/${limits.fileLimit} files (${limits.fileUsagePercent.toFixed(1)}%)`,
         {
           userId,
           metadata: {
-            fileCount,
-            fileLimit,
-            usagePercent: fileUsagePercent
+            fileCount: limits.fileCount,
+            fileLimit: limits.fileLimit,
+            usagePercent: limits.fileUsagePercent
           }
-        }
+        },
+        requestEvent
       );
     }
 
@@ -295,7 +337,8 @@ export async function checkUserStorageAlerts(userId: string) {
       {
         userId,
         metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
-      }
+      },
+      requestEvent
     );
   }
 }
@@ -303,7 +346,7 @@ export async function checkUserStorageAlerts(userId: string) {
 /**
  * Check system-wide alerts
  */
-export async function checkSystemAlerts() {
+export async function checkSystemAlerts(requestEvent?: RequestEvent) {
   try {
     const metrics = await getSystemMetrics();
 
@@ -317,7 +360,8 @@ export async function checkSystemAlerts() {
         {
           metadata: { cpuUsage: metrics.cpuUsage },
           includeMetrics: false
-        }
+        },
+        requestEvent
       );
     }
 
@@ -331,7 +375,8 @@ export async function checkSystemAlerts() {
         {
           metadata: { memoryUsage: metrics.memoryUsage },
           includeMetrics: false
-        }
+        },
+        requestEvent
       );
     }    // Disk space alerts (only check if using filesystem storage)
     const config = getEnvConfig();
@@ -346,7 +391,8 @@ export async function checkSystemAlerts() {
         {
           metadata: { diskUsage: metrics.diskUsage },
           includeMetrics: false
-        }
+        },
+        requestEvent
       );
     } else if (!isUsingR2 && metrics.diskUsage >= 80) {
       await createSystemEvent(
@@ -357,7 +403,8 @@ export async function checkSystemAlerts() {
         {
           metadata: { diskUsage: metrics.diskUsage },
           includeMetrics: false
-        }
+        },
+        requestEvent
       );
     }
 
@@ -370,7 +417,8 @@ export async function checkSystemAlerts() {
       `Failed to check system alerts: ${error instanceof Error ? error.message : 'Unknown error'}`,
       {
         metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
-      }
+      },
+      requestEvent
     );
   }
 }
@@ -380,83 +428,62 @@ export async function checkSystemAlerts() {
  */
 export async function getRecentSystemEvents(
   limit: number = 50,
-  severity?: EventSeverity, userId?: string
+  severity?: EventSeverity,
+  userId?: string,
+  requestEvent?: RequestEvent
 ) {
-  return await db.systemEvent.findMany({
-    where: {
-      ...(severity && { severity }),
-      ...(userId && { userId })
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    include: {
-      user: {
-        select: {
-          email: true,
-          name: true
-        }
-      }
-    }
-  });
+  return await serverRequest<SystemEventDto[]>(
+    '/admin/system-events',
+    requestEvent,
+    { params: { limit, severity, userId } }
+  );
 }
 
 /**
  * Get system events statistics
  */
-export async function getSystemEventsStats(hours: number = 24) {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+export async function getSystemEventsStats(hours: number = 24, requestEvent?: RequestEvent) {
+  const stats = await serverRequest<{ counts: Record<string, number> }>(
+    '/admin/system-events/stats',
+    requestEvent,
+    { params: { hours } }
+  );
 
-  const stats = await db.systemEvent.groupBy({
-    by: ['severity'],
-    where: {
-      createdAt: { gte: since }
-    },
-    _count: {
-      id: true
-    }
-  });
-
-  return stats.reduce((acc: any, stat: any) => {
-    acc[stat.severity as EventSeverity] = stat._count.id;
-    return acc;
-  }, {} as Record<EventSeverity, number>);
+  return stats.counts as Record<EventSeverity, number>;
 }
 
 /**
  * Clean up old system events (keep last 30 days)
  */
-export async function cleanupOldEvents() {
-  const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+export async function cleanupOldEvents(requestEvent?: RequestEvent) {
+  const result = await serverRequest<{ deletedCount: number }>(
+    '/admin/system-events/cleanup',
+    requestEvent,
+    { method: 'POST' }
+  );
 
-  const result = await db.systemEvent.deleteMany({
-    where: {
-      createdAt: { lt: cutoffDate }
-    }
-  });
-
-  if (result.count > 0) {
+  if (result.deletedCount > 0) {
     await createSystemEvent(
       'BULK_STORAGE_CLEANUP',
       'INFO',
       'System Events Cleanup',
-      `Cleaned up ${result.count} old system events (older than 30 days)`,
+      `Cleaned up ${result.deletedCount} old system events (older than 30 days)`,
       {
-        metadata: { deletedCount: result.count, cutoffDate: cutoffDate.toISOString() }
-      }
+        metadata: { deletedCount: result.deletedCount }
+      },
+      requestEvent
     );
   }
 
-  return result.count;
+  return result.deletedCount;
 }
 
 /**
  * Delete a specific system event by ID
  */
-export async function deleteSystemEvent(eventId: string): Promise<boolean> {
+export async function deleteSystemEvent(eventId: string, requestEvent?: RequestEvent): Promise<boolean> {
   try {
-    await db.systemEvent.delete({
-      where: { id: eventId }
-    });
+    await serverRequest(`/admin/system-events/${eventId}`, requestEvent, { method: 'DELETE' });
     return true;
   } catch (error) {
     console.error('Error deleting system event:', error);
@@ -467,116 +494,67 @@ export async function deleteSystemEvent(eventId: string): Promise<boolean> {
 /**
  * Clear all system events (with optional severity filter)
  */
-export async function clearAllSystemEvents(severityFilter?: EventSeverity): Promise<number> {
-  const result = await db.systemEvent.deleteMany({
-    where: severityFilter ? {
-      severity: severityFilter
-    } : {}
-  });
+export async function clearAllSystemEvents(severityFilter?: EventSeverity, requestEvent?: RequestEvent): Promise<number> {
+  const result = await serverRequest<{ deletedCount: number }>(
+    '/admin/system-events',
+    requestEvent,
+    { method: 'DELETE', params: { severity: severityFilter } }
+  );
 
-  return result.count;
+  return result.deletedCount;
 }
 
 /**
  * Clear non-critical events (INFO and WARNING)
  */
-export async function clearNonCriticalEvents(): Promise<number> {
-  const result = await db.systemEvent.deleteMany({
-    where: {
-      severity: {
-        in: ['INFO', 'WARNING']
-      }
-    }
-  });
+export async function clearNonCriticalEvents(requestEvent?: RequestEvent): Promise<number> {
+  const result = await serverRequest<{ deletedCount: number }>(
+    '/admin/system-events/non-critical',
+    requestEvent,
+    { method: 'DELETE' }
+  );
 
-  return result.count;
+  return result.deletedCount;
 }
 
 /**
  * Initialize system alerts configuration
  */
 export async function initializeSystemAlerts() {
-  // Default alert configurations
-  const defaultAlerts = [
-    {
-      eventType: 'SYSTEM_STORAGE_WARNING',
-      threshold: 80,
-      enabled: true
-    },
-    {
-      eventType: 'SYSTEM_STORAGE_CRITICAL',
-      threshold: 95,
-      enabled: true
-    },
-    {
-      eventType: 'HIGH_CPU_USAGE',
-      threshold: 90,
-      enabled: true
-    },
-    {
-      eventType: 'HIGH_MEMORY_USAGE',
-      threshold: 90,
-      enabled: true
-    }
-  ];
-
-  try {
-    for (const alert of defaultAlerts) {
-      await db.systemAlert.upsert({
-        where: { id: alert.eventType },
-        update: {},
-        create: {
-          id: alert.eventType,
-          eventType: alert.eventType as EventType,
-          threshold: alert.threshold,
-          name: alert.eventType.replace(/_/g, ' '),
-        }
-      });
-    }
-    console.log('System alerts configuration initialized');
-  } catch (error) {
-    console.error('Error initializing system alerts:', error);
-  }
+  // Backend handles alert configuration.
+  return;
 }
 
 /**
  * Check if user is approaching limits and warn them
  */
-export async function checkUserLimits(userId: string) {
+export async function checkUserLimits(userId: string, requestEvent?: RequestEvent) {
   try {
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      include: {
-        uploads: true,
-        settings: true
-      }
-    });
-
-    if (!user) return;
-
-    const totalStorage = user.uploads.reduce((sum: number, upload: any) => sum + Number(upload.size), 0);
-    const storageLimit = Number(user.settings?.maxStorageLimit || BigInt(10737418240)); // 10GB default
-    const storageUsagePercent = (totalStorage / storageLimit) * 100;
-
-    const fileCount = user.uploads.length;
-    const fileLimit = user.settings?.maxUploads || 1000;
-    const fileUsagePercent = (fileCount / fileLimit) * 100;
+    const limits = await serverRequest<{
+      storageUsed: number;
+      storageLimit: number;
+      storageUsagePercent: number;
+      fileCount: number;
+      fileLimit: number;
+      fileUsagePercent: number;
+      storageApproaching: boolean;
+      filesApproaching: boolean;
+    }>(`/admin/users/${userId}/limits`, requestEvent);
 
     return {
       storage: {
-        used: totalStorage,
-        limit: storageLimit,
-        usagePercent: storageUsagePercent,
-        approaching: storageUsagePercent >= 80
+        used: limits.storageUsed,
+        limit: limits.storageLimit,
+        usagePercent: limits.storageUsagePercent,
+        approaching: limits.storageApproaching
       },
       files: {
-        count: fileCount,
-        limit: fileLimit,
-        usagePercent: fileUsagePercent,
-        approaching: fileUsagePercent >= 80
+        count: limits.fileCount,
+        limit: limits.fileLimit,
+        usagePercent: limits.fileUsagePercent,
+        approaching: limits.filesApproaching
       }
     };
-
   } catch (error) {
     console.error('Error checking user limits:', error);
     return null;

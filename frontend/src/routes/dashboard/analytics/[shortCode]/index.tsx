@@ -14,47 +14,49 @@ import {
   FileDown,
 } from "lucide-icons-qwik";
 import { DetailedAnalyticsChart } from "~/components/charts/detailed-analytics-chart";
-import { db } from "~/lib/db";
 import { getUploadAnalytics } from "~/lib/analytics";
 import { formatBytes } from "~/lib/utils";
 export const useFileAnalytics = routeLoader$(async (requestEvent) => {
-  const session = requestEvent.sharedMap.get("session");
+  const user = requestEvent.sharedMap.get("user");
   const shortCode = requestEvent.params.shortCode;
 
-  if (!session?.user?.email) {
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Find the upload by shortCode and verify ownership
-  const upload = await db.upload.findUnique({
-    where: { shortCode },
-    include: { user: true },
+  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  const cookies = requestEvent.request.headers.get("cookie") || "";
+  const uploadResponse = await fetch(`${apiUrl}/api/uploads/short/${shortCode}`, {
+    headers: { Cookie: cookies }
   });
 
-  if (!upload) {
+  if (!uploadResponse.ok) {
     throw requestEvent.redirect(302, "/dashboard/uploads");
   }
 
-  // Verify user owns this upload
-  if (upload.user?.email !== session.user.email) {
-    throw requestEvent.redirect(302, "/dashboard/uploads");
-  }
+  const upload = await uploadResponse.json();
 
   // Get detailed analytics for the last 30 days
-  const analytics = await getUploadAnalytics(upload.id, 30);
+  const analytics = await getUploadAnalytics(upload.id, 30, requestEvent);
 
   // Get detailed view logs for analytics
-  const viewLogs = await db.viewLog.findMany({
-    where: { uploadId: upload.id },
-    orderBy: { viewedAt: "desc" },
-    take: 100, // Last 100 views
+  const logsResponse = await fetch(`${apiUrl}/api/uploads/${upload.id}/logs?limit=100`, {
+    headers: { Cookie: cookies }
   });
-  // Get detailed download logs for analytics
-  const downloadLogs = await db.downloadLog.findMany({
-    where: { uploadId: upload.id },
-    orderBy: { downloadedAt: "desc" },
-    take: 100, // Last 100 downloads
-  });
+
+  const logsData = logsResponse.ok
+    ? await logsResponse.json()
+    : { viewLogs: [], downloadLogs: [] };
+
+  const viewLogs = (logsData.viewLogs || []).map((log: any) => ({
+    ...log,
+    viewedAt: new Date(log.viewedAt),
+  }));
+
+  const downloadLogs = (logsData.downloadLogs || []).map((log: any) => ({
+    ...log,
+    downloadedAt: new Date(log.downloadedAt),
+  }));
   // Function to redact IP addresses - only show first two octets for privacy
   // This prevents users from accessing full IP addresses via dev tools
   const redactIpAddress = (ip: string | null): string => {
@@ -136,7 +138,7 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
   return {
     upload: {
       ...upload,
-      size: Number(upload.size) // Convert BigInt to number
+      size: Number(upload.size)
     },
     analytics,
     viewLogs: viewLogs.slice(0, 20).map((log) => ({
@@ -150,8 +152,8 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
     referrerStats,
     deviceStats,
     hourlyActivity,
-    totalViews: upload.views,
-    totalDownloads: upload.downloads,
+    totalViews: upload.viewCount,
+    totalDownloads: upload.downloadCount,
     origin: requestEvent.url.origin,
   };
 });

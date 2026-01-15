@@ -3,7 +3,6 @@ using System.Text.Json;
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Data;
-using TwinkForSale.Api.Entities;
 using TwinkForSale.Api.Services;
 using TwinkForSale.Api.Services.Image;
 using TwinkForSale.Api.Services.Storage;
@@ -17,32 +16,22 @@ public class UploadResponse
     public string? ThumbnailUrl { get; set; }
 }
 
-public class UploadFileEndpoint : EndpointWithoutRequest
+public class UploadFileEndpoint(
+    AppDbContext db,
+    IStorageService storage,
+    IImageService imageService,
+    IShortCodeService shortCodeService,
+    IConfiguration config,
+    ILogger<UploadFileEndpoint> logger) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
-    private readonly IStorageService _storage;
-    private readonly IImageService _imageService;
-    private readonly IShortCodeService _shortCodeService;
-    private readonly IConfiguration _config;
-    private readonly ILogger<UploadFileEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly IStorageService _storage = storage;
+    private readonly IImageService _imageService = imageService;
+    private readonly IShortCodeService _shortCodeService = shortCodeService;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger<UploadFileEndpoint> _logger = logger;
 
-    public UploadFileEndpoint(
-        AppDbContext db,
-        IStorageService storage,
-        IImageService imageService,
-        IShortCodeService shortCodeService,
-        IConfiguration config,
-        ILogger<UploadFileEndpoint> logger)
-    {
-        _db = db;
-        _storage = storage;
-        _imageService = imageService;
-        _shortCodeService = shortCodeService;
-        _config = config;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Post("/upload");
         AuthSchemes("ApiKey");

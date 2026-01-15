@@ -29,18 +29,12 @@ public class OEmbedResponse
     public int? ThumbnailHeight { get; set; }
 }
 
-public class OEmbedEndpoint : Endpoint<OEmbedRequest>
+public class OEmbedEndpoint(AppDbContext db, IConfiguration config) : Endpoint<OEmbedRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
+    private readonly AppDbContext _db = db;
+    private readonly IConfiguration _config = config;
 
-    public OEmbedEndpoint(AppDbContext db, IConfiguration config)
-    {
-        _db = db;
-        _config = config;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/oembed");
         AllowAnonymous();

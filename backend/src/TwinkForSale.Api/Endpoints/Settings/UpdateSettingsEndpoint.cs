@@ -28,18 +28,12 @@ public class UpdateSettingsRequest
     public int? DefaultMaxViews { get; set; }
 }
 
-public class UpdateSettingsEndpoint : Endpoint<UpdateSettingsRequest>
+public class UpdateSettingsEndpoint(AppDbContext db, ILogger<UpdateSettingsEndpoint> logger) : Endpoint<UpdateSettingsRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<UpdateSettingsEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<UpdateSettingsEndpoint> _logger = logger;
 
-    public UpdateSettingsEndpoint(AppDbContext db, ILogger<UpdateSettingsEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Put("/settings");
         AuthSchemes("JWT");

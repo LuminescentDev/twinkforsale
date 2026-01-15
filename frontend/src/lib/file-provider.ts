@@ -2,7 +2,6 @@
 import { getEnvConfig } from './env';
 import { getR2Storage } from './r2-storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { db } from './db';
 import fs from 'fs';
 import path from 'path';
 
@@ -172,15 +171,6 @@ export function getFileProvider(): FileProvider {
 
 // Helper function to get file by short code (for backwards compatibility)
 export async function getFileByShortCode(shortCode: string): Promise<FileData | null> {
-  // We need to look up the file in the database first to get the storage key
-  const upload = await db.upload.findUnique({
-    where: { shortCode }
-  });
-
-  if (!upload) {
-    return null;
-  }
-
-  const fileProvider = getFileProvider();
-  return await fileProvider.getFile(upload.filename);
+  console.warn("getFileByShortCode is no longer supported without backend metadata.", shortCode);
+  return null;
 }

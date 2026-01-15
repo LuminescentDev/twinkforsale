@@ -13,18 +13,12 @@ public class CreateDomainRequest
     public bool IsDefault { get; set; }
 }
 
-public class CreateDomainEndpoint : Endpoint<CreateDomainRequest>
+public class CreateDomainEndpoint(AppDbContext db, ILogger<CreateDomainEndpoint> logger) : Endpoint<CreateDomainRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<CreateDomainEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<CreateDomainEndpoint> _logger = logger;
 
-    public CreateDomainEndpoint(AppDbContext db, ILogger<CreateDomainEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Post("/admin/domains");
         AuthSchemes("JWT");

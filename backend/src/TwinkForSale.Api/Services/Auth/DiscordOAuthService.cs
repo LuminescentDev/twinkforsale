@@ -10,24 +10,17 @@ public interface IDiscordOAuthService
     Task<DiscordUser?> GetUserAsync(string accessToken);
 }
 
-public class DiscordOAuthService : IDiscordOAuthService
+public class DiscordOAuthService(IConfiguration config, HttpClient httpClient, ILogger<DiscordOAuthService> logger) : IDiscordOAuthService
 {
-    private readonly IConfiguration _config;
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<DiscordOAuthService> _logger;
+    private readonly IConfiguration _config = config;
+    private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger<DiscordOAuthService> _logger = logger;
 
     private const string AuthorizeUrl = "https://discord.com/api/oauth2/authorize";
     private const string TokenUrl = "https://discord.com/api/oauth2/token";
     private const string UserUrl = "https://discord.com/api/users/@me";
 
-    public DiscordOAuthService(IConfiguration config, HttpClient httpClient, ILogger<DiscordOAuthService> logger)
-    {
-        _config = config;
-        _httpClient = httpClient;
-        _logger = logger;
-    }
-
-    public string GetAuthorizationUrl(string state)
+  public string GetAuthorizationUrl(string state)
     {
         var clientId = _config["Discord:ClientId"];
         var redirectUri = Uri.EscapeDataString(_config["Discord:RedirectUri"]!);

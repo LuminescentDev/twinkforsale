@@ -17,16 +17,11 @@ public class ApiKeyDto
     public DateTime? ExpiresAt { get; set; }
 }
 
-public class ListApiKeysEndpoint : EndpointWithoutRequest
+public class ListApiKeysEndpoint(AppDbContext db) : EndpointWithoutRequest
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _db = db;
 
-    public ListApiKeysEndpoint(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Get("/api-keys");
         AuthSchemes("JWT");

@@ -22,18 +22,12 @@ public class CreateApiKeyResponse
     public DateTime? ExpiresAt { get; set; }
 }
 
-public class CreateApiKeyEndpoint : Endpoint<CreateApiKeyRequest>
+public class CreateApiKeyEndpoint(AppDbContext db, ILogger<CreateApiKeyEndpoint> logger) : Endpoint<CreateApiKeyRequest>
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<CreateApiKeyEndpoint> _logger;
+    private readonly AppDbContext _db = db;
+    private readonly ILogger<CreateApiKeyEndpoint> _logger = logger;
 
-    public CreateApiKeyEndpoint(AppDbContext db, ILogger<CreateApiKeyEndpoint> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
-
-    public override void Configure()
+  public override void Configure()
     {
         Post("/api-keys");
         AuthSchemes("JWT");
