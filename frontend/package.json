@@ -1,10 +1,9 @@
 {
   "name": "twink-for-sale",
-  "description": "Twink For Sale",
+  "description": "Twink For Sale - Frontend",
   "engines": {
     "node": "^18.17.0 || ^20.3.0 || >=21.0.0"
   },
-  "engines-annotation": "Mostly required by sharp which needs a Node-API v9 compatible runtime",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,27 +12,17 @@
     "build.preview": "vite build --ssr src/entry.preview.tsx",
     "build.server": "vite build -c adapters/node-server/vite.config.ts",
     "build.types": "tsc --incremental --noEmit",
-    "deploy": "prisma migrate deploy && prisma generate && pnpm run build && pnpm run build.server",
+    "deploy": "pnpm run build && pnpm run build.server",
     "dev": "vite --mode ssr",
     "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
     "fmt": "prettier --write .",
     "fmt.check": "prettier --check .",
     "lint": "eslint \"src/**/*.ts*\"",
-    "postinstall": "prisma generate",
     "preview": "qwik build preview && vite preview --host",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:prod": "prisma migrate deploy",
-    "db:deploy": "npx prisma migrate deploy && npx prisma generate",
-    "migrate:r2": "tsx migrate-to-r2.ts",
-    "migrate:r2:dry-run": "tsx migrate-to-r2.ts --dry-run",
-    "test:r2": "tsx test-r2.ts",
     "start": "vite --open --mode ssr",
     "qwik": "qwik"
   },
   "devDependencies": {
-    "@auth/prisma-adapter": "^2.9.1",
-    "@auth/qwik": "0.5.4",
     "@builder.io/qwik": "^1.14.1",
     "@builder.io/qwik-city": "^1.14.1",
     "@eslint/js": "latest",
@@ -48,7 +37,6 @@
     "nanoid": "^5.1.5",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
-    "prisma": "^6.9.0",
     "tailwindcss": "^4.1.8",
     "typescript": "5.4.5",
     "typescript-eslint": "8.26.1",
@@ -58,16 +46,12 @@
     "tsx": "^4.7.1"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.839.0",
-    "@aws-sdk/s3-request-presigner": "^3.839.0",
-    "@prisma/client": "^6.9.0",
     "dotenv": "^17.0.0",
     "rehype-stringify": "^10.0.1",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "sharp": "^0.34.2",
     "unified": "^11.0.5"
   }
 }

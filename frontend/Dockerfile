@@ -2,25 +2,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install system dependencies required for sharp and other native modules
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    libc6-compat \
-    vips-dev \
-    vips
-
 # Install pnpm
 RUN npm install -g pnpm
 
 COPY . .
 
 RUN pnpm install
-
-# Set environment variables needed for Prisma during build
-ENV UPLOADS_DIR=/app/uploads
-ENV DATABASE_URL=file:/app/data/prod.db
 
 RUN pnpm run deploy
 

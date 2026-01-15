@@ -25,30 +25,11 @@ export default defineConfig(({ command, mode }): UserConfig => {
     // This tells Vite which dependencies to pre-build in dev mode.
     optimizeDeps: {
       // Put problematic deps that break bundling here, mostly those with binaries.
-      // For example ['better-sqlite3'] if you use that in server functions.
-      exclude: [
-        'fs', 
-        'path', 
-        'os', 
-        'sharp',
-        '@aws-sdk/client-s3',
-        '@aws-sdk/s3-request-presigner',
-        '@prisma/client',
-        '.prisma/client'
-      ],
+      exclude: [],
     },
     build: {
       rollupOptions: {
-        external: mode === 'development' ? [] : [
-          'fs', 
-          'path', 
-          'os', 
-          'sharp',
-          '@aws-sdk/client-s3',
-          '@aws-sdk/s3-request-presigner',
-          '@prisma/client',
-          '.prisma/client'
-        ],
+        external: [],
       },
     },
     // Ensure environment variables are available in SSR
@@ -79,8 +60,7 @@ export default defineConfig(({ command, mode }): UserConfig => {
         "Cache-Control": "public, max-age=0",
       },
       watch: {
-        // Ignore Prisma files to prevent unnecessary reloads
-        ignored: ['**/prisma/**', '**/node_modules/**']
+        ignored: ['**/node_modules/**']
       },
     },
     preview: {
