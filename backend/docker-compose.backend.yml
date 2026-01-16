@@ -42,6 +42,8 @@ services:
       - Storage__S3__BucketName=${S3_BUCKET_NAME}
       - Storage__S3__BaseUrl=${S3_BASE_URL}
       - BaseUrl=${BASE_URL:-http://localhost:3000}
+    ports:
+      - "5000:5000"
     volumes:
       - uploads:/app/uploads
     depends_on:
