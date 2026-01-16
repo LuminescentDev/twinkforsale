@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Data;
@@ -9,12 +8,7 @@ using TwinkForSale.Api.Services.Storage;
 
 namespace TwinkForSale.Api.Endpoints.Upload;
 
-public class UploadResponse
-{
-    public string Url { get; set; } = null!;
-    public string DeleteUrl { get; set; } = null!;
-    public string? ThumbnailUrl { get; set; }
-}
+public record UploadResponse(string Url, string DeleteUrl, string? ThumbnailUrl);
 
 public class UploadFileEndpoint(
     AppDbContext db,
@@ -22,21 +16,13 @@ public class UploadFileEndpoint(
     IImageService imageService,
     IShortCodeService shortCodeService,
     IConfiguration config,
-    ILogger<UploadFileEndpoint> logger) : EndpointWithoutRequest
+    ILogger<UploadFileEndpoint> logger) : EndpointWithoutRequest<UploadResponse>
 {
-    private readonly AppDbContext _db = db;
-    private readonly IStorageService _storage = storage;
-    private readonly IImageService _imageService = imageService;
-    private readonly IShortCodeService _shortCodeService = shortCodeService;
-    private readonly IConfiguration _config = config;
-    private readonly ILogger<UploadFileEndpoint> _logger = logger;
-
-  public override void Configure()
+    public override void Configure()
     {
         Post("/upload");
         AuthSchemes("ApiKey");
         AllowFileUploads();
-        Description(x => x.WithTags("Upload"));
     }
 
     public override async Task HandleAsync(CancellationToken ct)
@@ -44,51 +30,46 @@ public class UploadFileEndpoint(
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
         {
-            HttpContext.Response.StatusCode = 401;
+            await SendUnauthorizedAsync(ct);
             return;
         }
 
         // Get user with settings
-        var user = await _db.Users
+        var user = await db.Users
             .Include(u => u.Settings)
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
         if (user == null || !user.IsApproved)
         {
-            HttpContext.Response.StatusCode = 403;
-            await HttpContext.Response.WriteAsync("User not approved", ct);
+            await SendForbiddenAsync(ct);
             return;
         }
 
         var file = Files.FirstOrDefault();
         if (file == null)
         {
-            HttpContext.Response.StatusCode = 400;
-            await HttpContext.Response.WriteAsync("No file uploaded", ct);
+            await SendAsync(new UploadResponse("", "", null), 400, ct);
             return;
         }
 
         var settings = user.Settings;
         if (settings == null)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsync("User settings not found", ct);
+            await SendAsync(new UploadResponse("", "", null), 500, ct);
             return;
         }
 
         // Check file size limit
         if (file.Length > settings.MaxFileSize)
         {
-            HttpContext.Response.StatusCode = 413;
-            await HttpContext.Response.WriteAsync($"File too large. Max size: {settings.MaxFileSize} bytes", ct);
+            await SendAsync(new UploadResponse("", "", null), 413, ct);
             return;
         }
 
         // Check storage limit
         if (settings.MaxStorageLimit.HasValue && settings.StorageUsed + file.Length > settings.MaxStorageLimit.Value)
         {
-            HttpContext.Response.StatusCode = 413;
-            await HttpContext.Response.WriteAsync("Storage limit exceeded", ct);
+            await SendAsync(new UploadResponse("", "", null), 413, ct);
             return;
         }
 
@@ -97,17 +78,17 @@ public class UploadFileEndpoint(
         if (settings.UseCustomWords && !string.IsNullOrEmpty(settings.CustomWords))
         {
             var words = settings.CustomWords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            shortCode = _shortCodeService.GenerateFromWords(words);
+            shortCode = shortCodeService.GenerateFromWords(words);
         }
         else
         {
-            shortCode = _shortCodeService.Generate();
+            shortCode = shortCodeService.Generate();
         }
 
         // Ensure short code is unique
-        while (await _db.Uploads.AnyAsync(u => u.ShortCode == shortCode, ct))
+        while (await db.Uploads.AnyAsync(u => u.ShortCode == shortCode, ct))
         {
-            shortCode = _shortCodeService.Generate();
+            shortCode = shortCodeService.Generate();
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -116,17 +97,17 @@ public class UploadFileEndpoint(
 
         // Save file to storage
         await using var stream = file.OpenReadStream();
-        var storagePath = await _storage.SaveAsync(stream, fileName, contentType, ct);
+        var storagePath = await storage.SaveAsync(stream, fileName, contentType, ct);
 
         // Get image dimensions if applicable
         int? width = null;
         int? height = null;
         string? thumbnailPath = null;
 
-        if (_imageService.IsImage(contentType))
+        if (imageService.IsImage(contentType))
         {
             stream.Position = 0;
-            var dimensions = await _imageService.GetDimensionsAsync(stream, ct);
+            var dimensions = await imageService.GetDimensionsAsync(stream, ct);
             if (dimensions != null)
             {
                 width = dimensions.Width;
@@ -135,8 +116,8 @@ public class UploadFileEndpoint(
 
             // Generate thumbnail for images
             stream.Position = 0;
-            using var thumbStream = await _imageService.GenerateThumbnailAsync(stream, 200, 200, ct);
-            thumbnailPath = await _storage.SaveAsync(thumbStream, $"thumb_{fileName}", "image/jpeg", ct);
+            using var thumbStream = await imageService.GenerateThumbnailAsync(stream, 200, 200, ct);
+            thumbnailPath = await storage.SaveAsync(thumbStream, $"thumb_{fileName}", "image/jpeg", ct);
         }
 
         // Create upload record
@@ -155,25 +136,22 @@ public class UploadFileEndpoint(
             IsPublic = true
         };
 
-        _db.Uploads.Add(upload);
+        db.Uploads.Add(upload);
 
         // Update storage used
         settings.StorageUsed += file.Length;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("File uploaded: {ShortCode} by user {UserId}", shortCode, userId);
+        logger.LogInformation("File uploaded: {ShortCode} by user {UserId}", shortCode, userId);
 
         // Build response URLs
-        var baseUrl = _config["App:BaseUrl"] ?? "http://localhost:5000";
-        var response = new UploadResponse
-        {
-            Url = $"{baseUrl}/f/{shortCode}",
-            DeleteUrl = $"{baseUrl}/api/uploads/{upload.Id}",
-            ThumbnailUrl = thumbnailPath != null ? $"{baseUrl}/f/thumb_{shortCode}" : null
-        };
+        var baseUrl = config["App:BaseUrl"] ?? "http://localhost:5000";
+        var response = new UploadResponse(
+            $"{baseUrl}/f/{shortCode}",
+            $"{baseUrl}/api/uploads/{upload.Id}",
+            thumbnailPath != null ? $"{baseUrl}/f/thumb_{shortCode}" : null);
 
-        HttpContext.Response.ContentType = "application/json";
-        await JsonSerializer.SerializeAsync(HttpContext.Response.Body, response, (JsonSerializerOptions?)null, ct);
+        await SendAsync(response, cancellation: ct);
     }
 }

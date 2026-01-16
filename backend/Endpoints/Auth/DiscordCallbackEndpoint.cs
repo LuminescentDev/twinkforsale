@@ -8,11 +8,7 @@ using UserSettingsEntity = TwinkForSale.Api.Entities.UserSettings;
 
 namespace TwinkForSale.Api.Endpoints.Auth;
 
-public class DiscordCallbackRequest
-{
-    public string Code { get; set; } = null!;
-    public string State { get; set; } = null!;
-}
+public record DiscordCallbackRequest(string Code, string State);
 
 public class DiscordCallbackEndpoint(
     IDiscordOAuthService discord,
@@ -21,55 +17,43 @@ public class DiscordCallbackEndpoint(
     IConfiguration config,
     ILogger<DiscordCallbackEndpoint> logger) : Endpoint<DiscordCallbackRequest>
 {
-    private readonly IDiscordOAuthService _discord = discord;
-    private readonly IJwtService _jwt = jwt;
-    private readonly AppDbContext _db = db;
-    private readonly IConfiguration _config = config;
-    private readonly ILogger<DiscordCallbackEndpoint> _logger = logger;
-
-  public override void Configure()
+    public override void Configure()
     {
         Get("/auth/callback");
         AllowAnonymous();
-        Description(x => x.WithTags("Auth"));
     }
 
     public override async Task HandleAsync(DiscordCallbackRequest req, CancellationToken ct)
     {
-        var frontendUrl = _config["Cors:Origins"]?.Split(',').First() ?? "http://localhost:3000";
+        var frontendUrl = config["Cors:Origins"]?.Split(',').First() ?? "http://localhost:3000";
 
-        // Verify state for CSRF protection
         var storedState = HttpContext.Request.Cookies["oauth_state"];
         if (string.IsNullOrEmpty(storedState) || storedState != req.State)
         {
-            _logger.LogWarning("OAuth state mismatch");
+            logger.LogWarning("OAuth state mismatch");
             HttpContext.Response.Redirect($"{frontendUrl}?error=invalid_state");
             return;
         }
 
-        // Clear the state cookie
         HttpContext.Response.Cookies.Delete("oauth_state");
 
-        // Exchange code for tokens
-        var tokens = await _discord.ExchangeCodeAsync(req.Code);
+        var tokens = await discord.ExchangeCodeAsync(req.Code);
         if (tokens == null)
         {
-            _logger.LogError("Failed to exchange Discord code");
+            logger.LogError("Failed to exchange Discord code");
             HttpContext.Response.Redirect($"{frontendUrl}?error=token_exchange_failed");
             return;
         }
 
-        // Get Discord user info
-        var discordUser = await _discord.GetUserAsync(tokens.AccessToken);
+        var discordUser = await discord.GetUserAsync(tokens.AccessToken);
         if (discordUser == null || string.IsNullOrEmpty(discordUser.Email))
         {
-            _logger.LogError("Failed to get Discord user or email not provided");
+            logger.LogError("Failed to get Discord user or email not provided");
             HttpContext.Response.Redirect($"{frontendUrl}?error=user_fetch_failed");
             return;
         }
 
-        // Find or create user
-        var user = await _db.Users
+        var user = await db.Users
             .Include(u => u.Accounts)
             .Include(u => u.Settings)
             .FirstOrDefaultAsync(u => u.Email == discordUser.Email, ct);
@@ -86,14 +70,12 @@ public class DiscordCallbackEndpoint(
                 IsApproved = false,
                 IsAdmin = false
             };
-            _db.Users.Add(user);
+            db.Users.Add(user);
 
-            // Create default settings
             var settings = new UserSettingsEntity { UserId = user.Id };
-            _db.UserSettings.Add(settings);
+            db.UserSettings.Add(settings);
         }
 
-        // Update or create Discord account link
         var existingAccount = user.Accounts.FirstOrDefault(a => a.Provider == "discord");
         if (existingAccount != null)
         {
@@ -115,30 +97,27 @@ public class DiscordCallbackEndpoint(
                 TokenType = tokens.TokenType,
                 Scope = tokens.Scope
             };
-            _db.Accounts.Add(account);
+            db.Accounts.Add(account);
         }
 
-        // Update user info from Discord
         user.Name = discordUser.GlobalName ?? discordUser.Username;
         user.Image = discordUser.GetAvatarUrl();
         user.UpdatedAt = DateTime.UtcNow;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("User authenticated via Discord: {UserId}, New: {IsNew}", user.Id, isNewUser);
+        logger.LogInformation("User authenticated via Discord: {UserId}, New: {IsNew}", user.Id, isNewUser);
 
-        // Generate JWT tokens
-        var accessToken = _jwt.GenerateAccessToken(user);
-        var refreshToken = _jwt.GenerateRefreshToken();
+        var accessToken = jwt.GenerateAccessToken(user);
+        var refreshToken = jwt.GenerateRefreshToken();
 
-        // Set tokens in HttpOnly cookies
         HttpContext.Response.Cookies.Append("access_token", accessToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
             Path = "/",
-            MaxAge = TimeSpan.FromMinutes(int.Parse(_config["Jwt:ExpiryMinutes"] ?? "15"))
+            MaxAge = TimeSpan.FromMinutes(int.Parse(config["Jwt:ExpiryMinutes"] ?? "15"))
         });
 
         HttpContext.Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
@@ -147,10 +126,9 @@ public class DiscordCallbackEndpoint(
             Secure = true,
             SameSite = SameSiteMode.Lax,
             Path = "/",
-            MaxAge = TimeSpan.FromDays(int.Parse(_config["Jwt:RefreshExpiryDays"] ?? "7"))
+            MaxAge = TimeSpan.FromDays(int.Parse(config["Jwt:RefreshExpiryDays"] ?? "7"))
         });
 
-        // Redirect to frontend
         HttpContext.Response.Redirect($"{frontendUrl}/dashboard");
     }
 }

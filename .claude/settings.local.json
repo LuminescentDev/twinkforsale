@@ -21,7 +21,8 @@
       "Bash(dotnet sln add:*)",
       "Bash(dotnet add:*)",
       "Bash(dotnet build:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dotnet restore:*)"
     ]
   }
 }

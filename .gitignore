@@ -47,5 +47,5 @@ prisma/dev.db
 /uploads/
 prisma/dev.db-journal
 generated/
-backend/src/TwinkForSale.Api/bin/*
-backend/src/TwinkForSale.Api/obj/*
+backend/bin/*
+backend/obj/*
