@@ -6,39 +6,44 @@ import path from 'path';
 import os from 'os';
 
 /**
- * Get disk usage information using Node.js built-in fs.statSync as fallback
+ * Get disk usage information using Node.js built-ins (best-effort fallback).
  */
 async function getDiskUsageFallback(dirPath: string): Promise<{
   total: number;
-  /**
-   * Get disk usage information using Node.js built-ins
-   * @param uploadsPath - Path to the uploads directory
-   * @returns Object containing total, used, and free space in bytes
-   */
+  used: number;
+  free: number;
+  usedPercentage: number;
+}> {
+  try {
     const absolutePath = path.resolve(dirPath);
-    
+
     // Ensure the directory exists
     if (!fs.existsSync(absolutePath)) {
       fs.mkdirSync(absolutePath, { recursive: true });
     }
-    return getDiskUsageFallback(uploadsPath);
+
+    // Use memory as a rough proxy for disk usage when real disk metrics are unavailable
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const used = Math.max(totalMemory - freeMemory, 0);
+
     const estimatedTotal = totalMemory * 10;
     // Estimate free space based on memory usage patterns
     const estimatedFree = Math.max(estimatedTotal - used, freeMemory * 5);
-    
+
     const usedPercentage = estimatedTotal > 0 ? (used / estimatedTotal) * 100 : 0;
 
     return {
       total: estimatedTotal,
       used,
       free: estimatedFree,
-      usedPercentage
+      usedPercentage,
     };
   } catch (error) {
     console.error('Error getting disk usage (fallback):', error);
     // Return safe default values
     const total = 500 * 1024 * 1024 * 1024; // 500 GB
-    const free = 100 * 1024 * 1024 * 1024;  // 100 GB
+    const free = 100 * 1024 * 1024 * 1024; // 100 GB
     const used = total - free;
     const usedPercentage = total > 0 ? (used / total) * 100 : 0;
 
@@ -46,7 +51,7 @@ async function getDiskUsageFallback(dirPath: string): Promise<{
       total,
       used,
       free,
-      usedPercentage
+      usedPercentage,
     };
   }
 }

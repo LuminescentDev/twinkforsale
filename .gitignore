@@ -49,3 +49,4 @@ prisma/dev.db-journal
 generated/
 backend/bin/*
 backend/obj/*
+frontend/dist/*
