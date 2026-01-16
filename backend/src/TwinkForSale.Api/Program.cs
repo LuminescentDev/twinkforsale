@@ -12,6 +12,9 @@ using TwinkForSale.Api.Services.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Listen on all interfaces by default
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 // Configure Serilog with Loki
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
