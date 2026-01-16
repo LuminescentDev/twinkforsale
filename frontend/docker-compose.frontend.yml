@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: twinkforsale-frontend
+    environment:
+      - PUBLIC_API_URL=${API_URL:-http://backend:5000}
+    ports:
+      - "3000:3000"
+    profiles:
+      - full
