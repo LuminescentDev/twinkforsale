@@ -8,6 +8,7 @@ services:
     container_name: twinkforsale-frontend
     environment:
       - PUBLIC_API_URL=${API_URL:-http://backend:5000}
+      - PORT=3000
     ports:
       - "3000:3000"
     healthcheck:
