@@ -12,38 +12,6 @@ import qwikCityPlan from "@qwik-city-plan";
 import render from "./entry.ssr";
 import { createServer } from "node:http";
 
-// Validate required environment variables
-const requiredEnvVars = [
-  "AUTH_SECRET",
-  "DISCORD_CLIENT_ID",
-  "DISCORD_CLIENT_SECRET",
-];
-const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.error(
-    "Missing required environment variables:",
-    missingEnvVars.join(", "),
-  );
-  console.error("Please check your .env file or environment configuration");
-  process.exit(1);
-}
-
-// Log environment info for debugging
-console.log("Environment configuration:");
-console.log("- NODE_ENV:", process.env.NODE_ENV || "development");
-console.log("- PORT:", process.env.PORT || 3004);
-console.log("- DATABASE_URL:", process.env.DATABASE_URL ? "Set" : "Not set");
-console.log("- AUTH_SECRET:", process.env.AUTH_SECRET ? "Set" : "Not set");
-console.log(
-  "- DISCORD_CLIENT_ID:",
-  process.env.DISCORD_CLIENT_ID ? "Set" : "Not set",
-);
-console.log(
-  "- DISCORD_CLIENT_SECRET:",
-  process.env.DISCORD_CLIENT_SECRET ? "Set" : "Not set",
-);
-
 // Allow for dynamic port with better fallbacks
 const PORT = process.env.PORT || process.env.NODE_PORT || 3004;
 
