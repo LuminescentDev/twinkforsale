@@ -1,10 +1,10 @@
-import type { RequestEvent } from "@builder.io/qwik-city";
+import type { RequestEvent, RequestEventCommon } from "@builder.io/qwik-city";
 
 const API_BASE_URL = process.env.API_URL || "http://localhost:5000/api";
 
 async function serverRequest<T>(
   endpoint: string,
-  requestEvent?: RequestEvent,
+  requestEvent?: RequestEventCommon,
   options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
@@ -115,7 +115,7 @@ export async function getUploadTodayAnalytics(uploadId: string, requestEvent?: R
 /**
  * Gets analytics data for a specific upload over N days
  */
-export async function getUploadAnalytics(uploadId: string, days: number = 7, requestEvent?: RequestEvent) {
+export async function getUploadAnalytics(uploadId: string, days: number = 7, requestEvent?: RequestEventCommon) {
   return serverRequest<Array<{
     date: string;
     totalViews: number;
@@ -149,7 +149,7 @@ export async function getUserTodayAnalytics(userId: string, requestEvent?: Reque
 /**
  * Gets analytics data for a specific user over N days
  */
-export async function getUserAnalytics(userId: string, days: number = 7, requestEvent?: RequestEvent) {
+export async function getUserAnalytics(userId: string, days: number = 7, requestEvent?: RequestEventCommon) {
   return serverRequest<Array<{
     date: string;
     totalViews: number;

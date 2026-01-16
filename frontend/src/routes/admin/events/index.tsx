@@ -3,6 +3,7 @@ import {
   routeLoader$,
   routeAction$,
   type DocumentHead,
+  RequestEventCommon,
 } from "@builder.io/qwik-city";
 import {
   AlertTriangle,
@@ -79,7 +80,7 @@ export const useTriggerSystemCheck = routeAction$(
 
       return {
         success: true,
-        message: `System check completed for ${users.length} users`,
+        message: `System check completed for ${usersData.items?.length || 0} users`,
       };
     } catch (error) {
       console.error("System check error:", error);
@@ -240,7 +241,7 @@ export const useClearNonCriticalEvents = routeAction$(
   },
 );
 
-export const useSystemEventsData = routeLoader$(async () => {
+export const useSystemEventsData = routeLoader$(async (requestEvent: RequestEventCommon) => {
   try {
     const recentEvents = await getRecentSystemEvents(100, undefined, undefined, requestEvent); // Get more events for management
     const eventStats = await getSystemEventsStats(24, requestEvent);
@@ -645,10 +646,10 @@ export default component$(() => {
                           <div class="text-theme-text-secondary mt-1 text-xs break-words sm:text-sm">
                             {event.message}
                           </div>
-                          {event.user && (
+                          {event && (
                             <div class="text-theme-text-secondary mt-2 flex items-center gap-2 text-xs">
                               <User class="h-3 w-3 flex-shrink-0" />
-                              <span class="truncate">{event.user.email}</span>
+                              <span class="truncate">{event.userEmail}</span>
                             </div>
                           )}
                           {event.metadata && (

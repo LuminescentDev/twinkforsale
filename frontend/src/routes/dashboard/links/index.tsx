@@ -77,6 +77,7 @@ export const deleteShortLink = server$(async function (id: string) {
   try {
     await shortLinksApi.delete(id);
     return { success: true };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     throw new Error("Link not found or access denied");
   }

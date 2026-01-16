@@ -721,7 +721,7 @@ export default component$(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.topUsers.map((user, index) => (
+                    {data.topUsers.map((user: any, index: number) => (
                       <tr
                         key={index}
                         class="border-theme-card-border border-b last:border-b-0"
@@ -823,10 +823,10 @@ export default component$(() => {
                         <div class="text-theme-text-secondary mt-1 text-xs break-words sm:text-sm">
                           {event.message}
                         </div>
-                        {event.user && (
+                        {event.userEmail && (
                           <div class="text-theme-text-secondary mt-1 text-xs">
                             User:{" "}
-                            <span class="truncate">{event.user.email}</span>
+                            <span class="truncate">{event.userEmail}</span>
                           </div>
                         )}
                         {event.metadata && (

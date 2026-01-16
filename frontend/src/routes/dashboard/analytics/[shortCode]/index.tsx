@@ -16,6 +16,20 @@ import {
 import { DetailedAnalyticsChart } from "~/components/charts/detailed-analytics-chart";
 import { getUploadAnalytics } from "~/lib/analytics";
 import { formatBytes } from "~/lib/utils";
+
+interface ViewLog {
+  ipAddress: string | null;
+  viewedAt: Date;
+  referer: string | null;
+  userAgent: string | null;
+}
+
+interface DownloadLog {
+  ipAddress: string | null;
+  downloadedAt: Date;
+  referer: string | null;
+  userAgent: string | null;
+}
 export const useFileAnalytics = routeLoader$(async (requestEvent) => {
   const user = requestEvent.sharedMap.get("user");
   const shortCode = requestEvent.params.shortCode;
@@ -48,12 +62,12 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
     ? await logsResponse.json()
     : { viewLogs: [], downloadLogs: [] };
 
-  const viewLogs = (logsData.viewLogs || []).map((log: any) => ({
+  const viewLogs: ViewLog[] = (logsData.viewLogs || []).map((log: { ipAddress: string | null; viewedAt: string; referer: string | null; userAgent: string | null }) => ({
     ...log,
     viewedAt: new Date(log.viewedAt),
   }));
 
-  const downloadLogs = (logsData.downloadLogs || []).map((log: any) => ({
+  const downloadLogs: DownloadLog[] = (logsData.downloadLogs || []).map((log: { ipAddress: string | null; downloadedAt: string; referer: string | null; userAgent: string | null }) => ({
     ...log,
     downloadedAt: new Date(log.downloadedAt),
   }));
@@ -70,7 +84,7 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
 
   // Process referrer data
   const referrerStats = viewLogs.reduce(
-    (acc, log) => {
+    (acc: Record<string, number>, log: ViewLog) => {
       const referrer = log.referer || "Direct";
       const domain =
         referrer === "Direct"
@@ -95,7 +109,7 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
 
   // Process device type data from user agents
   const deviceStats = viewLogs.reduce(
-    (acc, log) => {
+    (acc: Record<string, number>, log: ViewLog) => {
       const userAgent = log.userAgent?.toLowerCase() || "";
       let device = "Unknown";
 
@@ -166,7 +180,7 @@ export default component$(() => {
       file: {
         name: data.value.upload.originalName,
         size: data.value.upload.size,
-        type: data.value.upload.mimeType,
+        type: data.value.upload.contentType,
         uploadedAt: data.value.upload.createdAt,
         shortCode: data.value.upload.shortCode,
       },
@@ -176,7 +190,9 @@ export default component$(() => {
         uniqueVisitors: new Set(
           data.value.viewLogs.map((log) => log.ipAddress).filter(Boolean),
         ).size,
-        lastViewed: data.value.upload.lastViewed,
+        lastViewed: data.value.viewLogs.length > 0
+          ? data.value.viewLogs[0].viewedAt
+          : null,
       },
       dailyAnalytics: data.value.analytics,
       referrerStats: data.value.referrerStats,
@@ -245,7 +261,7 @@ export default component$(() => {
               </p>
               <div class="text-theme-text-secondary flex flex-wrap gap-4 text-sm">
                 <span>Size: {formatFileSize(data.value.upload.size)}</span>
-                <span>Type: {data.value.upload.mimeType}</span>
+                <span>Type: {data.value.upload.contentType}</span>
                 <span>Uploaded: {formatDate(data.value.upload.createdAt)}</span>
               </div>
             </div>

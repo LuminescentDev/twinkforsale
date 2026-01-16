@@ -50,3 +50,4 @@ generated/
 backend/bin/*
 backend/obj/*
 frontend/dist/*
+frontend/server/*

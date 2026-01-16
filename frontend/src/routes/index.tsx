@@ -1,6 +1,6 @@
 import { component$ } from "@builder.io/qwik";
 import { Form, Link, useLocation, routeLoader$ } from "@builder.io/qwik-city";
-import type { DocumentHead } from "@builder.io/qwik-city";
+import type { DocumentHead, RequestEventLoader } from "@builder.io/qwik-city";
 import { useSession, useSignIn } from "~/routes/plugin@auth";
 import {
   Home,
@@ -19,10 +19,17 @@ import {
 } from "lucide-icons-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { getAnalyticsData } from "~/lib/analytics";
-export const usePublicStats = routeLoader$(async () => {
+export const usePublicStats = routeLoader$(async (requestEvent: RequestEventLoader) => {
   try {
-    const apiUrl = process.env.API_URL || "http://localhost:5000/api";
-    const statsResponse = await fetch(`${apiUrl}/public/stats`);
+    const rawApiUrl =
+      requestEvent.env.get("API_URL") ||
+      requestEvent.env.get("VITE_API_URL") ||
+      process.env.API_URL ||
+      "http://localhost:5000";
+    const apiBaseUrl = rawApiUrl.endsWith("/api")
+      ? rawApiUrl
+      : `${rawApiUrl}/api`;
+    const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
     if (!statsResponse.ok) {
       throw new Error("Failed to fetch public stats");
     }
@@ -63,8 +70,8 @@ export const usePublicStats = routeLoader$(async () => {
 });
 
 export default component$(() => {
-  const session = useSession();
-  const signIn = useSignIn();
+  const user = useSession();
+  const signInAction = useSignIn();
   const loc = useLocation();
   const publicStats = usePublicStats();
 
@@ -87,7 +94,7 @@ export default component$(() => {
               Upload and share files with the cutest, most uwu file sharing
               service ever! I made this 80% with ai cuz i could (´｡• ᵕ •｡`) ♡
             </p>
-            {session.value ? (
+            {user.value ? (
               <div class="flex flex-col items-center justify-center gap-4 px-4 sm:flex-row">
                 {" "}
                 <Link
@@ -106,7 +113,7 @@ export default component$(() => {
                 </Link>
               </div>
             ) : (
-              <Form action={signIn} q:slot="end">
+              <Form action={signInAction} q:slot="end">
                 <input type="hidden" name="providerId" value="discord" />
                 <input
                   type="hidden"
@@ -353,7 +360,7 @@ export default component$(() => {
                 Recent Activity
               </h3>
               <div class="space-y-3">
-                {publicStats.value.recentUploads.map((upload) => {
+                {publicStats.value.recentUploads.map((upload: any) => {
                   const getFileIcon = (mimeType: string) => {
                     if (mimeType.startsWith("image/")) return "🖼️";
                     if (mimeType.startsWith("video/")) return "🎥";

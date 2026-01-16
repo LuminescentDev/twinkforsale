@@ -164,7 +164,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
                             return; // No action in preview
                           }
 
-                          if (onLinkClick) {
+                          if (onLinkClick && link.id) {
                             await onLinkClick(link.id);
                           }
 

@@ -34,7 +34,6 @@ import {
 import { ImagePreviewContext } from "~/lib/image-preview-store";
 import { FileTypeIcon } from "~/components/file-type-icon";
 import { createServerApi } from "~/lib/api/server";
-import { uploads as uploadsApi } from "~/lib/api/client";
 import { getServerUploadsViewMode } from "~/lib/cookie-utils";
 import { formatBytes } from "~/lib/utils";
 export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
@@ -76,6 +75,7 @@ export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
             error: errorText || "Failed to delete",
           });
         }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         results.push({
           id: uploadId,

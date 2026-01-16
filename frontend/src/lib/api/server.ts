@@ -1,5 +1,5 @@
 // Server-side API Client wrapper for Qwik routeLoader$ functions
-import type { RequestEvent } from '@builder.io/qwik-city';
+import type { RequestEventCommon } from '@builder.io/qwik-city';
 import type {
   CurrentUserResponse,
   ListUploadsResponse,
@@ -32,7 +32,7 @@ class ApiError extends Error {
 }
 
 async function serverRequest<T>(
-  requestEvent: RequestEvent,
+  requestEvent: RequestEventCommon,
   endpoint: string,
   options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
 ): Promise<T> {
@@ -78,7 +78,7 @@ async function serverRequest<T>(
 }
 
 // Server-side API functions that can be used in routeLoader$
-export function createServerApi(requestEvent: RequestEvent) {
+export function createServerApi(requestEvent: RequestEventCommon) {
   return {
     auth: {
       getCurrentUser: () =>

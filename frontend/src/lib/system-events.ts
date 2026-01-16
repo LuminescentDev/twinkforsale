@@ -1,4 +1,4 @@
-import type { RequestEvent } from '@builder.io/qwik-city';
+import type { RequestEvent, RequestEventCommon } from '@builder.io/qwik-city';
 import { getDiskUsage } from './server-utils';
 import { sendCriticalEventNotification, sendDiscordNotification } from './discord-notifications';
 import { getEnvConfig } from './env';
@@ -8,7 +8,7 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
 
 async function serverRequest<T>(
   endpoint: string,
-  requestEvent?: RequestEvent,
+  requestEvent?: RequestEventCommon,
   options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
@@ -152,7 +152,7 @@ export async function createSystemEvent(
     metadata?: EventMetadata;
     includeMetrics?: boolean;
   } = {},
-  requestEvent?: RequestEvent
+  requestEvent?: RequestEventCommon
 ) {
   const { userId, metadata, includeMetrics = true } = options;
 
@@ -246,7 +246,7 @@ export async function createSystemEvent(
 /**
  * Check user storage usage and create alerts if needed
  */
-export async function checkUserStorageAlerts(userId: string, requestEvent?: RequestEvent) {
+export async function checkUserStorageAlerts(userId: string, requestEvent?: RequestEventCommon) {
   try {
     const limits = await serverRequest<{
       storageUsed: number;
@@ -346,7 +346,7 @@ export async function checkUserStorageAlerts(userId: string, requestEvent?: Requ
 /**
  * Check system-wide alerts
  */
-export async function checkSystemAlerts(requestEvent?: RequestEvent) {
+export async function checkSystemAlerts(requestEvent?: RequestEventCommon) {
   try {
     const metrics = await getSystemMetrics();
 
@@ -430,7 +430,7 @@ export async function getRecentSystemEvents(
   limit: number = 50,
   severity?: EventSeverity,
   userId?: string,
-  requestEvent?: RequestEvent
+  requestEvent?: RequestEventCommon
 ) {
   return await serverRequest<SystemEventDto[]>(
     '/admin/system-events',
@@ -442,7 +442,7 @@ export async function getRecentSystemEvents(
 /**
  * Get system events statistics
  */
-export async function getSystemEventsStats(hours: number = 24, requestEvent?: RequestEvent) {
+export async function getSystemEventsStats(hours: number = 24, requestEvent?: RequestEventCommon) {
   const stats = await serverRequest<{ counts: Record<string, number> }>(
     '/admin/system-events/stats',
     requestEvent,
@@ -455,7 +455,7 @@ export async function getSystemEventsStats(hours: number = 24, requestEvent?: Re
 /**
  * Clean up old system events (keep last 30 days)
  */
-export async function cleanupOldEvents(requestEvent?: RequestEvent) {
+export async function cleanupOldEvents(requestEvent?: RequestEventCommon): Promise<number> {
   const result = await serverRequest<{ deletedCount: number }>(
     '/admin/system-events/cleanup',
     requestEvent,
@@ -481,7 +481,7 @@ export async function cleanupOldEvents(requestEvent?: RequestEvent) {
 /**
  * Delete a specific system event by ID
  */
-export async function deleteSystemEvent(eventId: string, requestEvent?: RequestEvent): Promise<boolean> {
+export async function deleteSystemEvent(eventId: string, requestEvent?: RequestEventCommon): Promise<boolean> {
   try {
     await serverRequest(`/admin/system-events/${eventId}`, requestEvent, { method: 'DELETE' });
     return true;
@@ -494,7 +494,7 @@ export async function deleteSystemEvent(eventId: string, requestEvent?: RequestE
 /**
  * Clear all system events (with optional severity filter)
  */
-export async function clearAllSystemEvents(severityFilter?: EventSeverity, requestEvent?: RequestEvent): Promise<number> {
+export async function clearAllSystemEvents(severityFilter?: EventSeverity, requestEvent?: RequestEventCommon): Promise<number> {
   const result = await serverRequest<{ deletedCount: number }>(
     '/admin/system-events',
     requestEvent,
@@ -507,7 +507,7 @@ export async function clearAllSystemEvents(severityFilter?: EventSeverity, reque
 /**
  * Clear non-critical events (INFO and WARNING)
  */
-export async function clearNonCriticalEvents(requestEvent?: RequestEvent): Promise<number> {
+export async function clearNonCriticalEvents(requestEvent?: RequestEventCommon): Promise<number> {
   const result = await serverRequest<{ deletedCount: number }>(
     '/admin/system-events/non-critical',
     requestEvent,
@@ -528,7 +528,7 @@ export async function initializeSystemAlerts() {
 /**
  * Check if user is approaching limits and warn them
  */
-export async function checkUserLimits(userId: string, requestEvent?: RequestEvent) {
+export async function checkUserLimits(userId: string, requestEvent?: RequestEventCommon) {
   try {
     const limits = await serverRequest<{
       storageUsed: number;

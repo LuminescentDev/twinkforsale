@@ -81,6 +81,7 @@ public class UpdateSettings(AppDbContext db, ILogger<UpdateSettings> logger) : E
             settings.EmbedFooter,
             settings.ShowFileInfo,
             settings.ShowUploadDate,
+            settings.ShowUserStats,
             settings.UseCustomWords,
             settings.CustomWords,
             settings.CustomDomain,

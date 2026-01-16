@@ -200,7 +200,7 @@ export default component$(() => {
                       </h4>
                       <div class="text-theme-text-secondary flex items-center gap-4 text-sm">
                         <span>{formatFileSize(upload.size)}</span>
-                        <span>{upload.mimeType}</span>
+                        <span>{upload.contentType}</span>
                         <span>
                           {new Date(upload.createdAt).toLocaleDateString()}
                         </span>
@@ -211,7 +211,7 @@ export default component$(() => {
                   <div class="flex items-center gap-6">
                     <div class="text-center">
                       <div class="text-theme-accent-primary-primary font-bold">
-                        {upload.views}
+                        {upload.viewCount}
                       </div>
                       <div class="text-theme-text-muted text-xs">
                         Total Views
@@ -227,7 +227,7 @@ export default component$(() => {
                     </div>
                     <div class="text-center">
                       <div class="text-theme-accent-primary-tertiary font-bold">
-                        {upload.downloads}
+                        {upload.weeklyDownloads}
                       </div>
                       <div class="text-theme-text-muted text-xs">Downloads</div>
                     </div>

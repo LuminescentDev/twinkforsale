@@ -20,7 +20,23 @@ import { AnalyticsChart } from "~/components/charts/analytics-chart";
 import { formatBytes } from "~/lib/utils";
 import { createServerApi } from "~/lib/api/server";
 
-export const useUserData = routeLoader$(async (requestEvent) => {
+export const useUserData = routeLoader$(async (requestEvent): Promise<{
+  user: any;
+  stats: {
+    totalUploads: number;
+    totalViews: number;
+    storageUsed: number;
+    maxStorage: number;
+  };
+  analyticsData: Array<{
+    date: string;
+    totalViews: number;
+    uniqueViews: number;
+    uploadsCount: number;
+    usersRegistered: number;
+  }>;
+  origin: string;
+}> => {
   const user = requestEvent.sharedMap.get("user");
 
   if (!user) {
@@ -38,7 +54,7 @@ export const useUserData = routeLoader$(async (requestEvent) => {
   }
 
   // Fetch API keys
-  let apiKeys;
+  let apiKeys: Array<any> = [];
   try {
     apiKeys = await api.apiKeys.list();
   } catch {
@@ -59,6 +75,7 @@ export const useUserData = routeLoader$(async (requestEvent) => {
     totalViews: number;
     uniqueViews: number;
     uploadsCount: number;
+    usersRegistered: number;
   }> = [];
 
   return {
@@ -397,7 +414,7 @@ export default component$(() => {
         </h2>
         {userData.value.user.uploads.length > 0 ? (
           <div class="space-y-3">
-            {userData.value.user.uploads.map((upload) => (
+            {userData.value.user.uploads.map((upload: any) => (
               <div
                 key={upload.id}
                 class="glass flex flex-col space-y-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"

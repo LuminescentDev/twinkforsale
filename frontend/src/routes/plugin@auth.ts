@@ -1,4 +1,5 @@
 import type { RequestHandler } from "@builder.io/qwik-city";
+import { routeLoader$, globalAction$ } from "@builder.io/qwik-city";
 import { createServerApi, type CurrentUserResponse } from "~/lib/api/server";
 
 // Extend the shared map type
@@ -28,7 +29,7 @@ export const onRequest: RequestHandler = async (requestEvent) => {
 
   if (!accessToken && !isPublicPath) {
     // No token and accessing protected route - redirect to login
-    const apiUrl = process.env.API_URL || "http://localhost:5000";
+    const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
     throw redirect(302, `${apiUrl}/api/auth/discord`);
   }
 
@@ -47,7 +48,7 @@ export const onRequest: RequestHandler = async (requestEvent) => {
         // Clear invalid cookies and redirect to login
         cookie.delete("access_token", { path: "/" });
         cookie.delete("refresh_token", { path: "/" });
-        const apiUrl = process.env.API_URL || "http://localhost:5000";
+        const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
         throw redirect(302, `${apiUrl}/api/auth/discord`);
       }
     }
@@ -56,33 +57,26 @@ export const onRequest: RequestHandler = async (requestEvent) => {
   }
 };
 
-// Helper hooks for components
-import { routeLoader$ } from "@builder.io/qwik-city";
-
+// Session loader - gets current user from shared map
 export const useSession = routeLoader$(async (requestEvent) => {
   const user = requestEvent.sharedMap.get("user");
-  return { user };
+  return user;
 });
 
-export const useSignIn = routeLoader$(async (requestEvent) => {
-  return {
-    signIn: async () => {
-      const apiUrl = requestEvent.env.get("VITE_API_URL") || "http://localhost:5000";
-      window.location.href = `${apiUrl}/api/auth/discord`;
-    },
-  };
+// Sign in action - redirects to Discord OAuth
+export const useSignIn = globalAction$(async (_, requestEvent) => {
+  const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+  throw requestEvent.redirect(302, `${apiUrl}/api/auth/discord`);
 });
 
-export const useSignOut = routeLoader$(async () => {
-  // This will be called client-side to sign out
-  return {
-    signOut: async () => {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      await fetch(`${apiUrl}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-      window.location.href = "/";
-    },
-  };
+// Sign out action - clears cookies and redirects to home
+export const useSignOut = globalAction$(async (_, requestEvent) => {
+  const { cookie } = requestEvent;
+
+  // Clear auth cookies
+  cookie.delete("access_token", { path: "/" });
+  cookie.delete("refresh_token", { path: "/" });
+
+  // Redirect to home
+  throw requestEvent.redirect(302, "/");
 });

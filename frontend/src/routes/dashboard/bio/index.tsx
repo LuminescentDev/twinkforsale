@@ -99,16 +99,35 @@ export const useBioData = routeLoader$(async (requestEvent) => {
         icon: link.icon,
         order: link.order,
         isActive: link.isActive,
+        clicks: link.clicks ?? 0,
       })),
       bioLimits: {
         maxLinks: 20,
+        maxBioLinks: 20,
         maxDescriptionLength: 500,
         maxCustomCssLength: 5000,
+        maxUsernameLength: 30,
+        maxDisplayNameLength: 50,
+        maxUrlLength: 500,
+        maxLinkTitleLength: 100,
+        maxIconLength: 50,
         canUseCustomCss: true,
         canUseParticles: true,
         canUseGradients: true,
       },
-      analytics: null,
+      analytics: {
+        totalViews: bioData.views,
+        uniqueIPs: 0, // Not tracked separately yet
+        topLinks: bioData.links
+          .filter(link => (link.clicks ?? 0) > 0)
+          .sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))
+          .slice(0, 5)
+          .map(link => ({
+            id: link.id,
+            title: link.title,
+            clicks: link.clicks ?? 0,
+          })),
+      },
       baseUrl: requestEvent.url.origin,
     };
   } catch (error) {
@@ -126,13 +145,23 @@ export const useBioData = routeLoader$(async (requestEvent) => {
       bioLinks: [],
       bioLimits: {
         maxLinks: 20,
+        maxBioLinks: 20,
         maxDescriptionLength: 500,
         maxCustomCssLength: 5000,
+        maxUsernameLength: 30,
+        maxDisplayNameLength: 50,
+        maxUrlLength: 500,
+        maxLinkTitleLength: 100,
+        maxIconLength: 50,
         canUseCustomCss: true,
         canUseParticles: true,
         canUseGradients: true,
       },
-      analytics: null,
+      analytics: {
+        totalViews: 0,
+        uniqueIPs: 0,
+        topLinks: [],
+      },
       baseUrl: requestEvent.url.origin,
     };
   }

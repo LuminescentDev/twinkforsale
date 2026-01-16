@@ -14,6 +14,7 @@ public class BioLinkDto
     public string? Icon { get; set; }
     public int Order { get; set; }
     public bool IsActive { get; set; }
+    public int Clicks { get; set; }
 }
 
 public class BioSettingsDto
@@ -77,7 +78,8 @@ public class GetBioEndpoint(AppDbContext db) : EndpointWithoutRequest
                 Url = l.Url,
                 Icon = l.Icon,
                 Order = l.Order,
-                IsActive = l.IsActive
+                IsActive = l.IsActive,
+                Clicks = l.Clicks
             })
             .ToListAsync(ct);
 

@@ -346,25 +346,49 @@ export default component$(() => {
         </h2>
         <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-4">
           <AnalyticsChart
-            data={userData.value?.analyticsData || []}
+            data={(userData.value?.analyticsData || []).map(d => ({
+              date: d.date,
+              totalViews: d.views || 0,
+              uniqueViews: d.uniqueVisitors || 0,
+              uploadsCount: d.uploads || 0,
+              usersRegistered: d.usersRegistered || 0,
+            }))}
             metric="totalViews"
             title="Total Views"
             color="var(--theme-accent-primary)"
           />
           <AnalyticsChart
-            data={userData.value?.analyticsData || []}
+            data={(userData.value?.analyticsData || []).map(d => ({
+              date: d.date,
+              totalViews: d.views || 0,
+              uniqueViews: d.uniqueVisitors || 0,
+              uploadsCount: d.uploads || 0,
+              usersRegistered: d.usersRegistered || 0,
+            }))}
             metric="uniqueViews"
             title="Unique Visitors"
             color="var(--theme-accent-secondary)"
           />
           <AnalyticsChart
-            data={userData.value?.analyticsData || []}
+            data={(userData.value?.analyticsData || []).map(d => ({
+              date: d.date,
+              totalViews: d.views || 0,
+              uniqueViews: d.uniqueVisitors || 0,
+              uploadsCount: d.uploads || 0,
+              usersRegistered: d.usersRegistered || 0,
+            }))}
             metric="uploadsCount"
             title="New Uploads"
             color="var(--theme-accent-tertiary)"
           />
           <AnalyticsChart
-            data={userData.value?.analyticsData || []}
+            data={(userData.value?.analyticsData || []).map(d => ({
+              date: d.date,
+              totalViews: d.views || 0,
+              uniqueViews: d.uniqueVisitors || 0,
+              uploadsCount: d.uploads || 0,
+              usersRegistered: d.usersRegistered || 0,
+            }))}
             metric="usersRegistered"
             title="New Users"
             color="var(--theme-accent-quaternary)"

@@ -288,6 +288,7 @@ export interface UserSettingsDto {
   embedFooter?: string;
   showFileInfo: boolean;
   showUploadDate: boolean;
+  showUserStats: boolean;
   useCustomWords: boolean;
   customWords?: string;
   customDomain?: string;
@@ -304,6 +305,7 @@ export interface BioLinkDto {
   icon?: string;
   order: number;
   isActive: boolean;
+  clicks?: number;
 }
 
 export interface BioSettingsDto {
@@ -403,6 +405,7 @@ export interface DailyStatDto {
   date: string;
   uploads: number;
   views: number;
+  uniqueVisitors: number;
   downloads: number;
   usersRegistered: number;
 }

@@ -16,9 +16,9 @@ import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 export default component$(() => {
-  const session = useSession();
-  const signIn = useSignIn();
-  const signOut = useSignOut();
+  const user = useSession();
+  const signInAction = useSignIn();
+  const signOutAction = useSignOut();
   const location = useLocation();
   const isCurrentPage = (path: string) => {
     return (
@@ -57,7 +57,7 @@ export default component$(() => {
         <div class="heart-gradient sm"></div>
         <span>twink.forsale</span>
       </Link>
-      {/* Desktop Center Navigation */}      {session.value && (
+      {/* Desktop Center Navigation */}      {user.value && (
         <div q:slot="center" class="hidden items-center space-x-3 lg:flex">          <Link href="/dashboard" class={getNavLinkClasses(isDashboardExact())}>
             <Home class="h-4 w-4" />
             Dashboard
@@ -106,7 +106,7 @@ export default component$(() => {
       )}
       {/* Desktop End Navigation */}
       <div q:slot="end" class="hidden items-center space-x-3 lg:flex">
-        {session.value ? (
+        {user.value ? (
           <>
             <Link
               href="/setup/sharex"
@@ -115,7 +115,7 @@ export default component$(() => {
               <Settings class="h-4 w-4" />
               ShareX Setup
             </Link>
-            <Form action={signOut}>
+            <Form action={signOutAction}>
               <input type="hidden" name="providerId" value="discord" />
               <input type="hidden" name="options.redirectTo" />
               <button class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex items-center gap-2 rounded-full px-4 py-2 !whitespace-nowrap transition-all duration-300">
@@ -125,7 +125,7 @@ export default component$(() => {
             </Form>
           </>
         ) : (
-          <Form action={signIn}>
+          <Form action={signInAction}>
             <input type="hidden" name="providerId" value="discord" />
             <input type="hidden" name="options.redirectTo" />
             <button class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white">
@@ -136,7 +136,7 @@ export default component$(() => {
         )}
       </div>
       {/* Mobile Navigation Items */}
-      {session.value ? (
+      {user.value ? (
         <>
           <Link
             href="/dashboard"
@@ -205,7 +205,7 @@ export default component$(() => {
           <div q:slot="mobile" class="px-4 py-3">
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
-          <Form action={signOut} q:slot="mobile">
+          <Form action={signOutAction} q:slot="mobile">
             <input type="hidden" name="providerId" value="discord" />
             <input type="hidden" name="options.redirectTo" />
             <button
@@ -221,7 +221,7 @@ export default component$(() => {
           <div q:slot="mobile" class="px-4 py-3">
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
-          <Form action={signIn} q:slot="mobile">
+          <Form action={signInAction} q:slot="mobile">
             <input type="hidden" name="providerId" value="discord" />
             <input type="hidden" name="options.redirectTo" />
             <button class={`${buttonClasses} btn-cute text-white`}>

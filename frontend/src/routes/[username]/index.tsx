@@ -106,7 +106,7 @@ export default component$(() => {
       userId: '', // Not needed for display
       title: link.title,
       url: link.url,
-      icon: link.icon || null,
+      icon: link.icon || undefined,
       order: link.order,
       isActive: link.isActive,
       clicks: 0, // We don't track clicks in the link data structure, using 0 as default

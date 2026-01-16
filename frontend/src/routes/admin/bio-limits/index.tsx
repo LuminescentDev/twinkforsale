@@ -1,13 +1,13 @@
 import { component$, useSignal } from "@builder.io/qwik";
 import { routeLoader$, Form, routeAction$, z, zod$, type RequestEvent } from "@builder.io/qwik-city";
-import type { DocumentHead } from "@builder.io/qwik-city";
+import type { DocumentHead, RequestEventLoader, RequestEventAction } from "@builder.io/qwik-city";
 import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 
 const API_BASE_URL = process.env.API_URL || "http://localhost:5000/api";
 
 async function serverRequest<T>(
-  requestEvent: RequestEvent,
+  requestEvent: RequestEvent | RequestEventLoader | RequestEventAction,
   endpoint: string,
   options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
 ): Promise<T> {

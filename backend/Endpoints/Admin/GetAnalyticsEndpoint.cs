@@ -25,6 +25,7 @@ public class DailyStatDto
     public DateTime Date { get; set; }
     public int Uploads { get; set; }
     public int Views { get; set; }
+    public int UniqueViews { get; set; }
     public int Downloads { get; set; }
     public int UsersRegistered { get; set; }
 }
