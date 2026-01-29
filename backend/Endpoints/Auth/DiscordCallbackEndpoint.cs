@@ -19,7 +19,7 @@ public class DiscordCallbackEndpoint(
 {
     public override void Configure()
     {
-        Get("/api/auth/callback");
+        Get(" /auth/callback");
         AllowAnonymous();
     }
 
