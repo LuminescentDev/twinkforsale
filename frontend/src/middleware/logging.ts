@@ -4,7 +4,7 @@
  */
 
 import type { RequestHandler } from '@builder.io/qwik-city';
-import logger, { logRequest } from './logger';
+import logger, { logRequest } from '~/lib/logger';
 
 export const loggingMiddleware: RequestHandler = async ({ request, next, url, sharedMap }) => {
   const startTime = Date.now();

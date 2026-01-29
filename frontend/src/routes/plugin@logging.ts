@@ -38,8 +38,10 @@ export const onRequest: RequestHandler = async ({ request, url, next, sharedMap 
     // Continue to the next handler
     const response = await next();
     
-    // Try to get status code from response
-    statusCode = response?.status;
+    // Try to get status code from response if it's a Response object
+    if (response && typeof response === 'object' && 'status' in response) {
+      statusCode = (response as Response).status;
+    }
     
     return response;
   } catch (err) {
