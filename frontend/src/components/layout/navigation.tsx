@@ -15,17 +15,10 @@ import {
 import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 
-export default component$(() => {
+export default component$<{authUrl: string}>((props) => {
   const user = useSession();
   const signOutAction = useSignOut();
   const location = useLocation();
-  
-  // Get API URL from environment - works on both server and client
-  const getAuthUrl = () => {
-    // Use VITE_API_URL which is available at build time
-    const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-    return apiUrl.replace(/\/+$/, '').replace(/\/api$/, '') + '/auth/discord';
-  };
   const isCurrentPage = (path: string) => {
     return (
       location.url.pathname === path ||
@@ -132,7 +125,7 @@ export default component$(() => {
           </>
         ) : (
           <a
-            href={getAuthUrl()}
+            href={props.authUrl}
             class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
           >
             <User class="h-4 w-4" />
@@ -227,7 +220,7 @@ export default component$(() => {
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
           <a
-            href={getAuthUrl()}
+            href={props.authUrl}
             q:slot="mobile"
             class={`${buttonClasses} btn-cute text-white`}
           >

@@ -22,6 +22,13 @@ import {
 } from "~/lib/cookie-utils";
 import { generateThemeCSS, themes } from "~/lib/theme-store";
 
+export const useAuthUrl = routeLoader$(() => {
+  // Use runtime API_URL from environment (set in docker-compose)
+  const apiUrl = process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:5000';
+  const normalized = apiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+  return normalized + '/auth/discord';
+});
+
 export const useServerTheme = routeLoader$(async (requestEvent) => {
   const cookieHeader = requestEvent.request.headers.get("cookie");
   const serverTheme = getServerThemePreference(cookieHeader || "") || "auto";
@@ -186,7 +193,7 @@ export default component$(() => {
           {/* Particle background - rendered behind everything */}
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
-          )}          <Navigation />
+          )}          <Navigation authUrl={useAuthUrl().value} />
           <div class="relative z-10 mx-auto mt-18 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <Slot />
           </div>

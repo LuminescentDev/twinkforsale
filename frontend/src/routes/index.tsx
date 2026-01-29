@@ -2,6 +2,7 @@ import { component$ } from "@builder.io/qwik";
 import { Link, routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead, RequestEventLoader } from "@builder.io/qwik-city";
 import { useSession } from "~/routes/plugin@auth";
+import { useAuthUrl } from "~/routes/layout";
 import {
   Home,
   Settings,
@@ -77,13 +78,7 @@ export const usePublicStats = routeLoader$(
 export default component$(() => {
   const user = useSession();
   const publicStats = usePublicStats();
-  
-  // Get OAuth URL - works on both server and client
-  const getAuthUrl = () => {
-    // Use VITE_API_URL which is available at build time
-    const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-    return normalizeApiUrl(apiUrl) + '/auth/discord';
-  };
+  const authUrl = useAuthUrl();
 
   return (
     <>
@@ -124,7 +119,7 @@ export default component$(() => {
               </div>
             ) : (
               <a
-                href={getAuthUrl()}
+                href={authUrl.value}
                 class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
               >
                 <User class="h-5 w-5" />
