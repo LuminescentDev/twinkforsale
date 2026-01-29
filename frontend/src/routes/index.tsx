@@ -26,7 +26,9 @@ export const usePublicStats = routeLoader$(
     try {
       // Construct absolute URL for server-side fetch
       const origin = requestEvent.url.origin;
-      const statsResponse = await fetch(`${origin}/api/public/stats`);
+      const reqUrl = `${origin}/api/public/stats`;
+      console.log("Fetching public stats from:", reqUrl);
+      const statsResponse = await fetch(reqUrl);
       if (!statsResponse.ok) {
         throw new Error("Failed to fetch public stats", { cause: statsResponse.status });
       }
