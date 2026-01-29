@@ -17,8 +17,9 @@ export const useUserApiKeys = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Construct absolute URL for server-side fetch
-  const origin = requestEvent.url.origin;
+  // Construct absolute URL for server-side fetch using FRONTEND_URL
+  const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+  const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
   const cookies = requestEvent.request.headers.get("cookie") || "";
   let apiKey: { id: string; name: string; key: string; createdAt: string } | null = null;
   try {
@@ -32,7 +33,7 @@ export const useUserApiKeys = routeLoader$(async (requestEvent) => {
     apiKey = null;
   }
 
-  // Get the base URL from the request
+  // Get the base URL from the request (for display to users)
   const baseUrl = requestEvent.url.origin;
   return { user, baseUrl, apiKey };
 });
@@ -49,8 +50,9 @@ export const createApiKey = server$(async function (name: string) {
     );
   }
 
-  // Construct absolute URL for server-side fetch
-  const origin = this.url.origin;
+  // Construct absolute URL for server-side fetch using FRONTEND_URL
+  const frontendUrl = this.env.get('FRONTEND_URL');
+  const origin = frontendUrl || `http://localhost:${this.env.get('PORT') || '3000'}`;
   const cookies = this.request.headers.get("cookie") || "";
 
   const response = await fetch(`${origin}/api/api-keys`, {

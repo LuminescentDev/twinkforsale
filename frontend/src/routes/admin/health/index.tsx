@@ -58,8 +58,9 @@ export const useTriggerSystemCheck = routeAction$(
     try {
       await checkSystemAlerts(requestEvent);
 
-      // Construct absolute URL for server-side fetch
-      const origin = requestEvent.url.origin;
+      // Construct absolute URL for server-side fetch using FRONTEND_URL
+      const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+      const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
       const cookies = requestEvent.request.headers.get("cookie") || "";
       const usersResponse = await fetch(`${origin}/api/admin/users?pageSize=1000`, {
         headers: { Cookie: cookies }
@@ -84,8 +85,9 @@ export const useHealthData = routeLoader$(async (requestEvent) => {
   try {
     // Database Health
     const dbStart = Date.now();
-    // Construct absolute URL for server-side fetch
-    const origin = requestEvent.url.origin;
+    // Construct absolute URL for server-side fetch using FRONTEND_URL
+    const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+    const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
     const cookies = requestEvent.request.headers.get("cookie") || "";
     const dbResponse = await fetch(`${origin}/api/admin/health-stats`, {
       headers: { Cookie: cookies }

@@ -60,8 +60,9 @@ export const useUserSession = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/dashboard?error=upload_not_approved");
   }
 
-  // Construct absolute URL for server-side fetch
-  const origin = requestEvent.url.origin;
+  // Construct absolute URL for server-side fetch using FRONTEND_URL
+  const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+  const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
   const cookies = requestEvent.request.headers.get("cookie") || "";
   let apiKey: string | null = null;
   try {

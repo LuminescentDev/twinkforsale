@@ -4,46 +4,14 @@ import type { DocumentHead, RequestEventLoader, RequestEventAction } from "@buil
 import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 
+import { ssrFetch } from "~/lib/ssr-fetch";
+
 async function serverRequest<T>(
   requestEvent: RequestEvent | RequestEventLoader | RequestEventAction,
   endpoint: string,
   options: RequestInit & { params?: Record<string, string | number | boolean | undefined> } = {}
 ): Promise<T> {
-  const { params, ...fetchOptions } = options;
-
-  // Construct absolute URL for server-side fetch
-  const origin = requestEvent.url.origin;
-  let url = `${origin}/api${endpoint}`;
-  if (params) {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.append(key, String(value));
-    });
-    const queryString = searchParams.toString();
-    if (queryString) url += `?${queryString}`;
-  }
-
-  const cookies = requestEvent.request.headers.get("cookie") || "";
-
-  const response = await fetch(url, {
-    ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...(cookies ? { Cookie: cookies } : {}),
-      ...fetchOptions.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || response.statusText);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json();
+  return ssrFetch<T>(requestEvent, endpoint, options);
 }
 
 export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {

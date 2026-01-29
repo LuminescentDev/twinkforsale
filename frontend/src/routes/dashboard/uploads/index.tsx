@@ -52,8 +52,9 @@ export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
 
   try {
     const results = [];
-    // Construct absolute URL for server-side fetch
-    const origin = requestEvent.url.origin;
+    // Construct absolute URL for server-side fetch using FRONTEND_URL
+    const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+    const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
     const cookies = requestEvent.request.headers.get("cookie") || "";
 
     // Process each upload ID

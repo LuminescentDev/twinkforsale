@@ -52,8 +52,10 @@ async function serverRequest<T>(
     }
   }
 
-  // Get the origin from the request to construct absolute URL for server-side fetch
-  const origin = requestEvent.url.origin;
+  // For server-side fetch, use FRONTEND_URL env var to reach the frontend's own API routes
+  // This avoids issues with public domains behind proxies/load balancers
+  const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+  const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
   const absoluteUrl = `${origin}${url}`;
 
   // Forward cookies from the incoming request

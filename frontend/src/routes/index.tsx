@@ -24,8 +24,10 @@ import { getAnalyticsData } from "~/lib/analytics";
 export const usePublicStats = routeLoader$(
   async (requestEvent: RequestEventLoader) => {
     try {
-      // Construct absolute URL for server-side fetch
-      const origin = requestEvent.url.origin;
+      // For server-side fetch, use FRONTEND_URL env var to reach the frontend's own API routes
+      // This avoids issues with public domains behind proxies/load balancers
+      const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+      const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
       const reqUrl = `${origin}/api/public/stats`;
       console.log("Fetching public stats from:", reqUrl);
       const statsResponse = await fetch(reqUrl);

@@ -5,6 +5,7 @@ import {
   createSystemEvent 
 } from './system-events';
 import type { RequestEvent } from '@builder.io/qwik-city';
+import logger from './logger';
 
 async function serverRequest<T>(
   endpoint: string,
@@ -41,6 +42,11 @@ async function serverRequest<T>(
 
   if (!response.ok) {
     const message = await response.text();
+    logger.error('System monitoring request failed', {
+      endpoint,
+      statusCode: response.status,
+      message,
+    });
     throw new Error(message || response.statusText);
   }
 

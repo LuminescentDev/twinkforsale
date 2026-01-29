@@ -8,6 +8,8 @@ services:
     container_name: twinkforsale-frontend
     environment:
       - BACKEND_URL=${BACKEND_URL:-http://localhost:5000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - LOKI_URL=${LOKI_URL:-}
       - PORT=3000
     ports:
       - "3000:3000"

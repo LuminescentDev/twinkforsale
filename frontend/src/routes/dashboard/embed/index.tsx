@@ -45,8 +45,9 @@ export const useUpdateEmbedSettings = routeAction$(
       return requestEvent.fail(401, { message: "Unauthorized" });
     }
 
-    // Construct absolute URL for server-side fetch
-    const origin = requestEvent.url.origin;
+    // Construct absolute URL for server-side fetch using FRONTEND_URL
+    const frontendUrl = requestEvent.env.get('FRONTEND_URL');
+    const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
     const cookies = requestEvent.request.headers.get("cookie") || "";
     const response = await fetch(`${origin}/api/settings`, {
       method: "PUT",
