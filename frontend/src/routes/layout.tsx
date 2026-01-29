@@ -23,10 +23,8 @@ import {
 import { generateThemeCSS, themes } from "~/lib/theme-store";
 
 export const useAuthUrl = routeLoader$(() => {
-  // Use runtime API_URL from environment (set in docker-compose)
-  const apiUrl = process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:5000';
-  const normalized = apiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
-  return normalized + '/auth/discord';
+  // Use relative path since backend is served at /api on same domain
+  return '/api/auth/discord';
 });
 
 export const useServerTheme = routeLoader$(async (requestEvent) => {

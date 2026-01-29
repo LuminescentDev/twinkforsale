@@ -7,7 +7,7 @@ public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/auth/discord");
+        Get("/api/auth/discord");
         AllowAnonymous();
     }
 

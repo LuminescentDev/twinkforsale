@@ -1,6 +1,5 @@
 // API Client for TwinkForSale Backend
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Uses relative paths since API is served on same domain at /api/*
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -23,7 +22,8 @@ async function request<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+  // Use relative path - assumes API is at /api/*
+  let url = `/api${endpoint}`;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -58,6 +58,10 @@ async function request<T>(
   }
 
   return response.json();
+}
+
+interface RequestOptions extends RequestInit {
+  params?: Record<string, string | number | boolean | undefined>;
 }
 
 // Auth API
