@@ -11,7 +11,7 @@ public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithou
         AllowAnonymous();
     }
 
-    public override Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(CancellationToken ct)
     {
         var state = Guid.NewGuid().ToString("N");
 
@@ -24,8 +24,6 @@ public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithou
         });
 
         var url = discord.GetAuthorizationUrl(state);
-        HttpContext.Response.StatusCode = 302;
-        HttpContext.Response.Headers.Location = url;
-        return Task.CompletedTask;
+        await SendRedirectAsync(url, allowRemoteRedirects: true);
     }
 }
