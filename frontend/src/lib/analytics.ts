@@ -42,10 +42,14 @@ async function serverRequest<T>(
   if (!response.ok) {
     let message: string;
     try {
-      const errorData = await response.json();
+      const errorData = await response.clone().json();
       message = errorData.message || JSON.stringify(errorData);
     } catch {
-      message = await response.text();
+      try {
+        message = await response.text();
+      } catch {
+        message = response.statusText;
+      }
     }
     throw new Error(message || response.statusText);
   }
