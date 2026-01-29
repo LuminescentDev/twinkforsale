@@ -43,6 +43,7 @@ export const useServerTheme = routeLoader$(async (requestEvent) => {
 export default component$(() => {
   // Get server-side theme data
   const serverThemeData = useServerTheme();
+  const authUrl = useAuthUrl();
   const location = useLocation();
   const globalParticle = useGlobalParticle();
 
@@ -193,7 +194,8 @@ export default component$(() => {
           {/* Particle background - rendered behind everything */}
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
-          )}          <Navigation authUrl={useAuthUrl().value} />
+          )}
+          <Navigation authUrl={authUrl.value} />
           <div class="relative z-10 mx-auto mt-18 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <Slot />
           </div>
