@@ -19,7 +19,8 @@ public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithou
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Lax,
+            SameSite = SameSiteMode.Strict,
+            Path = "/",
             MaxAge = TimeSpan.FromMinutes(10)
         });
 

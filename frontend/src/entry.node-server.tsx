@@ -101,7 +101,9 @@ server.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`Node server listening on http://0.0.0.0:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   
-  // Start system monitoring service
+  // TODO: Re-enable system monitoring once reverse proxy is configured
+  // System monitoring requires backend API at /api/* via reverse proxy
+  /*
   if (process.env.NODE_ENV === "production") {
     import("./lib/system-monitoring").then(({ startSystemMonitoring }) => {
       startSystemMonitoring();
@@ -118,4 +120,7 @@ server.listen(Number(PORT), "0.0.0.0", () => {
       console.error("Failed to initialize system alerts:", err);
     });
   }
+  */
+  
+  console.log("System monitoring disabled - configure reverse proxy to enable");
 });
