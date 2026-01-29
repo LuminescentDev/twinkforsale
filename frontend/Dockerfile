@@ -15,6 +15,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build the application
+ENV VITE_BUILD=true
 RUN pnpm run deploy && echo "✅ Build completed successfully"
 
 # Copy and setup entrypoint

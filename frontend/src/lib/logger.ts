@@ -10,6 +10,7 @@ import LokiTransport from 'winston-loki';
 
 // Environment configuration
 const isProduction = process.env.NODE_ENV === 'production';
+const isBuild = process.env.npm_lifecycle_event?.includes('build') || process.env.VITE_BUILD === 'true';
 const lokiUrl = process.env.LOKI_URL || 'http://localhost:3100';
 const environment = process.env.NODE_ENV || 'development';
 const appName = 'twinkforsale-frontend';
@@ -49,27 +50,34 @@ transports.push(
   })
 );
 
-// Add Loki transport if URL is configured
-if (lokiUrl && lokiUrl !== 'disabled') {
-  transports.push(
-    new LokiTransport({
-      host: lokiUrl,
-      labels: {
-        app: appName,
-        env: environment,
-        service: 'frontend',
-      },
-      json: true,
-      format: customFormat,
-      replaceTimestamp: true,
-      onConnectionError: (err) => {
-        console.error('Loki connection error:', err);
-      },
-      // Batch settings for performance
-      batching: true,
-      interval: 5, // Send logs every 5 seconds
-    })
-  );
+// Add Loki transport if URL is configured and NOT during build
+if (lokiUrl && lokiUrl !== 'disabled' && !isBuild) {
+  try {
+    transports.push(
+      new LokiTransport({
+        host: lokiUrl,
+        labels: {
+          app: appName,
+          env: environment,
+          service: 'frontend',
+        },
+        json: true,
+        format: customFormat,
+        replaceTimestamp: true,
+        onConnectionError: (err) => {
+          console.error('Loki connection error:', err);
+        },
+        // Batch settings for performance
+        batching: true,
+        interval: 5, // Send logs every 5 seconds
+        timeout: 3000, // 3 second timeout
+      })
+    );
+  } catch (err) {
+    console.warn('Failed to initialize Loki transport:', err);
+  }
+} else if (isBuild) {
+  console.log('[Logger] Skipping Loki transport during build');
 }
 
 // Create the logger instance
