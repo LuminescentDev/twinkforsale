@@ -2,29 +2,28 @@
  * SSR Fetch Utilities
  * 
  * Helper functions for making server-side requests from Qwik routeLoader$ and routeAction$.
- * These utilities ensure that SSR code can reach the frontend's own API routes by using
- * localhost instead of the public domain, which avoids issues with proxies and load balancers.
+ * These utilities ensure that SSR code can reach the backend API directly using BACKEND_URL,
+ * bypassing the need to go through the frontend's reverse proxy.
  */
 
 import type { RequestEventCommon } from '@builder.io/qwik-city';
 
 /**
- * Get the internal origin for SSR fetches
- * Uses FRONTEND_URL env var or falls back to localhost with PORT
+ * Get the backend origin for SSR fetches
+ * Uses BACKEND_URL env var or falls back to localhost:5000
  */
 export function getInternalOrigin(requestEvent: RequestEventCommon): string {
-  const frontendUrl = requestEvent.env.get('FRONTEND_URL');
-  if (frontendUrl) {
-    return frontendUrl;
+  const backendUrl = requestEvent.env.get('BACKEND_URL');
+  if (backendUrl) {
+    return backendUrl;
   }
   
-  // Fallback to localhost with PORT
-  const port = requestEvent.env.get('PORT') || '3000';
-  return `http://localhost:${port}`;
+  // Fallback to localhost backend
+  return 'http://localhost:5000';
 }
 
 /**
- * Make a server-side request to the frontend's own API routes
+ * Make a server-side request to the backend API
  * 
  * @param requestEvent - The request event from routeLoader$ or routeAction$
  * @param endpoint - The API endpoint (e.g., '/users/me')
@@ -38,8 +37,8 @@ export async function ssrFetch<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  // Use relative path with /api/ prefix
-  let url = `/api${endpoint}`;
+  // Build the endpoint URL
+  let url = endpoint;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -54,7 +53,7 @@ export async function ssrFetch<T>(
     }
   }
 
-  // Use localhost for internal SSR requests instead of the public domain
+  // Use BACKEND_URL for SSR requests to reach the backend directly
   const origin = getInternalOrigin(requestEvent);
   const absoluteUrl = `${origin}${url}`;
 

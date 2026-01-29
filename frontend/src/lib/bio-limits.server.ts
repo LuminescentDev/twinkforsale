@@ -8,8 +8,8 @@ async function serverRequest<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  // Use relative path with /api/ prefix
-  let url = `/api${endpoint}`;
+  // Build the endpoint URL
+  let url = endpoint;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -24,11 +24,9 @@ async function serverRequest<T>(
     }
   }
 
-  // For server-side fetch, use FRONTEND_URL env var to reach the frontend's own API routes
-  // This avoids issues with public domains behind proxies/load balancers
-  const frontendUrl = requestEvent?.env.get?.('FRONTEND_URL');
-  const origin = frontendUrl || `http://localhost:${requestEvent?.env.get?.('PORT') || '3000'}`;
-  const absoluteUrl = `${origin}${url}`;
+  // For server-side fetch, use BACKEND_URL to reach the backend directly
+  const backendUrl = requestEvent?.env.get?.('BACKEND_URL') || 'http://localhost:5000';
+  const absoluteUrl = `${backendUrl}${url}`;
 
   const cookies = requestEvent?.request.headers.get('cookie') || '';
 

@@ -7,8 +7,8 @@ async function serverRequest<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  // Use relative path with /api/ prefix
-  let url = `/api${endpoint}`;
+  // Build query parameters
+  let url = endpoint;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -18,9 +18,10 @@ async function serverRequest<T>(
     if (queryString) url += `?${queryString}`;
   }
 
-  // For server-side requests, construct absolute URL
-  const origin = requestEvent?.url.origin || 'http://localhost:3000';
-  const absoluteUrl = `${origin}${url}`;
+  // For server-side requests, use BACKEND_URL to reach the backend directly
+  // The reverse proxy routes /api/* to the backend on the public domain
+  const backendUrl = requestEvent?.env.get?.('BACKEND_URL') || 'http://localhost:5000';
+  const absoluteUrl = `${backendUrl}${url}`;
 
   const cookies = requestEvent?.request.headers.get("cookie") || "";
 

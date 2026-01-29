@@ -24,11 +24,10 @@ import { getAnalyticsData } from "~/lib/analytics";
 export const usePublicStats = routeLoader$(
   async (requestEvent: RequestEventLoader) => {
     try {
-      // For server-side fetch, use FRONTEND_URL env var to reach the frontend's own API routes
-      // This avoids issues with public domains behind proxies/load balancers
-      const frontendUrl = requestEvent.env.get('FRONTEND_URL');
-      const origin = frontendUrl || `http://localhost:${requestEvent.env.get('PORT') || '3000'}`;
-      const reqUrl = `${origin}/api/public/stats`;
+      // For server-side fetch, use BACKEND_URL to fetch directly from backend
+      // The reverse proxy routes /api/* to the backend on the public domain
+      const backendUrl = requestEvent.env.get('BACKEND_URL') || 'http://localhost:5000';
+      const reqUrl = `${backendUrl}/public/stats`;
       console.log("Fetching public stats from:", reqUrl);
       const statsResponse = await fetch(reqUrl);
       if (!statsResponse.ok) {
