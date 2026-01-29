@@ -17,11 +17,12 @@ export const useUserApiKeys = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/");
   }
 
-  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  // Construct absolute URL for server-side fetch
+  const origin = requestEvent.url.origin;
   const cookies = requestEvent.request.headers.get("cookie") || "";
   let apiKey: { id: string; name: string; key: string; createdAt: string } | null = null;
   try {
-    const response = await fetch(`${apiUrl}/api/api-keys/latest`, {
+    const response = await fetch(`${origin}/api/api-keys/latest`, {
       headers: { Cookie: cookies }
     });
     if (response.ok) {
@@ -48,10 +49,11 @@ export const createApiKey = server$(async function (name: string) {
     );
   }
 
-  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  // Construct absolute URL for server-side fetch
+  const origin = this.url.origin;
   const cookies = this.request.headers.get("cookie") || "";
 
-  const response = await fetch(`${apiUrl}/api/api-keys`, {
+  const response = await fetch(`${origin}/api/api-keys`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

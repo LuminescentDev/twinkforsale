@@ -4,8 +4,6 @@ import type { DocumentHead, RequestEventLoader, RequestEventAction } from "@buil
 import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 
-const API_BASE_URL = process.env.API_URL || "http://localhost:5000/api";
-
 async function serverRequest<T>(
   requestEvent: RequestEvent | RequestEventLoader | RequestEventAction,
   endpoint: string,
@@ -13,7 +11,9 @@ async function serverRequest<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+  // Construct absolute URL for server-side fetch
+  const origin = requestEvent.url.origin;
+  let url = `${origin}/api${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {

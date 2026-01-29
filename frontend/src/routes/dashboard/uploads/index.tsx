@@ -52,13 +52,14 @@ export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
 
   try {
     const results = [];
-    const API_URL = process.env.API_URL || "http://localhost:5000/api";
+    // Construct absolute URL for server-side fetch
+    const origin = requestEvent.url.origin;
     const cookies = requestEvent.request.headers.get("cookie") || "";
 
     // Process each upload ID
     for (const uploadId of idsArray) {
       try {
-        const response = await fetch(`${API_URL}/uploads/${uploadId}`, {
+        const response = await fetch(`${origin}/api/uploads/${uploadId}`, {
           method: "DELETE",
           headers: {
             Cookie: cookies,

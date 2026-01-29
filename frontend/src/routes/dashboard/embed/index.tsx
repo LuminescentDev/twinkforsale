@@ -45,9 +45,10 @@ export const useUpdateEmbedSettings = routeAction$(
       return requestEvent.fail(401, { message: "Unauthorized" });
     }
 
-    const apiUrl = process.env.API_URL || "http://localhost:5000";
+    // Construct absolute URL for server-side fetch
+    const origin = requestEvent.url.origin;
     const cookies = requestEvent.request.headers.get("cookie") || "";
-    const response = await fetch(`${apiUrl}/api/settings`, {
+    const response = await fetch(`${origin}/api/settings`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

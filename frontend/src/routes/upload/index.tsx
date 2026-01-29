@@ -60,11 +60,12 @@ export const useUserSession = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/dashboard?error=upload_not_approved");
   }
 
-  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  // Construct absolute URL for server-side fetch
+  const origin = requestEvent.url.origin;
   const cookies = requestEvent.request.headers.get("cookie") || "";
   let apiKey: string | null = null;
   try {
-    const response = await fetch(`${apiUrl}/api/api-keys/latest`, {
+    const response = await fetch(`${origin}/api/api-keys/latest`, {
       headers: { Cookie: cookies }
     });
     if (response.ok) {

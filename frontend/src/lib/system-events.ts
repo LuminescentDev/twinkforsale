@@ -4,8 +4,6 @@ import { sendCriticalEventNotification, sendDiscordNotification } from './discor
 import { getEnvConfig } from './env';
 import os from 'os';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
-
 async function serverRequest<T>(
   endpoint: string,
   requestEvent?: RequestEventCommon,
@@ -13,7 +11,8 @@ async function serverRequest<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+  // Use relative path with /api/ prefix
+  let url = `/api${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -23,9 +22,13 @@ async function serverRequest<T>(
     if (queryString) url += `?${queryString}`;
   }
 
+  // For server-side requests, construct absolute URL
+  const origin = requestEvent?.url.origin || 'http://localhost:3000';
+  const absoluteUrl = `${origin}${url}`;
+
   const cookies = requestEvent?.request.headers.get('cookie') || '';
 
-  const response = await fetch(url, {
+  const response = await fetch(absoluteUrl, {
     ...fetchOptions,
     headers: {
       'Content-Type': 'application/json',

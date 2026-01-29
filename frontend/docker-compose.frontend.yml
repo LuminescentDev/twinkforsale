@@ -5,12 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${API_URL:-http://localhost:5000}
     container_name: twinkforsale-frontend
     environment:
-      - API_URL=${API_URL:-http://backend:5000}
-      - PUBLIC_API_URL=${API_URL:-http://backend:5000}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:5000}
       - PORT=3000
     ports:
       - "3000:3000"
@@ -21,3 +18,4 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+

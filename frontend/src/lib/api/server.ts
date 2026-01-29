@@ -18,8 +18,6 @@ import type {
   PublicDomainDto,
 } from './client';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
-
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -38,7 +36,8 @@ async function serverRequest<T>(
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+  // Use relative path with /api/ prefix - works on same domain
+  let url = `/api${endpoint}`;
 
   if (params) {
     const searchParams = new URLSearchParams();
@@ -53,10 +52,14 @@ async function serverRequest<T>(
     }
   }
 
+  // Get the origin from the request to construct absolute URL for server-side fetch
+  const origin = requestEvent.url.origin;
+  const absoluteUrl = `${origin}${url}`;
+
   // Forward cookies from the incoming request
   const cookies = requestEvent.request.headers.get('cookie') || '';
 
-  const response = await fetch(url, {
+  const response = await fetch(absoluteUrl, {
     ...fetchOptions,
     headers: {
       'Content-Type': 'application/json',

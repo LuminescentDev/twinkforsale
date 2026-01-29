@@ -7,6 +7,7 @@ export const onRequest: RequestHandler = async (ev) => {
     return;
   }
 
-  const apiUrl = process.env.API_URL || "http://localhost:5000";
-  throw ev.redirect(302, `${apiUrl}/l/${code}`);
+  // Use internal backend URL (e.g., http://backend:5000 in Docker, or http://localhost:5000 locally)
+  const backendUrl = ev.env.get("BACKEND_URL") || "http://localhost:5000";
+  throw ev.redirect(302, `${backendUrl}/l/${code}`);
 };

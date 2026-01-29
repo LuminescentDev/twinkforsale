@@ -20,21 +20,13 @@ import {
 } from "lucide-icons-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { getAnalyticsData } from "~/lib/analytics";
-// Helper to normalize API URL
-const normalizeApiUrl = (rawUrl: string) => {
-  return rawUrl.replace(/\/+$/, "").replace(/\/api$/, "");
-};
 
 export const usePublicStats = routeLoader$(
   async (requestEvent: RequestEventLoader) => {
     try {
-      const rawApiUrl =
-        requestEvent.env.get("API_URL") ||
-        requestEvent.env.get("VITE_API_URL") ||
-        process.env.API_URL ||
-        "http://localhost:5000";
-      const apiBaseUrl = normalizeApiUrl(rawApiUrl);
-      const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
+      // Construct absolute URL for server-side fetch
+      const origin = requestEvent.url.origin;
+      const statsResponse = await fetch(`${origin}/api/public/stats`);
       if (!statsResponse.ok) {
         throw new Error("Failed to fetch public stats", { cause: statsResponse.status });
       }

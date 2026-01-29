@@ -59,9 +59,10 @@ export const useTriggerSystemCheck = routeAction$(
       // Check system alerts
       await checkSystemAlerts(requestEvent);
 
-      const apiUrl = process.env.API_URL || "http://localhost:5000";
+      // Construct absolute URL for server-side fetch
+      const origin = requestEvent.url.origin;
       const cookies = requestEvent.request.headers.get("cookie") || "";
-      const usersResponse = await fetch(`${apiUrl}/api/admin/users?pageSize=1000`, {
+      const usersResponse = await fetch(`${origin}/api/admin/users?pageSize=1000`, {
         headers: { Cookie: cookies }
       });
       const usersData = usersResponse.ok ? await usersResponse.json() : { items: [] };

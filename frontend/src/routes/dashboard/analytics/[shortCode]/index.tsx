@@ -38,9 +38,10 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/");
   }
 
-  const apiUrl = process.env.API_URL || "http://localhost:5000";
+  // Construct absolute URL for server-side fetch
+  const origin = requestEvent.url.origin;
   const cookies = requestEvent.request.headers.get("cookie") || "";
-  const uploadResponse = await fetch(`${apiUrl}/api/uploads/short/${shortCode}`, {
+  const uploadResponse = await fetch(`${origin}/api/uploads/short/${shortCode}`, {
     headers: { Cookie: cookies }
   });
 
@@ -54,7 +55,7 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
   const analytics = await getUploadAnalytics(upload.id, 30, requestEvent);
 
   // Get detailed view logs for analytics
-  const logsResponse = await fetch(`${apiUrl}/api/uploads/${upload.id}/logs?limit=100`, {
+  const logsResponse = await fetch(`${origin}/api/uploads/${upload.id}/logs?limit=100`, {
     headers: { Cookie: cookies }
   });
 
