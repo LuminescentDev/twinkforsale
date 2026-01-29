@@ -119,12 +119,15 @@ app.UseFastEndpoints(c =>
 });
 app.UseSwaggerGen();
 
-// Auto-migrate in development
-if (app.Environment.IsDevelopment())
+// Auto-migrate database on startup
+var autoMigrate = builder.Configuration.GetValue("Database:AutoMigrate", true);
+if (autoMigrate)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    Log.Information("Applying database migrations...");
     await db.Database.MigrateAsync();
+    Log.Information("Database migrations applied successfully");
 }
 
 app.Run();
