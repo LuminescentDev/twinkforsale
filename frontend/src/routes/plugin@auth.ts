@@ -29,7 +29,8 @@ export const onRequest: RequestHandler = async (requestEvent) => {
 
   if (!accessToken && !isPublicPath) {
     // No token and accessing protected route - redirect to login
-    const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+    const rawApiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+    const apiUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, ''); // Remove trailing slashes and /api
     throw redirect(302, `${apiUrl}/api/auth/discord`);
   }
 
@@ -48,7 +49,8 @@ export const onRequest: RequestHandler = async (requestEvent) => {
         // Clear invalid cookies and redirect to login
         cookie.delete("access_token", { path: "/" });
         cookie.delete("refresh_token", { path: "/" });
-        const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+        const rawApiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+        const apiUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, ''); // Remove trailing slashes and /api
         throw redirect(302, `${apiUrl}/api/auth/discord`);
       }
     }
@@ -65,7 +67,8 @@ export const useSession = routeLoader$(async (requestEvent) => {
 
 // Sign in action - redirects to Discord OAuth
 export const useSignIn = globalAction$(async (_, requestEvent) => {
-  const apiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+  const rawApiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
+  const apiUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, ''); // Remove trailing slashes and /api
   throw requestEvent.redirect(302, `${apiUrl}/api/auth/discord`);
 });
 
