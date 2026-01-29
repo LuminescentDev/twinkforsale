@@ -1,16 +1,6 @@
-import { component$ } from "@builder.io/qwik";
-import { Form, Link, useLocation, routeLoader$ } from "@builder.io/qwik-city";
+import { component$, useComputed$ } from "@builder.io/qwik";
+import { Form, Link, useLocation } from "@builder.io/qwik-city";
 import { useSession, useSignOut } from "~/routes/plugin@auth";
-
-// Loader to get API URL for OAuth redirect
-export const useApiUrl = routeLoader$(async (requestEvent) => {
-  const rawApiUrl =
-    requestEvent.env.get("API_URL") ||
-    requestEvent.env.get("VITE_API_URL") ||
-    process.env.API_URL ||
-    "http://localhost:5000";
-  return rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
-});
 import {
   Home,
   Upload,
@@ -27,9 +17,19 @@ import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 export default component$(() => {
   const user = useSession();
-  const apiUrl = useApiUrl();
   const signOutAction = useSignOut();
   const location = useLocation();
+  
+  // Get API URL from environment - client side only for OAuth redirect
+  const getAuthUrl = () => {
+    if (typeof window !== 'undefined') {
+      // Client-side: use VITE_API_URL from build-time env
+      const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
+      return apiUrl.replace(/\/+$/, '').replace(/\/api$/, '') + '/auth/discord';
+    }
+    // Server-side: return relative URL (will work since it's a link)
+    return '#';
+  };
   const isCurrentPage = (path: string) => {
     return (
       location.url.pathname === path ||
@@ -136,7 +136,7 @@ export default component$(() => {
           </>
         ) : (
           <a
-            href={`${apiUrl.value}/auth/discord`}
+            href={getAuthUrl()}
             class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
           >
             <User class="h-4 w-4" />
@@ -231,7 +231,7 @@ export default component$(() => {
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
           <a
-            href={`${apiUrl.value}/auth/discord`}
+            href={getAuthUrl()}
             q:slot="mobile"
             class={`${buttonClasses} btn-cute text-white`}
           >

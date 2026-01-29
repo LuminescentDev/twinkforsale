@@ -74,20 +74,20 @@ export const usePublicStats = routeLoader$(
   },
 );
 
-// Loader to get API URL for OAuth redirect
-export const useApiUrl = routeLoader$(async (requestEvent) => {
-  const rawApiUrl =
-    requestEvent.env.get("API_URL") ||
-    requestEvent.env.get("VITE_API_URL") ||
-    process.env.API_URL ||
-    "http://localhost:5000";
-  return normalizeApiUrl(rawApiUrl);
-});
-
 export default component$(() => {
   const user = useSession();
-  const apiUrl = useApiUrl();
   const publicStats = usePublicStats();
+  
+  // Get OAuth URL - works on both server and client
+  const getAuthUrl = () => {
+    if (typeof window !== 'undefined') {
+      // Client-side
+      const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
+      return normalizeApiUrl(apiUrl) + '/auth/discord';
+    }
+    // Server-side: return hash, will be updated client-side
+    return '#';
+  };
 
   return (
     <>
@@ -128,7 +128,7 @@ export default component$(() => {
               </div>
             ) : (
               <a
-                href={`${apiUrl.value}/auth/discord`}
+                href={getAuthUrl()}
                 class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
               >
                 <User class="h-5 w-5" />
