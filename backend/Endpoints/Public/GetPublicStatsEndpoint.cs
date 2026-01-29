@@ -57,8 +57,6 @@ public class GetPublicStatsEndpoint(AppDbContext db) : EndpointWithoutRequest
             TotalUsers = totalUsers,
             RecentUploads = recentUploads
         };
-
-        HttpContext.Response.ContentType = "application/json";
-        await JsonSerializer.SerializeAsync(HttpContext.Response.Body, response, (JsonSerializerOptions?)null, ct);
+        await SendOkAsync(response, ct);
     }
 }
