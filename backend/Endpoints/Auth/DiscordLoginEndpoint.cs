@@ -24,7 +24,8 @@ public class DiscordLoginEndpoint(IDiscordOAuthService discord) : EndpointWithou
         });
 
         var url = discord.GetAuthorizationUrl(state);
-        HttpContext.Response.Redirect(url);
+        HttpContext.Response.StatusCode = 302;
+        HttpContext.Response.Headers.Location = url;
         return Task.CompletedTask;
     }
 }
