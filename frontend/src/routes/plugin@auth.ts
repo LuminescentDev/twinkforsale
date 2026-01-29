@@ -69,7 +69,9 @@ export const useSession = routeLoader$(async (requestEvent) => {
 export const useSignIn = globalAction$(async (_, requestEvent) => {
   const rawApiUrl = requestEvent.env.get("API_URL") || "http://localhost:5000";
   const apiUrl = rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, ''); // Remove trailing slashes and /api
-  throw requestEvent.redirect(302, `${apiUrl}/api/auth/discord`);
+  const redirectUrl = `${apiUrl}/api/auth/discord`;
+  console.log("Sign in redirect URL:", redirectUrl);
+  throw requestEvent.redirect(302, redirectUrl);
 });
 
 // Sign out action - clears cookies and redirects to home

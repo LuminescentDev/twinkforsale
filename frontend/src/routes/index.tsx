@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
-import { Form, Link, useLocation, routeLoader$ } from "@builder.io/qwik-city";
+import { Link, routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead, RequestEventLoader } from "@builder.io/qwik-city";
-import { useSession, useSignIn } from "~/routes/plugin@auth";
+import { useSession } from "~/routes/plugin@auth";
 import {
   Home,
   Settings,
@@ -19,60 +19,74 @@ import {
 } from "lucide-icons-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { getAnalyticsData } from "~/lib/analytics";
-export const usePublicStats = routeLoader$(async (requestEvent: RequestEventLoader) => {
-  try {
-    const rawApiUrl =
-      requestEvent.env.get("API_URL") ||
-      requestEvent.env.get("VITE_API_URL") ||
-      process.env.API_URL ||
-      "http://localhost:5000";
-    const apiBaseUrl = rawApiUrl.endsWith("/api")
-      ? rawApiUrl
-      : `${rawApiUrl}/api`;
-    const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
-    if (!statsResponse.ok) {
-      throw new Error("Failed to fetch public stats");
+// Helper to normalize API URL
+const normalizeApiUrl = (rawUrl: string) => {
+  return rawUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+};
+
+export const usePublicStats = routeLoader$(
+  async (requestEvent: RequestEventLoader) => {
+    try {
+      const rawApiUrl =
+        requestEvent.env.get("API_URL") ||
+        requestEvent.env.get("VITE_API_URL") ||
+        process.env.API_URL ||
+        "http://localhost:5000";
+      const apiBaseUrl = `${normalizeApiUrl(rawApiUrl)}/api`;
+      const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
+      if (!statsResponse.ok) {
+        throw new Error("Failed to fetch public stats");
+      }
+
+      const stats = await statsResponse.json();
+      const analyticsData = await getAnalyticsData(7);
+
+      // Calculate 7-day totals
+      const weeklyStats = analyticsData.reduce(
+        (acc, day) => ({
+          views: acc.views + day.totalViews,
+          uploads: acc.uploads + day.uploadsCount,
+          users: acc.users + day.usersRegistered,
+        }),
+        { views: 0, uploads: 0, users: 0 },
+      );
+
+      // Get recent upload activity (anonymized)
+      return {
+        totalUploads: stats.totalUploads || 0,
+        totalViews: stats.totalViews || 0,
+        totalUsers: stats.totalUsers || 0,
+        weeklyStats,
+        analyticsData,
+        recentUploads: stats.recentUploads || [],
+      };
+    } catch (error) {
+      console.error("Error fetching public stats:", error);
+      return {
+        totalUploads: 0,
+        totalViews: 0,
+        totalUsers: 0,
+        weeklyStats: { views: 0, uploads: 0, users: 0 },
+        analyticsData: [],
+        recentUploads: [],
+      };
     }
+  },
+);
 
-    const stats = await statsResponse.json();
-    const analyticsData = await getAnalyticsData(7);
-
-    // Calculate 7-day totals
-    const weeklyStats = analyticsData.reduce(
-      (acc, day) => ({
-        views: acc.views + day.totalViews,
-        uploads: acc.uploads + day.uploadsCount,
-        users: acc.users + day.usersRegistered,
-      }),
-      { views: 0, uploads: 0, users: 0 },
-    );
-
-    // Get recent upload activity (anonymized)
-    return {
-      totalUploads: stats.totalUploads || 0,
-      totalViews: stats.totalViews || 0,
-      totalUsers: stats.totalUsers || 0,
-      weeklyStats,
-      analyticsData,
-      recentUploads: stats.recentUploads || [],
-    };
-  } catch (error) {
-    console.error("Error fetching public stats:", error);
-    return {
-      totalUploads: 0,
-      totalViews: 0,
-      totalUsers: 0,
-      weeklyStats: { views: 0, uploads: 0, users: 0 },
-      analyticsData: [],
-      recentUploads: [],
-    };
-  }
+// Loader to get API URL for OAuth redirect
+export const useApiUrl = routeLoader$(async (requestEvent) => {
+  const rawApiUrl =
+    requestEvent.env.get("API_URL") ||
+    requestEvent.env.get("VITE_API_URL") ||
+    process.env.API_URL ||
+    "http://localhost:5000";
+  return normalizeApiUrl(rawApiUrl);
 });
 
 export default component$(() => {
   const user = useSession();
-  const signInAction = useSignIn();
-  const loc = useLocation();
+  const apiUrl = useApiUrl();
   const publicStats = usePublicStats();
 
   return (
@@ -106,25 +120,20 @@ export default component$(() => {
                 </Link>
                 <Link
                   href="/setup/sharex"
-                  class="glass text-theme-text-primary hover:bg-gradient-to-br from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all duration-300 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+                  class="glass text-theme-text-primary from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all duration-300 hover:bg-gradient-to-br sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                 >
                   <Settings class="h-5 w-5" />
                   Setup ShareX
                 </Link>
               </div>
             ) : (
-              <Form action={signInAction} q:slot="end">
-                <input type="hidden" name="providerId" value="discord" />
-                <input
-                  type="hidden"
-                  name="options.redirectTo"
-                  value={loc.url.pathname + loc.url.search}
-                />{" "}
-                <button class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg">
-                  <User class="h-5 w-5" />
-                  Get Started
-                </button>
-              </Form>
+              <a
+                href={`${apiUrl.value}/api/auth/discord`}
+                class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+              >
+                <User class="h-5 w-5" />
+                Get Started
+              </a>
             )}
           </div>
         </div>
@@ -231,7 +240,9 @@ export default component$(() => {
               <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
                 {publicStats.value.totalUsers.toLocaleString()}
               </div>
-              <div class="text-theme-text-secondary text-xs sm:text-sm">Twinks</div>
+              <div class="text-theme-text-secondary text-xs sm:text-sm">
+                Twinks
+              </div>
             </div>
 
             <div class="card-cute rounded-3xl p-4 text-center sm:p-6">
@@ -520,23 +531,37 @@ export default component$(() => {
               <div class="relative z-0 mt-6 grid grid-cols-2 gap-4 text-center md:grid-cols-3">
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-slate-800 to-slate-900"></div>
-                  <div class="text-theme-text-secondary text-xs">Dark Theme</div>
-                  <div class="text-theme-text-muted text-xs">Classic & sleek</div>
+                  <div class="text-theme-text-secondary text-xs">
+                    Dark Theme
+                  </div>
+                  <div class="text-theme-text-muted text-xs">
+                    Classic & sleek
+                  </div>
                 </div>
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
-                  <div class="text-theme-text-secondary text-xs">Light Theme</div>
-                  <div class="text-theme-text-muted text-xs">Clean & bright</div>
+                  <div class="text-theme-text-secondary text-xs">
+                    Light Theme
+                  </div>
+                  <div class="text-theme-text-muted text-xs">
+                    Clean & bright
+                  </div>
                 </div>
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-pink-300 to-purple-400"></div>
-                  <div class="text-theme-text-secondary text-xs">Pastel Theme</div>
+                  <div class="text-theme-text-secondary text-xs">
+                    Pastel Theme
+                  </div>
                   <div class="text-theme-text-muted text-xs">Soft & dreamy</div>
                 </div>
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-pink-500 to-violet-600"></div>
-                  <div class="text-theme-text-secondary text-xs">Neon Theme</div>
-                  <div class="text-theme-text-muted text-xs">Cyberpunk vibes</div>
+                  <div class="text-theme-text-secondary text-xs">
+                    Neon Theme
+                  </div>
+                  <div class="text-theme-text-muted text-xs">
+                    Cyberpunk vibes
+                  </div>
                 </div>
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-rose-400 to-pink-600"></div>
@@ -547,8 +572,12 @@ export default component$(() => {
                 </div>
                 <div class="glass rounded-xl p-4">
                   <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-slate-500 to-slate-600"></div>
-                  <div class="text-theme-text-secondary text-xs">Auto Theme</div>
-                  <div class="text-theme-text-muted text-xs">Follows system</div>
+                  <div class="text-theme-text-secondary text-xs">
+                    Auto Theme
+                  </div>
+                  <div class="text-theme-text-muted text-xs">
+                    Follows system
+                  </div>
                 </div>
               </div>
               <div class="mt-6 text-center">

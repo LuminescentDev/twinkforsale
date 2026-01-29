@@ -1,6 +1,16 @@
 import { component$ } from "@builder.io/qwik";
-import { Form, Link, useLocation } from "@builder.io/qwik-city";
-import { useSession, useSignIn, useSignOut } from "~/routes/plugin@auth";
+import { Form, Link, useLocation, routeLoader$ } from "@builder.io/qwik-city";
+import { useSession, useSignOut } from "~/routes/plugin@auth";
+
+// Loader to get API URL for OAuth redirect
+export const useApiUrl = routeLoader$(async (requestEvent) => {
+  const rawApiUrl =
+    requestEvent.env.get("API_URL") ||
+    requestEvent.env.get("VITE_API_URL") ||
+    process.env.API_URL ||
+    "http://localhost:5000";
+  return rawApiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+});
 import {
   Home,
   Upload,
@@ -17,7 +27,7 @@ import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 export default component$(() => {
   const user = useSession();
-  const signInAction = useSignIn();
+  const apiUrl = useApiUrl();
   const signOutAction = useSignOut();
   const location = useLocation();
   const isCurrentPage = (path: string) => {
@@ -125,14 +135,13 @@ export default component$(() => {
             </Form>
           </>
         ) : (
-          <Form action={signInAction}>
-            <input type="hidden" name="providerId" value="discord" />
-            <input type="hidden" name="options.redirectTo" />
-            <button class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white">
-              <User class="h-4 w-4" />
-              Sign In
-            </button>
-          </Form>
+          <a
+            href={`${apiUrl.value}/api/auth/discord`}
+            class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
+          >
+            <User class="h-4 w-4" />
+            Sign In
+          </a>
         )}
       </div>
       {/* Mobile Navigation Items */}
@@ -221,14 +230,14 @@ export default component$(() => {
           <div q:slot="mobile" class="px-4 py-3">
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
-          <Form action={signInAction} q:slot="mobile">
-            <input type="hidden" name="providerId" value="discord" />
-            <input type="hidden" name="options.redirectTo" />
-            <button class={`${buttonClasses} btn-cute text-white`}>
-              <User class="h-5 w-5" />
-              Sign In
-            </button>
-          </Form>
+          <a
+            href={`${apiUrl.value}/api/auth/discord`}
+            q:slot="mobile"
+            class={`${buttonClasses} btn-cute text-white`}
+          >
+            <User class="h-5 w-5" />
+            Sign In
+          </a>
         </>
       )}
     </Nav>
