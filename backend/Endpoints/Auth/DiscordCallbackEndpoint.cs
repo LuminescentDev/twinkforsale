@@ -26,7 +26,7 @@ public class DiscordCallbackEndpoint(
     public override async Task HandleAsync(DiscordCallbackRequest req, CancellationToken ct)
     {
         var frontendUrl = config["App:FrontendUrl"] ?? config["Cors:Origins"]?.Split(',').First() ?? "http://localhost:3000";
-
+        frontendUrl = frontendUrl.TrimEnd('/');
         var storedState = HttpContext.Request.Cookies["oauth_state"];
         if (string.IsNullOrEmpty(storedState) || storedState != req.State)
         {
