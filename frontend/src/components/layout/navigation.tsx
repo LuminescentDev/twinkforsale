@@ -1,4 +1,4 @@
-import { component$, useComputed$ } from "@builder.io/qwik";
+import { component$ } from "@builder.io/qwik";
 import { Form, Link, useLocation } from "@builder.io/qwik-city";
 import { useSession, useSignOut } from "~/routes/plugin@auth";
 import {
