@@ -21,17 +21,29 @@ async function serverRequest<T>(
 
   const cookies = requestEvent?.request.headers.get("cookie") || "";
 
+  const headers: Record<string, string> = {
+    ...(cookies ? { Cookie: cookies } : {}),
+    ...(fetchOptions.headers ? Object.fromEntries(Object.entries(fetchOptions.headers)) : {}),
+  };
+
+  // Only set Content-Type for requests with a body
+  if (fetchOptions.body) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(url, {
     ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...(cookies ? { Cookie: cookies } : {}),
-      ...fetchOptions.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    let message: string;
+    try {
+      const errorData = await response.json();
+      message = errorData.message || JSON.stringify(errorData);
+    } catch {
+      message = await response.text();
+    }
     throw new Error(message || response.statusText);
   }
 

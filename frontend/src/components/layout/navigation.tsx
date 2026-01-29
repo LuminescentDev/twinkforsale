@@ -20,15 +20,11 @@ export default component$(() => {
   const signOutAction = useSignOut();
   const location = useLocation();
   
-  // Get API URL from environment - client side only for OAuth redirect
+  // Get API URL from environment - works on both server and client
   const getAuthUrl = () => {
-    if (typeof window !== 'undefined') {
-      // Client-side: use VITE_API_URL from build-time env
-      const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-      return apiUrl.replace(/\/+$/, '').replace(/\/api$/, '') + '/auth/discord';
-    }
-    // Server-side: return relative URL (will work since it's a link)
-    return '#';
+    // Use VITE_API_URL which is available at build time
+    const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
+    return apiUrl.replace(/\/+$/, '').replace(/\/api$/, '') + '/auth/discord';
   };
   const isCurrentPage = (path: string) => {
     return (

@@ -80,13 +80,9 @@ export default component$(() => {
   
   // Get OAuth URL - works on both server and client
   const getAuthUrl = () => {
-    if (typeof window !== 'undefined') {
-      // Client-side
-      const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-      return normalizeApiUrl(apiUrl) + '/auth/discord';
-    }
-    // Server-side: return hash, will be updated client-side
-    return '#';
+    // Use VITE_API_URL which is available at build time
+    const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
+    return normalizeApiUrl(apiUrl) + '/auth/discord';
   };
 
   return (
