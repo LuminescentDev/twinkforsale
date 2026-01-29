@@ -115,7 +115,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseFastEndpoints(c =>
 {
-    c.Endpoints.RoutePrefix = "api";
+    // No route prefix - endpoints define their own routes
 });
 app.UseSwaggerGen();
 

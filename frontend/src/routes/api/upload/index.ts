@@ -14,7 +14,7 @@ export const onPost: RequestHandler = async ({ request, json }) => {
 
     const authHeader = request.headers.get("Authorization") || "";
 
-    const response = await fetch(`${apiUrl}/api/upload`, {
+    const response = await fetch(`${apiUrl}/upload`, {
       method: "POST",
       headers: {
         Authorization: authHeader,

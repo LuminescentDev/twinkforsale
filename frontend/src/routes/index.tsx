@@ -32,7 +32,7 @@ export const usePublicStats = routeLoader$(
         requestEvent.env.get("VITE_API_URL") ||
         process.env.API_URL ||
         "http://localhost:5000";
-      const apiBaseUrl = `${normalizeApiUrl(rawApiUrl)}/api`;
+      const apiBaseUrl = normalizeApiUrl(rawApiUrl);
       const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
       if (!statsResponse.ok) {
         throw new Error("Failed to fetch public stats");
@@ -128,7 +128,7 @@ export default component$(() => {
               </div>
             ) : (
               <a
-                href={`${apiUrl.value}/api/auth/discord`}
+                href={`${apiUrl.value}/auth/discord`}
                 class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
               >
                 <User class="h-5 w-5" />

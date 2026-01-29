@@ -136,7 +136,7 @@ export default component$(() => {
           </>
         ) : (
           <a
-            href={`${apiUrl.value}/api/auth/discord`}
+            href={`${apiUrl.value}/auth/discord`}
             class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
           >
             <User class="h-4 w-4" />
@@ -231,7 +231,7 @@ export default component$(() => {
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
           <a
-            href={`${apiUrl.value}/api/auth/discord`}
+            href={`${apiUrl.value}/auth/discord`}
             q:slot="mobile"
             class={`${buttonClasses} btn-cute text-white`}
           >

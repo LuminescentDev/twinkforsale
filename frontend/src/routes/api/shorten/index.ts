@@ -5,7 +5,7 @@ export const onPost: RequestHandler = async ({ request, json }) => {
   const authHeader = request.headers.get("Authorization") || "";
   const body = await request.text();
 
-  const response = await fetch(`${apiUrl}/api/shorten`, {
+  const response = await fetch(`${apiUrl}/shorten`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
