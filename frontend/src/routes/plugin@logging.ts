@@ -39,7 +39,7 @@ export const onRequest: RequestHandler = async ({ request, url, next, sharedMap 
     const response = await next();
     
     // Try to get status code from response if it's a Response object
-    if (response && typeof response === 'object' && 'status' in response) {
+    if (response !== undefined && typeof response === 'object' && 'status' in response) {
       statusCode = (response as Response).status;
     }
     
