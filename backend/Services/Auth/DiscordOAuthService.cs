@@ -47,7 +47,8 @@ public class DiscordOAuthService(IConfiguration config, HttpClient httpClient, I
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Discord token exchange failed: {Response}", json);
+                _logger.LogError("Discord token exchange failed. Status: {StatusCode}, Response: {Response}, RedirectUri: {RedirectUri}", 
+                    response.StatusCode, json, _config["Discord:RedirectUri"]);
                 return null;
             }
 
