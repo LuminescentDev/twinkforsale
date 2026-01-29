@@ -31,7 +31,7 @@ public class DiscordCallbackEndpoint(
         if (string.IsNullOrEmpty(storedState) || storedState != req.State)
         {
             logger.LogWarning("OAuth state mismatch");
-            HttpContext.Response.Redirect($"{frontendUrl}?error=invalid_state");
+            await SendRedirectAsync($"{frontendUrl}?error=invalid_state", allowRemoteRedirects: true);
             return;
         }
 
@@ -41,7 +41,7 @@ public class DiscordCallbackEndpoint(
         if (tokens == null)
         {
             logger.LogError("Failed to exchange Discord code");
-            HttpContext.Response.Redirect($"{frontendUrl}?error=token_exchange_failed");
+            await SendRedirectAsync($"{frontendUrl}?error=token_exchange_failed", allowRemoteRedirects: true);
             return;
         }
 
@@ -49,7 +49,7 @@ public class DiscordCallbackEndpoint(
         if (discordUser == null || string.IsNullOrEmpty(discordUser.Email))
         {
             logger.LogError("Failed to get Discord user or email not provided");
-            HttpContext.Response.Redirect($"{frontendUrl}?error=user_fetch_failed");
+            await SendRedirectAsync($"{frontendUrl}?error=user_fetch_failed", allowRemoteRedirects: true);
             return;
         }
 
@@ -129,6 +129,6 @@ public class DiscordCallbackEndpoint(
             MaxAge = TimeSpan.FromDays(int.Parse(config["Jwt:RefreshExpiryDays"] ?? "7"))
         });
 
-        HttpContext.Response.Redirect($"{frontendUrl}/dashboard");
+        await SendRedirectAsync($"{frontendUrl}/dashboard", allowRemoteRedirects: true);
     }
 }
