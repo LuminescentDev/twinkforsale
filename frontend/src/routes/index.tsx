@@ -35,7 +35,7 @@ export const usePublicStats = routeLoader$(
       const apiBaseUrl = normalizeApiUrl(rawApiUrl);
       const statsResponse = await fetch(`${apiBaseUrl}/public/stats`);
       if (!statsResponse.ok) {
-        throw new Error("Failed to fetch public stats");
+        throw new Error("Failed to fetch public stats", { cause: statsResponse.status });
       }
 
       const stats = await statsResponse.json();
