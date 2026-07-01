@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     vips
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.13.1
 
 COPY . .
 

@@ -1,18 +1,18 @@
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.13.1
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY frontend/package.json frontend/package.json
 RUN pnpm install --filter twink-for-sale --frozen-lockfile
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.13.1
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
@@ -25,7 +25,7 @@ ARG VITE_API_BASE_URL=http://localhost:5000
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm run deploy
 
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app/frontend
 

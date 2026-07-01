@@ -61,7 +61,7 @@ twinkforsale/
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Node.js 18.17.0+ or 20.3.0+
+- Node.js 24+
 - Bun (recommended) or npm/yarn
 - Discord application for OAuth
 

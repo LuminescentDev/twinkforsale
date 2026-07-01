@@ -2,7 +2,7 @@
   "name": "twink-for-sale",
   "description": "Twink For Sale",
   "engines": {
-    "node": "^18.17.0 || ^20.3.0 || >=21.0.0"
+    "node": ">=24.0.0"
   },
   "private": true,
   "type": "module",
@@ -29,7 +29,7 @@
     "@luminescent/ui": "^3.0.4",
     "@luminescent/ui-qwik": "^3.0.4",
     "@tailwindcss/vite": "^4.1.8",
-    "@types/node": "20.14.11",
+    "@types/node": "^24.0.0",
     "eslint": "9.25.1",
     "eslint-plugin-qwik": "^1.14.1",
     "globals": "16.0.0",
