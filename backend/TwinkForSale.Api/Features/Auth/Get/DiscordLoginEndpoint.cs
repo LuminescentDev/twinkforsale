@@ -47,7 +47,10 @@ public sealed class DiscordLoginEndpoint(
             ["prompt"] = "none"
         };
 
-        await SendRedirectAsync(QueryHelpers.AddQueryString("https://discord.com/api/oauth2/authorize", parameters), isPermanent: false);
+        await SendRedirectAsync(
+            QueryHelpers.AddQueryString("https://discord.com/api/oauth2/authorize", parameters),
+            isPermanent: false,
+            allowRemoteRedirects: true);
     }
 
     internal string BuildCallbackUrl()

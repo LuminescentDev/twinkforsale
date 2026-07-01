@@ -194,9 +194,10 @@ public sealed class DiscordCallbackEndpoint(
     {
         var frontendUrl = (frontendOrigin ?? appOptions.Value.FrontendUrl).TrimEnd('/');
         var safeReturnTo = DiscordLoginEndpoint.SanitizeReturnTo(returnTo);
-        await SendRedirectAsync(string.IsNullOrWhiteSpace(frontendUrl)
-            ? safeReturnTo
-            : $"{frontendUrl}{safeReturnTo}", isPermanent: false);
+        await SendRedirectAsync(
+            string.IsNullOrWhiteSpace(frontendUrl) ? safeReturnTo : $"{frontendUrl}{safeReturnTo}",
+            isPermanent: false,
+            allowRemoteRedirects: true);
     }
 
     private string BuildCallbackUrl()
