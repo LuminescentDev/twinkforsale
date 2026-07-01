@@ -1,7 +1,7 @@
 import { component$, $ } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 import { useCurrentUser } from "~/routes/layout";
-import { loginWithDiscord, logout } from "~/lib/auth-client";
+import { logout } from "~/lib/auth-client";
 import {
   Home,
   Upload,
@@ -9,16 +9,15 @@ import {
   Sparkle,
   Settings,
   LogOut,
-  User,
   Link as LinkIcon,
   Plus,
 } from "lucide-icons-qwik";
 import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { LoginButton } from "~/components/auth/login-button";
 
 export default component$(() => {
   const user = useCurrentUser();
-  const signIn = $(() => loginWithDiscord());
   const signOut = $(() => logout());
   const location = useLocation();
   const isCurrentPage = (path: string) => {
@@ -125,13 +124,9 @@ export default component$(() => {
             </button>
           </>
         ) : (
-          <button
-            onClick$={signIn}
+          <LoginButton
             class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
-          >
-            <User class="h-4 w-4" />
-            Sign In
-          </button>
+          />
         )}
       </div>
       {/* Mobile Navigation Items */}
@@ -218,14 +213,11 @@ export default component$(() => {
           <div q:slot="mobile" class="px-4 py-3">
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
-          <button
-            onClick$={signIn}
+          <LoginButton
             q:slot="mobile"
             class={`${buttonClasses} btn-cute text-white`}
-          >
-            <User class="h-5 w-5" />
-            Sign In
-          </button>
+            iconClass="h-5 w-5"
+          />
         </>
       )}
     </Nav>

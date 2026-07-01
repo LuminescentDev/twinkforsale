@@ -1,8 +1,7 @@
-import { component$, $ } from "@builder.io/qwik";
+import { component$ } from "@builder.io/qwik";
 import { Link, routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { useCurrentUser } from "~/routes/layout";
-import { loginWithDiscord } from "~/lib/auth-client";
 import { api } from "~/lib/api-client";
 import {
   Home,
@@ -20,6 +19,7 @@ import {
   Palette,
 } from "lucide-icons-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { LoginButton } from "~/components/auth/login-button";
 
 export const usePublicStats = routeLoader$(async (requestEvent) => {
   const empty = {
@@ -48,7 +48,6 @@ export const usePublicStats = routeLoader$(async (requestEvent) => {
 
 export default component$(() => {
   const user = useCurrentUser();
-  const signIn = $(() => loginWithDiscord());
   const publicStats = usePublicStats();
 
   return (
@@ -89,13 +88,11 @@ export default component$(() => {
                 </Link>
               </div>
             ) : (
-              <button
-                onClick$={signIn}
+              <LoginButton
                 class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-              >
-                <User class="h-5 w-5" />
-                Get Started
-              </button>
+                iconClass="h-5 w-5"
+                label="Get Started"
+              />
             )}
           </div>
         </div>

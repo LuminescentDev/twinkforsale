@@ -1,23 +1,12 @@
-FROM node:24-alpine AS deps
-
-WORKDIR /app
-
-RUN npm install -g pnpm@10.13.1
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY frontend/package.json frontend/package.json
-RUN pnpm install --filter twink-for-sale --frozen-lockfile
-
 FROM node:24-alpine AS build
 
 WORKDIR /app
 
 RUN npm install -g pnpm@10.13.1
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY frontend ./frontend
+RUN pnpm install --filter twink-for-sale --frozen-lockfile
 
 WORKDIR /app/frontend
 
