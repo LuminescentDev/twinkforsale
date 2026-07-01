@@ -1,22 +1,56 @@
-# Build
-/dist
-/lib
-/lib-types
-/server
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnpm-store/
 
-# Development
-node_modules
+# Frontend build output
+dist/
+server/
+tmp/
+.qwik/
+frontend/dist/
+frontend/server/
+frontend/tmp/
+frontend/.qwik/
+frontend/lib/
+frontend/lib-types/
+
+# .NET build output
+**/bin/
+**/obj/
+**/.vs/
+TestResults/
+*.user
+*.rsuser
+*.suo
+
+# Environment and local secrets
 .env
+.env.*
+!.env.example
+!.env.production.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
 *.local
 
-# Cache
-.cache
-.mf
-.rollup.cache
-tsconfig.tsbuildinfo
+# Local data and uploads
+/uploads/
+/frontend/uploads/
+/backend/uploads/
+generated/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db
+prisma/dev.db-journal
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -24,26 +58,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor
+# Caches
+.cache/
+.mf/
+.rollup.cache/
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/*
 !.vscode/launch.json
 !.vscode/*.code-snippets
+*.swp
+*.swo
 
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Yarn
+# Tooling
+.history/
 .yarn/*
-!.yarn/releases
-prisma/dev.db
-.github/
-
-# Uploads directory (files uploaded by users)
-/uploads/
-prisma/dev.db-journal
-generated/
+!.yarn/releases/
+.netlify/

@@ -29,4 +29,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set entrypoint and command
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["node", "server/entry.node-server.js"]
+CMD ["node", "frontend/server/entry.node-server.js"]
