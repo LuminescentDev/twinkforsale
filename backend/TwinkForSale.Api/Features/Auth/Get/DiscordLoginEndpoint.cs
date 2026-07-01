@@ -19,13 +19,14 @@ public sealed class DiscordLoginEndpoint(
         AllowAnonymous();
     }
 
-    public override Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(CancellationToken ct)
     {
         var options = discordOptions.Value;
         if (string.IsNullOrWhiteSpace(options.ClientId))
         {
             HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            return HttpContext.Response.WriteAsync("Discord OAuth is not configured.", ct);
+            await HttpContext.Response.WriteAsync("Discord OAuth is not configured.", ct);
+            return;
         }
 
         var nonce = GenerateToken();
@@ -46,8 +47,7 @@ public sealed class DiscordLoginEndpoint(
             ["prompt"] = "none"
         };
 
-        HttpContext.Response.Redirect(QueryHelpers.AddQueryString("https://discord.com/api/oauth2/authorize", parameters));
-        return Task.CompletedTask;
+        await SendRedirectAsync(QueryHelpers.AddQueryString("https://discord.com/api/oauth2/authorize", parameters), isPermanent: false);
     }
 
     internal string BuildCallbackUrl()
