@@ -10,7 +10,12 @@
 import { createQwikCity } from "@builder.io/qwik-city/middleware/node";
 import qwikCityPlan from "@qwik-city-plan";
 import render from "./entry.ssr";
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
+import { Readable } from "node:stream";
 
 // The frontend node server only serves the Qwik app; auth, database and
 // monitoring are owned by the C# backend (see MIGRATION_PLAN.md).
@@ -24,6 +29,54 @@ console.log(
 
 // Allow for dynamic port with better fallbacks
 const PORT = process.env.PORT || process.env.NODE_PORT || 3004;
+const API_INTERNAL_BASE_URL = (
+  process.env.API_INTERNAL_BASE_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+const backendProxyPrefixes = ["/f/", "/l/"];
+
+function shouldProxyToBackend(url: string | undefined): boolean {
+  if (!url) return false;
+  return backendProxyPrefixes.some((prefix) => url.startsWith(prefix));
+}
+
+async function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
+  const targetUrl = `${API_INTERNAL_BASE_URL}${req.url ?? "/"}`;
+  const headers = new Headers();
+
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (value === undefined || name.toLowerCase() === "host") continue;
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(name, item);
+    } else {
+      headers.set(name, value);
+    }
+  }
+
+  const response = await fetch(targetUrl, {
+    method: req.method,
+    headers,
+    body:
+      req.method === "GET" || req.method === "HEAD"
+        ? undefined
+        : (req as unknown as BodyInit),
+    duplex: "half",
+    redirect: "manual",
+  } as RequestInit & { duplex: "half" });
+
+  res.statusCode = response.status;
+  response.headers.forEach((value, name) => {
+    res.setHeader(name, value);
+  });
+
+  if (!response.body || req.method === "HEAD") {
+    res.end();
+    return;
+  }
+
+  Readable.fromWeb(
+    response.body as Parameters<typeof Readable.fromWeb>[0],
+  ).pipe(res);
+}
 
 // Create the Qwik City express middleware
 const { router, notFound, staticFile } = createQwikCity({
@@ -71,6 +124,19 @@ server.on("request", (req, res) => {
     console.log(
       `${new Date().toISOString()} ${req.method} ${req.url} - Host: ${req.headers.host} - Proto: ${forwardedProto || "http"}`,
     );
+  }
+
+  if (shouldProxyToBackend(req.url)) {
+    proxyToBackend(req, res).catch((error) => {
+      console.error("Backend proxy error:", error);
+      if (!res.headersSent) {
+        res.statusCode = 502;
+        res.end("Bad Gateway");
+      } else {
+        res.destroy(error);
+      }
+    });
+    return;
   }
 
   staticFile(req, res, () => {
