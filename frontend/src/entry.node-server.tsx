@@ -12,10 +12,11 @@ import qwikCityPlan from "@qwik-city-plan";
 import render from "./entry.ssr";
 import {
   createServer,
+  request as httpRequest,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { Readable } from "node:stream";
+import { request as httpsRequest } from "node:https";
 
 // The frontend node server only serves the Qwik app; auth, database and
 // monitoring are owned by the C# backend (see MIGRATION_PLAN.md).
@@ -39,43 +40,39 @@ function shouldProxyToBackend(url: string | undefined): boolean {
   return backendProxyPrefixes.some((prefix) => url.startsWith(prefix));
 }
 
-async function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
-  const targetUrl = `${API_INTERNAL_BASE_URL}${req.url ?? "/"}`;
-  const headers = new Headers();
+function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
+  return new Promise<void>((resolve, reject) => {
+    const targetUrl = new URL(req.url ?? "/", `${API_INTERNAL_BASE_URL}/`);
+    const proxyRequest = (targetUrl.protocol === "https:" ? httpsRequest : httpRequest)(
+      targetUrl,
+      {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: targetUrl.host,
+        },
+      },
+      (proxyResponse) => {
+        res.writeHead(
+          proxyResponse.statusCode ?? 502,
+          proxyResponse.statusMessage,
+          proxyResponse.headers,
+        );
 
-  for (const [name, value] of Object.entries(req.headers)) {
-    if (value === undefined || name.toLowerCase() === "host") continue;
-    if (Array.isArray(value)) {
-      for (const item of value) headers.append(name, item);
-    } else {
-      headers.set(name, value);
+        proxyResponse.pipe(res);
+        proxyResponse.on("end", resolve);
+      },
+    );
+
+    proxyRequest.on("error", reject);
+
+    if (req.method === "GET" || req.method === "HEAD") {
+      proxyRequest.end();
+      return;
     }
-  }
 
-  const response = await fetch(targetUrl, {
-    method: req.method,
-    headers,
-    body:
-      req.method === "GET" || req.method === "HEAD"
-        ? undefined
-        : (req as unknown as BodyInit),
-    duplex: "half",
-    redirect: "manual",
-  } as RequestInit & { duplex: "half" });
-
-  res.statusCode = response.status;
-  response.headers.forEach((value, name) => {
-    res.setHeader(name, value);
+    req.pipe(proxyRequest);
   });
-
-  if (!response.body || req.method === "HEAD") {
-    res.end();
-    return;
-  }
-
-  Readable.fromWeb(
-    response.body as Parameters<typeof Readable.fromWeb>[0],
-  ).pipe(res);
 }
 
 // Create the Qwik City express middleware
