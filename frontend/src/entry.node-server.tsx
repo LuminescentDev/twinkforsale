@@ -33,7 +33,15 @@ const PORT = process.env.PORT || process.env.NODE_PORT || 3004;
 const API_INTERNAL_BASE_URL = (
   process.env.API_INTERNAL_BASE_URL || "http://localhost:5000"
 ).replace(/\/$/, "");
-const backendProxyPrefixes = ["/f/", "/l/", "/api/upload", "/api/uploads", "/api/oembed"];
+const backendProxyPrefixes = [
+  "/f/",
+  "/l/",
+  "/upload",
+  "/uploads",
+  "/api/upload",
+  "/api/uploads",
+  "/api/oembed",
+];
 
 function shouldProxyToBackend(url: string | undefined): boolean {
   if (!url) return false;

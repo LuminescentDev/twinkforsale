@@ -14,7 +14,8 @@ public sealed class CreateUploadEndpoint(
     AppDbContext dbContext,
     IFileStorage fileStorage,
     UploadCodeGenerator codeGenerator,
-    IOptions<AppOptions> appOptions) : EndpointWithoutRequest<CreateUploadResponse>
+    IOptions<AppOptions> appOptions,
+    ILogger<CreateUploadEndpoint> logger) : EndpointWithoutRequest<CreateUploadResponse>
 {
     public override void Configure()
     {
@@ -31,105 +32,123 @@ public sealed class CreateUploadEndpoint(
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userId))
+        try
         {
-            await SendAsync(new CreateUploadResponse(Error: "Authentication required."), StatusCodes.Status401Unauthorized, ct);
-            return;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                await SendAsync(new CreateUploadResponse(Error: "Authentication required."), StatusCodes.Status401Unauthorized, ct);
+                return;
+            }
+
+            var form = await HttpContext.Request.ReadFormAsync(ct);
+            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            if (file is null)
+            {
+                await SendAsync(new CreateUploadResponse(Error: "No file provided."), StatusCodes.Status400BadRequest, ct);
+                return;
+            }
+
+            var user = await dbContext.Users
+                .Include(x => x.Uploads)
+                .Include(x => x.Settings)
+                .FirstAsync(x => x.Id == userId, ct);
+
+            var apiKeyId = User.FindFirstValue(AppClaimTypes.ApiKeyId);
+            if (!string.IsNullOrWhiteSpace(apiKeyId))
+            {
+                await dbContext.ApiKeys
+                    .Where(x => x.Id == apiKeyId)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.LastUsed, DateTimeOffset.UtcNow), ct);
+            }
+
+            var settings = user.Settings ?? new UserSettings { UserId = user.Id };
+            var maxUploads = settings.MaxUploads;
+            if (user.Uploads.Count >= maxUploads)
+            {
+                await SendAsync(new CreateUploadResponse(Error: "Upload limit exceeded."), StatusCodes.Status429TooManyRequests, ct);
+                return;
+            }
+
+            if (file.Length > settings.MaxFileSize)
+            {
+                await SendAsync(new CreateUploadResponse(Error: "File too large."), StatusCodes.Status413PayloadTooLarge, ct);
+                return;
+            }
+
+            var storageLimit = settings.MaxStorageLimit ?? appOptions.Value.BaseStorageLimit;
+            if (settings.StorageUsed + file.Length > storageLimit)
+            {
+                await SendAsync(new CreateUploadResponse(Error: "Storage quota exceeded."), StatusCodes.Status413PayloadTooLarge, ct);
+                return;
+            }
+
+            var shortCode = await codeGenerator.GenerateUniqueShortCodeAsync(ct);
+            var deletionKey = EntityIds.NewId();
+            var cleanFilename = CleanFilename(file.FileName);
+            var storageKey = $"{shortCode}_{cleanFilename}";
+
+            var uploadResult = await fileStorage.UploadAsync(file, storageKey, user.Id, ct);
+            if (!uploadResult.Success || string.IsNullOrWhiteSpace(uploadResult.Key))
+            {
+                await SendAsync(new CreateUploadResponse(Error: uploadResult.Error ?? "File upload failed."), StatusCodes.Status500InternalServerError, ct);
+                return;
+            }
+
+            var expirationDays = ParseNullableInt(form["expirationDays"]);
+            var maxViews = ParseNullableInt(form["maxViews"]);
+            DateTimeOffset? expiresAt = expirationDays is > 0
+                ? DateTimeOffset.UtcNow.AddDays(expirationDays.Value)
+                : settings.DefaultExpirationDays is > 0
+                    ? DateTimeOffset.UtcNow.AddDays(settings.DefaultExpirationDays.Value)
+                    : null;
+
+            var baseUrl = GetRequestBaseUrl();
+            var fileUrl = $"{baseUrl}/f/{shortCode}";
+
+            var upload = new Upload
+            {
+                Filename = uploadResult.Key,
+                OriginalName = file.FileName,
+                MimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                Size = file.Length,
+                Url = fileUrl,
+                ShortCode = shortCode,
+                DeletionKey = deletionKey,
+                UserId = user.Id,
+                ExpiresAt = expiresAt,
+                MaxViews = maxViews ?? settings.DefaultMaxViews
+            };
+
+            dbContext.Uploads.Add(upload);
+            settings.StorageUsed += file.Length;
+            if (user.Settings is null)
+            {
+                dbContext.UserSettings.Add(settings);
+            }
+
+            await dbContext.SaveChangesAsync(ct);
+
+            await SendAsync(new CreateUploadResponse(
+                Url: fileUrl,
+                DeletionUrl: $"{baseUrl}/delete/{deletionKey}",
+                ThumbnailUrl: upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? fileUrl : null), StatusCodes.Status201Created, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Upload failed.");
+            await SendAsync(new CreateUploadResponse(Error: "Upload failed. Check server logs for details."), StatusCodes.Status500InternalServerError, ct);
+        }
+    }
+
+    private string GetRequestBaseUrl()
+    {
+        if (HttpContext.Request.Host.HasValue)
+        {
+            return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}".TrimEnd('/');
         }
 
-        var form = await HttpContext.Request.ReadFormAsync(ct);
-        var file = form.Files.GetFile("file");
-        if (file is null)
-        {
-            await SendAsync(new CreateUploadResponse(Error: "No file provided."), StatusCodes.Status400BadRequest, ct);
-            return;
-        }
-
-        var user = await dbContext.Users
-            .Include(x => x.Uploads)
-            .Include(x => x.Settings)
-            .FirstAsync(x => x.Id == userId, ct);
-
-        var apiKeyId = User.FindFirstValue(AppClaimTypes.ApiKeyId);
-        if (!string.IsNullOrWhiteSpace(apiKeyId))
-        {
-            await dbContext.ApiKeys
-                .Where(x => x.Id == apiKeyId)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.LastUsed, DateTimeOffset.UtcNow), ct);
-        }
-
-        var settings = user.Settings ?? new UserSettings { UserId = user.Id };
-        var maxUploads = settings.MaxUploads;
-        if (user.Uploads.Count >= maxUploads)
-        {
-            await SendAsync(new CreateUploadResponse(Error: "Upload limit exceeded."), StatusCodes.Status429TooManyRequests, ct);
-            return;
-        }
-
-        if (file.Length > settings.MaxFileSize)
-        {
-            await SendAsync(new CreateUploadResponse(Error: "File too large."), StatusCodes.Status413PayloadTooLarge, ct);
-            return;
-        }
-
-        var storageLimit = settings.MaxStorageLimit ?? appOptions.Value.BaseStorageLimit;
-        if (settings.StorageUsed + file.Length > storageLimit)
-        {
-            await SendAsync(new CreateUploadResponse(Error: "Storage quota exceeded."), StatusCodes.Status413PayloadTooLarge, ct);
-            return;
-        }
-
-        var shortCode = await codeGenerator.GenerateUniqueShortCodeAsync(ct);
-        var deletionKey = EntityIds.NewId();
-        var cleanFilename = CleanFilename(file.FileName);
-        var storageKey = $"{shortCode}_{cleanFilename}";
-
-        var uploadResult = await fileStorage.UploadAsync(file, storageKey, user.Id, ct);
-        if (!uploadResult.Success || string.IsNullOrWhiteSpace(uploadResult.Key))
-        {
-            await SendAsync(new CreateUploadResponse(Error: uploadResult.Error ?? "File upload failed."), StatusCodes.Status500InternalServerError, ct);
-            return;
-        }
-
-        var expirationDays = ParseNullableInt(form["expirationDays"]);
-        var maxViews = ParseNullableInt(form["maxViews"]);
-        DateTimeOffset? expiresAt = expirationDays is > 0
-            ? DateTimeOffset.UtcNow.AddDays(expirationDays.Value)
-            : settings.DefaultExpirationDays is > 0
-                ? DateTimeOffset.UtcNow.AddDays(settings.DefaultExpirationDays.Value)
-                : null;
-
-        var baseUrl = appOptions.Value.BaseUrl.TrimEnd('/');
-        var fileUrl = $"{baseUrl}/f/{shortCode}";
-
-        var upload = new Upload
-        {
-            Filename = uploadResult.Key,
-            OriginalName = file.FileName,
-            MimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-            Size = file.Length,
-            Url = fileUrl,
-            ShortCode = shortCode,
-            DeletionKey = deletionKey,
-            UserId = user.Id,
-            ExpiresAt = expiresAt,
-            MaxViews = maxViews ?? settings.DefaultMaxViews
-        };
-
-        dbContext.Uploads.Add(upload);
-        settings.StorageUsed += file.Length;
-        if (user.Settings is null)
-        {
-            dbContext.UserSettings.Add(settings);
-        }
-
-        await dbContext.SaveChangesAsync(ct);
-
-        await SendAsync(new CreateUploadResponse(
-            Url: fileUrl,
-            DeletionUrl: $"{baseUrl}/delete/{deletionKey}",
-            ThumbnailUrl: upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? fileUrl : null), StatusCodes.Status201Created, ct);
+        return appOptions.Value.BaseUrl.TrimEnd('/');
     }
 
     private static int? ParseNullableInt(string? value)

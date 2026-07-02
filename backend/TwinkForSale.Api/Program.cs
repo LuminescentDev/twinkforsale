@@ -95,7 +95,8 @@ builder.Services.AddScoped<R2FileStorage>();
 builder.Services.AddScoped<IFileStorage>(sp =>
 {
     var storageOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<StorageOptions>>().Value;
-    return storageOptions.Provider.Equals("R2", StringComparison.OrdinalIgnoreCase)
+    return storageOptions.Provider.Equals("R2", StringComparison.OrdinalIgnoreCase) ||
+           storageOptions.Provider.Equals("S3", StringComparison.OrdinalIgnoreCase)
         ? sp.GetRequiredService<R2FileStorage>()
         : sp.GetRequiredService<LocalFileStorage>();
 });
