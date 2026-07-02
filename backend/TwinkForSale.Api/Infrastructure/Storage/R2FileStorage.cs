@@ -24,13 +24,22 @@ public sealed class R2FileStorage(IOptions<StorageOptions> options) : IFileStora
             var objectKey = BuildObjectKey(key, userId);
             using var client = CreateClient(r2);
             await using var stream = file.OpenReadStream();
+            await using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            buffer.Position = 0;
+
             await client.PutObjectAsync(new PutObjectRequest
             {
                 BucketName = r2.BucketName,
                 Key = objectKey,
-                InputStream = stream,
+                InputStream = buffer,
                 ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-                AutoCloseStream = false
+                AutoCloseStream = false,
+                AutoResetStreamPosition = false,
+                Headers =
+                {
+                    ContentLength = buffer.Length
+                }
             }, cancellationToken);
 
             var publicUrl = string.IsNullOrWhiteSpace(r2.PublicUrl)
