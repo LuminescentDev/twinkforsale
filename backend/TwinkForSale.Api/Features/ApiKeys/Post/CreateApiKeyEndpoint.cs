@@ -10,7 +10,7 @@ public sealed class CreateApiKeyEndpoint(AppDbContext dbContext) : Endpoint<Crea
 {
     public override void Configure()
     {
-        Post("/api/api-keys");
+        Post("/api-keys");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

@@ -9,7 +9,7 @@ public sealed class UpdateUserEndpoint(AppDbContext dbContext) : Endpoint<Update
 {
     public override void Configure()
     {
-        Put("/api/admin/users/{id}");
+        Put("/admin/users/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

@@ -9,7 +9,7 @@ public sealed class ListUploadsEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/api/uploads", "/api/dashboard/uploads");
+        Get("/uploads", "/dashboard/uploads");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

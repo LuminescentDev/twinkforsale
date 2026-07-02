@@ -9,7 +9,7 @@ public sealed class ListDomainsEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/api/admin/domains", "/api/domains");
+        Get("/admin/domains", "/domains");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

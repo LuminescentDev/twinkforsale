@@ -8,7 +8,7 @@ public sealed class ClickPublicBioLinkEndpoint(AppDbContext dbContext) : Endpoin
 {
     public override void Configure()
     {
-        Post("/api/public/bio-links/{id}/click");
+        Post("/public/bio-links/{id}/click");
         AllowAnonymous();
     }
 

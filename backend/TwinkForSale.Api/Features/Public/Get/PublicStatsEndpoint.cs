@@ -9,7 +9,7 @@ public sealed class PublicStatsEndpoint(AppDbContext dbContext, AnalyticsService
 {
     public override void Configure()
     {
-        Get("/api/public/stats");
+        Get("/public/stats");
         AllowAnonymous();
     }
 

@@ -10,7 +10,7 @@ public sealed class DeleteUploadEndpoint(AppDbContext dbContext, IFileStorage fi
 {
     public override void Configure()
     {
-        Delete("/api/uploads/{id}", "/api/dashboard/uploads/{id}");
+        Delete("/uploads/{id}", "/dashboard/uploads/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

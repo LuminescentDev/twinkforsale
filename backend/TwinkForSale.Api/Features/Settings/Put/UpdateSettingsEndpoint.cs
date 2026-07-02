@@ -10,7 +10,7 @@ public sealed class UpdateSettingsEndpoint(AppDbContext dbContext) : Endpoint<Up
 {
     public override void Configure()
     {
-        Put("/api/settings");
+        Put("/settings");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

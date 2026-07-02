@@ -9,7 +9,7 @@ public sealed class DeleteApiKeyEndpoint(AppDbContext dbContext) : EndpointWitho
 {
     public override void Configure()
     {
-        Delete("/api/api-keys/{id}");
+        Delete("/api-keys/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

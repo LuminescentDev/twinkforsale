@@ -13,7 +13,7 @@ public sealed class CreateShortLinkEndpoint(
 {
     public override void Configure()
     {
-        Post("/api/short-links", "/api/shorten");
+        Post("/short-links", "/shorten");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
         Summary(summary =>

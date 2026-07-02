@@ -24,7 +24,7 @@ public sealed class DiscordCallbackEndpoint(
 
     public override void Configure()
     {
-        Get("/api/auth/discord/callback");
+        Get("/auth/discord/callback");
         AllowAnonymous();
     }
 
@@ -48,7 +48,7 @@ public sealed class DiscordCallbackEndpoint(
             return;
         }
 
-        var token = await ExchangeCodeAsync(code, BuildCallbackUrl(), ct);
+        var token = await ExchangeCodeAsync(code, DiscordLoginEndpoint.BuildCallbackUrl(HttpContext.Request, appOptions.Value.BaseUrl), ct);
         if (token is null || string.IsNullOrWhiteSpace(token.AccessToken))
         {
             await RedirectToFrontendAsync("/?authError=discord_token_failed", state.FrontendOrigin, ct);
@@ -198,12 +198,6 @@ public sealed class DiscordCallbackEndpoint(
             string.IsNullOrWhiteSpace(frontendUrl) ? safeReturnTo : $"{frontendUrl}{safeReturnTo}",
             isPermanent: false,
             allowRemoteRedirects: true);
-    }
-
-    private string BuildCallbackUrl()
-    {
-        var request = HttpContext.Request;
-        return $"{request.Scheme}://{request.Host}/api/auth/discord/callback";
     }
 
     private static DiscordLoginEndpoint.OAuthState? ReadState(string? state)

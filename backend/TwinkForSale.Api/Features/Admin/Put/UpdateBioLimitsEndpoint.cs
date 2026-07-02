@@ -10,7 +10,7 @@ public sealed class UpdateBioLimitsEndpoint(AppDbContext dbContext) : Endpoint<U
 {
     public override void Configure()
     {
-        Put("/api/admin/bio-limits/{userId}");
+        Put("/admin/bio-limits/{userId}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

@@ -8,7 +8,7 @@ public sealed class GetPublicBioEndpoint(AppDbContext dbContext) : EndpointWitho
 {
     public override void Configure()
     {
-        Get("/api/public/bio/{username}");
+        Get("/public/bio/{username}");
         AllowAnonymous();
     }
 

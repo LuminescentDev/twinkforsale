@@ -18,7 +18,7 @@ public sealed class CreateUploadEndpoint(
 {
     public override void Configure()
     {
-        Post("/api/uploads", "/api/upload");
+        Post("/uploads", "/upload");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
         AllowFileUploads();

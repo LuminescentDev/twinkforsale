@@ -69,7 +69,7 @@ export function generateShareXConfig(options: ShareXConfigOptions): ShareXConfig
     Name: "twink.forsale",
     DestinationType: ["ImageUploader", "TextUploader", "FileUploader"],
     RequestMethod: "POST",
-    RequestURL: `${baseUrl}/api/upload`,
+    RequestURL: `${baseUrl}/upload`,
     Body: "MultipartFormData",
     FileFormName: "file",
   };

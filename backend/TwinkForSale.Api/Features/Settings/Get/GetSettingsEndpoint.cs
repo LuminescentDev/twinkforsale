@@ -10,7 +10,7 @@ public sealed class GetSettingsEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/api/settings");
+        Get("/settings");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

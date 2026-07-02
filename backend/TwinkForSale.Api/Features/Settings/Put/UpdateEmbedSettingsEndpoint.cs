@@ -10,7 +10,7 @@ public sealed class UpdateEmbedSettingsEndpoint(AppDbContext dbContext) : Endpoi
 {
     public override void Configure()
     {
-        Put("/api/settings/embed");
+        Put("/settings/embed");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

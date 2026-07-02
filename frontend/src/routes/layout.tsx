@@ -26,7 +26,7 @@ import { getCurrentUser } from "~/lib/auth-client";
 /**
  * Root-level current-user loader. Available to every route and component via
  * the exported `useCurrentUser` hook. Resolves the signed-in user from the
- * backend (`/api/auth/me`) by forwarding the request cookie; returns `null`
+ * backend (`/auth/me`) by forwarding the request cookie; returns `null`
  * when unauthenticated.
  */
 export const useCurrentUser = routeLoader$(async (requestEvent) => {

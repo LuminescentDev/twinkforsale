@@ -9,7 +9,7 @@ public sealed class DeleteDomainEndpoint(AppDbContext dbContext) : EndpointWitho
 {
     public override void Configure()
     {
-        Delete("/api/admin/domains/{id}");
+        Delete("/admin/domains/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

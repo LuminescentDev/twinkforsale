@@ -9,7 +9,7 @@ public sealed class LogoutEndpoint(AppDbContext dbContext) : EndpointWithoutRequ
 {
     public override void Configure()
     {
-        Post("/api/auth/logout");
+        Post("/auth/logout");
         AllowAnonymous();
     }
 

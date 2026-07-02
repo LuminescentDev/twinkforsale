@@ -9,7 +9,7 @@ public sealed class DeleteShortLinkEndpoint(AppDbContext dbContext) : EndpointWi
 {
     public override void Configure()
     {
-        Delete("/api/short-links/{id}");
+        Delete("/short-links/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

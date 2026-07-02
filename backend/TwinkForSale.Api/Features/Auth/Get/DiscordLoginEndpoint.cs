@@ -15,7 +15,7 @@ public sealed class DiscordLoginEndpoint(
 {
     public override void Configure()
     {
-        Get("/api/auth/discord/login");
+        Get("/auth/discord/login");
         AllowAnonymous();
     }
 
@@ -36,7 +36,7 @@ public sealed class DiscordLoginEndpoint(
 
         HttpContext.Response.Cookies.Append(BrowserSessionDefaults.OAuthStateCookieName, nonce, CookieOptions());
 
-        var callbackUrl = BuildCallbackUrl();
+        var callbackUrl = BuildCallbackUrl(HttpContext.Request, appOptions.Value.BaseUrl);
         var parameters = new Dictionary<string, string?>
         {
             ["client_id"] = options.ClientId,
@@ -53,10 +53,55 @@ public sealed class DiscordLoginEndpoint(
             allowRemoteRedirects: true);
     }
 
-    internal string BuildCallbackUrl()
+    internal static string BuildCallbackUrl(HttpRequest request, string configuredBaseUrl)
     {
-        var request = HttpContext.Request;
-        return $"{request.Scheme}://{request.Host}/api/auth/discord/callback";
+        var pathBase = GetExternalPathBase(request, configuredBaseUrl);
+        return $"{request.Scheme}://{request.Host}{pathBase}/auth/discord/callback";
+    }
+
+    private static string GetExternalPathBase(HttpRequest request, string configuredBaseUrl)
+    {
+        var forwardedPrefix = request.Headers["X-Forwarded-Prefix"].FirstOrDefault()
+            ?? request.Headers["X-Forwarded-PathBase"].FirstOrDefault();
+
+        if (TryNormalizePathBase(forwardedPrefix, out var normalizedForwardedPrefix))
+        {
+            return normalizedForwardedPrefix;
+        }
+
+        if (request.PathBase.HasValue)
+        {
+            return request.PathBase.Value?.TrimEnd('/') ?? string.Empty;
+        }
+
+        if (Uri.TryCreate(configuredBaseUrl, UriKind.Absolute, out var configuredUri) &&
+            TryNormalizePathBase(configuredUri.AbsolutePath, out var normalizedConfiguredPath))
+        {
+            return normalizedConfiguredPath;
+        }
+
+        return string.Empty;
+    }
+
+    private static bool TryNormalizePathBase(string? value, out string normalized)
+    {
+        normalized = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(value) || value == "/")
+        {
+            return false;
+        }
+
+        if (!value.StartsWith("/", StringComparison.Ordinal) ||
+            value.Contains("://", StringComparison.Ordinal) ||
+            value.Contains("?", StringComparison.Ordinal) ||
+            value.Contains("#", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        normalized = value.TrimEnd('/');
+        return normalized.Length > 0;
     }
 
     internal static string SanitizeReturnTo(string? value)

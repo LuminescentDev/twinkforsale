@@ -9,7 +9,7 @@ public sealed class DeleteEventEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Delete("/api/admin/events/{id}");
+        Delete("/admin/events/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

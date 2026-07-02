@@ -8,7 +8,7 @@ public sealed class HealthEndpoint(AppDbContext dbContext) : EndpointWithoutRequ
 {
     public override void Configure()
     {
-        Get("/api/health");
+        Get("/health");
         AllowAnonymous();
         Summary(summary =>
         {

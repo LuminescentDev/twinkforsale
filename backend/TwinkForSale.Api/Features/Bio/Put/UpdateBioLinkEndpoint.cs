@@ -9,7 +9,7 @@ public sealed class UpdateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<Upd
 {
     public override void Configure()
     {
-        Put("/api/bio/links/{id}");
+        Put("/bio/links/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

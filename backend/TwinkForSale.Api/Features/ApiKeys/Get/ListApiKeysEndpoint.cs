@@ -9,7 +9,7 @@ public sealed class ListApiKeysEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/api/api-keys");
+        Get("/api-keys");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

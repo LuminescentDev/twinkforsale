@@ -476,32 +476,32 @@ type CallOpts = Pick<RequestOptions, "cookie" | "token" | "signal">;
 
 export const api = {
   auth: {
-    me: (o?: CallOpts) => apiFetch<MeResponse>("/api/auth/me", o),
+    me: (o?: CallOpts) => apiFetch<MeResponse>("/auth/me", o),
     logout: (o?: CallOpts) =>
-      apiFetch<void>("/api/auth/logout", { ...o, method: "POST" }),
+      apiFetch<void>("/auth/logout", { ...o, method: "POST" }),
     /** URL the browser should navigate to in order to start Discord OAuth. */
     discordLoginUrl: (returnTo?: string) =>
-      buildUrl("/api/auth/discord/login", returnTo ? { returnTo } : undefined),
+      buildUrl("/auth/discord/login", returnTo ? { returnTo } : undefined),
   },
 
   dashboard: {
     summary: (o?: CallOpts) =>
-      apiFetch<DashboardSummary>("/api/dashboard/summary", o),
+      apiFetch<DashboardSummary>("/dashboard/summary", o),
     uploads: (o?: CallOpts) =>
-      apiFetch<{ uploads: UploadListItem[] }>("/api/dashboard/uploads", o),
+      apiFetch<{ uploads: UploadListItem[] }>("/dashboard/uploads", o),
     deleteUpload: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/dashboard/uploads/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/dashboard/uploads/${id}`, { ...o, method: "DELETE" }),
   },
 
   uploads: {
     list: (o?: CallOpts) =>
-      apiFetch<{ uploads: UploadListItem[] }>("/api/uploads", o),
+      apiFetch<{ uploads: UploadListItem[] }>("/uploads", o),
     get: (id: string, o?: CallOpts) =>
-      apiFetch<UploadListItem>(`/api/uploads/${id}`, o),
+      apiFetch<UploadListItem>(`/uploads/${id}`, o),
     delete: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/uploads/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/uploads/${id}`, { ...o, method: "DELETE" }),
     create: (form: FormData, o?: CallOpts) =>
-      apiFetch<CreateUploadResponse>("/api/uploads", {
+      apiFetch<CreateUploadResponse>("/uploads", {
         ...o,
         method: "POST",
         body: form,
@@ -510,7 +510,7 @@ export const api = {
 
   shortLinks: {
     list: (o?: CallOpts) =>
-      apiFetch<{ links: ShortLinkListItem[] }>("/api/short-links", o),
+      apiFetch<{ links: ShortLinkListItem[] }>("/short-links", o),
     create: (
       body: {
         url: string;
@@ -520,86 +520,86 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<CreateShortLinkResponse>("/api/short-links", {
+      apiFetch<CreateShortLinkResponse>("/short-links", {
         ...o,
         method: "POST",
         body,
       }),
     delete: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/short-links/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/short-links/${id}`, { ...o, method: "DELETE" }),
   },
 
   apiKeys: {
     list: (o?: CallOpts) =>
-      apiFetch<{ apiKeys: ApiKeyListItem[] }>("/api/api-keys", o),
+      apiFetch<{ apiKeys: ApiKeyListItem[] }>("/api-keys", o),
     create: (name: string | null, o?: CallOpts) =>
-      apiFetch<CreateApiKeyResponse>("/api/api-keys", {
+      apiFetch<CreateApiKeyResponse>("/api-keys", {
         ...o,
         method: "POST",
         body: { name },
       }),
     delete: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/api-keys/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/api-keys/${id}`, { ...o, method: "DELETE" }),
   },
 
   settings: {
-    get: (o?: CallOpts) => apiFetch<UserSettings>("/api/settings", o),
+    get: (o?: CallOpts) => apiFetch<UserSettings>("/settings", o),
     update: (body: UpdateSettingsRequest, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>("/api/settings", {
+      apiFetch<{ success: boolean }>("/settings", {
         ...o,
         method: "PUT",
         body,
       }),
     updateEmbed: (body: UpdateEmbedSettingsRequest, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>("/api/settings/embed", {
+      apiFetch<{ success: boolean }>("/settings/embed", {
         ...o,
         method: "PUT",
         body,
       }),
     updateParticles: (globalParticleConfig: string | null, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>("/api/settings/particles", {
+      apiFetch<{ success: boolean }>("/settings/particles", {
         ...o,
         method: "PUT",
         body: { globalParticleConfig },
       }),
     deleteAccount: (o?: CallOpts) =>
-      apiFetch<void>("/api/settings/account", { ...o, method: "DELETE" }),
+      apiFetch<void>("/settings/account", { ...o, method: "DELETE" }),
   },
 
   bio: {
-    me: (o?: CallOpts) => apiFetch<BioResponse>("/api/bio/me", o),
+    me: (o?: CallOpts) => apiFetch<BioResponse>("/bio/me", o),
     update: (body: UpdateBioRequest, o?: CallOpts) =>
-      apiFetch<{ success: boolean; error?: string | null }>("/api/bio/me", {
+      apiFetch<{ success: boolean; error?: string | null }>("/bio/me", {
         ...o,
         method: "PUT",
         body,
       }),
     createLink: (body: CreateBioLinkRequest, o?: CallOpts) =>
-      apiFetch<BioLinkMutationResponse>("/api/bio/links", {
+      apiFetch<BioLinkMutationResponse>("/bio/links", {
         ...o,
         method: "POST",
         body,
       }),
     updateLink: (id: string, body: UpdateBioLinkRequest, o?: CallOpts) =>
-      apiFetch<BioLinkMutationResponse>(`/api/bio/links/${id}`, {
+      apiFetch<BioLinkMutationResponse>(`/bio/links/${id}`, {
         ...o,
         method: "PUT",
         body,
       }),
     deleteLink: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/bio/links/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/bio/links/${id}`, { ...o, method: "DELETE" }),
   },
 
   publicBio: {
     get: (username: string, o?: CallOpts) =>
-      apiFetch<BioResponse>(`/api/public/bio/${encodeURIComponent(username)}`, o),
+      apiFetch<BioResponse>(`/public/bio/${encodeURIComponent(username)}`, o),
     view: (username: string, o?: CallOpts) =>
       apiFetch<void>(
-        `/api/public/bio/${encodeURIComponent(username)}/view`,
+        `/public/bio/${encodeURIComponent(username)}/view`,
         { ...o, method: "POST" },
       ),
     clickLink: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/public/bio-links/${id}/click`, {
+      apiFetch<void>(`/public/bio-links/${id}/click`, {
         ...o,
         method: "POST",
       }),
@@ -607,7 +607,7 @@ export const api = {
 
   admin: {
     users: (o?: CallOpts) =>
-      apiFetch<{ users: AdminUserDto[] }>("/api/admin/users", o),
+      apiFetch<{ users: AdminUserDto[] }>("/admin/users", o),
     updateUser: (
       id: string,
       body: {
@@ -619,15 +619,15 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ success: boolean }>(`/api/admin/users/${id}`, {
+      apiFetch<{ success: boolean }>(`/admin/users/${id}`, {
         ...o,
         method: "PUT",
         body,
       }),
     analytics: (o?: CallOpts) =>
-      apiFetch<AdminAnalyticsResponse>("/api/admin/analytics", o),
+      apiFetch<AdminAnalyticsResponse>("/admin/analytics", o),
     events: (o?: CallOpts) =>
-      apiFetch<{ events: EventDto[] }>("/api/admin/events", o),
+      apiFetch<{ events: EventDto[] }>("/admin/events", o),
     createEvent: (
       body: {
         type: string;
@@ -638,18 +638,18 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ id: string }>("/api/admin/events", {
+      apiFetch<{ id: string }>("/admin/events", {
         ...o,
         method: "POST",
         body,
       }),
     deleteEvent: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/admin/events/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/admin/events/${id}`, { ...o, method: "DELETE" }),
     health: (o?: CallOpts) =>
-      apiFetch<AdminHealthResponse>("/api/admin/health", o),
-    bioLimits: (o?: CallOpts) => apiFetch<unknown>("/api/admin/bio-limits", o),
+      apiFetch<AdminHealthResponse>("/admin/health", o),
+    bioLimits: (o?: CallOpts) => apiFetch<unknown>("/admin/bio-limits", o),
     updateBioLimits: (userId: string, body: unknown, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>(`/api/admin/bio-limits/${userId}`, {
+      apiFetch<{ success: boolean }>(`/admin/bio-limits/${userId}`, {
         ...o,
         method: "PUT",
         body,
@@ -658,7 +658,7 @@ export const api = {
 
   domains: {
     list: (o?: CallOpts) =>
-      apiFetch<{ domains: DomainDto[] }>("/api/admin/domains", o),
+      apiFetch<{ domains: DomainDto[] }>("/admin/domains", o),
     create: (
       body: {
         domain: string;
@@ -669,40 +669,40 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ id: string }>("/api/admin/domains", {
+      apiFetch<{ id: string }>("/admin/domains", {
         ...o,
         method: "POST",
         body,
       }),
     update: (id: string, body: Partial<DomainDto>, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>(`/api/admin/domains/${id}`, {
+      apiFetch<{ success: boolean }>(`/admin/domains/${id}`, {
         ...o,
         method: "PUT",
         body,
       }),
     delete: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/api/admin/domains/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/admin/domains/${id}`, { ...o, method: "DELETE" }),
   },
 
   analytics: {
     overview: (o?: CallOpts) =>
-      apiFetch<AnalyticsOverviewResponse>("/api/analytics", o),
+      apiFetch<AnalyticsOverviewResponse>("/analytics", o),
     upload: (shortCode: string, o?: CallOpts) =>
       apiFetch<UploadAnalyticsResponse>(
-        `/api/analytics/uploads/${shortCode}`,
+        `/analytics/uploads/${shortCode}`,
         o,
       ),
   },
 
   oembed: {
     get: (url: string, o?: CallOpts) =>
-      apiFetch<unknown>("/api/oembed", { ...o, query: { url } }),
+      apiFetch<unknown>("/oembed", { ...o, query: { url } }),
   },
 
   stats: {
     /** Anonymized platform stats for the public landing page. */
     public: (o?: CallOpts) =>
-      apiFetch<PublicStats>("/api/public/stats", o),
+      apiFetch<PublicStats>("/public/stats", o),
   },
 };
 

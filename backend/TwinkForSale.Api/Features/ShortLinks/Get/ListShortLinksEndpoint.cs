@@ -9,7 +9,7 @@ public sealed class ListShortLinksEndpoint(AppDbContext dbContext) : EndpointWit
 {
     public override void Configure()
     {
-        Get("/api/short-links");
+        Get("/short-links");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

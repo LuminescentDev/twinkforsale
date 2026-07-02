@@ -9,7 +9,7 @@ public sealed class DeleteBioLinkEndpoint(AppDbContext dbContext) : EndpointWith
 {
     public override void Configure()
     {
-        Delete("/api/bio/links/{id}");
+        Delete("/bio/links/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

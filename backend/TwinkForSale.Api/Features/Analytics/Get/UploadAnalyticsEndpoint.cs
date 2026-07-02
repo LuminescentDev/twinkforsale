@@ -14,7 +14,7 @@ public sealed class UploadAnalyticsEndpoint(
 {
     public override void Configure()
     {
-        Get("/api/analytics/uploads/{shortCode}");
+        Get("/analytics/uploads/{shortCode}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

@@ -23,7 +23,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:5000/api/health"]
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

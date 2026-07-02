@@ -10,7 +10,7 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
 {
     public override void Configure()
     {
-        Get("/api/oembed");
+        Get("/oembed");
         AllowAnonymous();
     }
 

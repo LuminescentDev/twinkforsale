@@ -11,7 +11,7 @@ public sealed class DashboardSummaryEndpoint(AppDbContext dbContext, IOptions<Ap
 {
     public override void Configure()
     {
-        Get("/api/dashboard/summary");
+        Get("/dashboard/summary");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

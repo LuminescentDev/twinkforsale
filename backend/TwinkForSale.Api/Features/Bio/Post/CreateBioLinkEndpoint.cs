@@ -10,7 +10,7 @@ public sealed class CreateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<Cre
 {
     public override void Configure()
     {
-        Post("/api/bio/links");
+        Post("/bio/links");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

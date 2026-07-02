@@ -9,7 +9,7 @@ public sealed class ListUsersEndpoint(AppDbContext dbContext) : EndpointWithoutR
 {
     public override void Configure()
     {
-        Get("/api/admin/users");
+        Get("/admin/users");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

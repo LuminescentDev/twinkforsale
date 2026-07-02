@@ -286,7 +286,7 @@ export default component$(() => {
               API Endpoint:
             </p>
             <code class="text-theme-accent-quaternary font-mono text-xs break-all sm:text-sm">
-              {apiKeysData.value.origin}/api/upload
+              {apiKeysData.value.origin}/upload
             </code>
           </div>
         </div>

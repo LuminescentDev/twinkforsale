@@ -9,7 +9,7 @@ public sealed class MeEndpoint(AppDbContext dbContext) : EndpointWithoutRequest<
 {
     public override void Configure()
     {
-        Get("/api/auth/me");
+        Get("/auth/me");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Summary(summary =>
         {

@@ -9,7 +9,7 @@ public sealed class AnalyticsOverviewEndpoint(AppDbContext dbContext, AnalyticsS
 {
     public override void Configure()
     {
-        Get("/api/analytics");
+        Get("/analytics");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

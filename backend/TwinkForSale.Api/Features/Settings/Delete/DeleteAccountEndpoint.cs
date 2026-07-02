@@ -10,7 +10,7 @@ public sealed class DeleteAccountEndpoint(AppDbContext dbContext, IFileStorage f
 {
     public override void Configure()
     {
-        Delete("/api/settings/account");
+        Delete("/settings/account");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

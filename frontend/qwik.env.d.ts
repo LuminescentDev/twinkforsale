@@ -6,7 +6,7 @@
 interface ImportMetaEnv {
   /**
    * Base URL of the C# backend API. Empty string ("") means same-origin,
-   * which is correct in production where /api, /f and /l are proxied to the
+   * which is correct in production where /auth, /uploads, /admin, /analytics, /f and /l are proxied to the
    * backend. In local dev this points at the running backend, e.g.
    * http://localhost:5000.
    */

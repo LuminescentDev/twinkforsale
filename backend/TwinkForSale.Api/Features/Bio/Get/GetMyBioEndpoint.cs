@@ -9,7 +9,7 @@ public sealed class GetMyBioEndpoint(AppDbContext dbContext) : EndpointWithoutRe
 {
     public override void Configure()
     {
-        Get("/api/bio/me");
+        Get("/bio/me");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }

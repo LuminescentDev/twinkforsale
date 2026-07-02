@@ -10,7 +10,7 @@ public sealed class UpdateParticleSettingsEndpoint(AppDbContext dbContext) : End
 {
     public override void Configure()
     {
-        Put("/api/settings/particles");
+        Put("/settings/particles");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.ApprovedUser);
     }
