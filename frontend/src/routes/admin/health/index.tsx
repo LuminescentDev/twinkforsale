@@ -155,14 +155,14 @@ export default component$(() => {
 
   if (healthData.value.error) {
     return (
-      <div class="min-h-screen p-4 sm:p-6">
+      <div>
         <div class="mx-auto max-w-7xl">
           <div class="text-center">
-            <AlertTriangle class="mx-auto h-12 w-12 text-red-500" />
-            <h1 class="mt-4 text-2xl font-bold text-red-500">
+            <AlertTriangle class="mx-auto h-12 w-12 text-theme-error" />
+            <h1 class="mt-4 text-2xl font-bold text-theme-error">
               Health Check Failed
             </h1>
-            <p class="mt-2 text-gray-600">{healthData.value.error}</p>
+            <p class="mt-2 text-theme-text-muted">{healthData.value.error}</p>
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default component$(() => {
   const data = healthData.value;
 
   return (
-    <div class="min-h-screen p-4 sm:p-6">
+    <div>
       <div class="mx-auto max-w-7xl">
         {" "}
         {/* Header */}
@@ -218,7 +218,7 @@ export default component$(() => {
                 }}
                 class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
               >
-                <Info class="h-4 w-4 text-blue-500" />
+                <Info class="h-4 w-4 text-theme-info" />
                 Check Events
               </button>
               <button
@@ -260,7 +260,7 @@ export default component$(() => {
               }}
               class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
             >
-              <Info class="h-4 w-4 text-blue-500" />
+              <Info class="h-4 w-4 text-theme-info" />
               Check Events
             </button>
             <button
@@ -278,15 +278,15 @@ export default component$(() => {
           <div class="card-cute rounded-2xl p-3 sm:p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2 sm:gap-3">
-                <Database class="h-5 w-5 text-blue-500 sm:h-6 sm:w-6" />
+                <Database class="h-5 w-5 text-theme-info sm:h-6 sm:w-6" />
                 <div>
                   <h3 class="text-sm font-medium sm:text-base">Database</h3>
-                  <p class="text-xs text-gray-600 sm:text-sm">
+                  <p class="text-xs text-theme-text-muted sm:text-sm">
                     {data.database?.responseTime}ms response
                   </p>
                 </div>
               </div>
-              <CheckCircle class="h-4 w-4 text-green-500 sm:h-5 sm:w-5" />
+              <CheckCircle class="h-4 w-4 text-theme-success sm:h-5 sm:w-5" />
             </div>
           </div>
           {/* Storage Status */}
@@ -296,7 +296,7 @@ export default component$(() => {
                 <HardDrive class="h-5 w-5 text-purple-500 sm:h-6 sm:w-6" />
                 <div class="min-w-0 flex-1">
                   <h3 class="text-sm font-medium sm:text-base">Storage</h3>
-                  <p class="truncate text-xs text-gray-600 sm:text-sm">
+                  <p class="truncate text-xs text-theme-text-muted sm:text-sm">
                     {formatBytes(data.storage?.freeSpace || 0)} free
                     {data.storage?.diskUsedPercentage && (
                       <span class="ml-1 hidden sm:inline">
@@ -308,9 +308,9 @@ export default component$(() => {
               </div>
               {data.storage?.diskUsedPercentage &&
               data.storage.diskUsedPercentage > 80 ? (
-                <AlertTriangle class="h-4 w-4 flex-shrink-0 text-yellow-500 sm:h-5 sm:w-5" />
+                <AlertTriangle class="h-4 w-4 flex-shrink-0 text-theme-warning sm:h-5 sm:w-5" />
               ) : (
-                <CheckCircle class="h-4 w-4 flex-shrink-0 text-green-500 sm:h-5 sm:w-5" />
+                <CheckCircle class="h-4 w-4 flex-shrink-0 text-theme-success sm:h-5 sm:w-5" />
               )}
             </div>
           </div>
@@ -318,18 +318,18 @@ export default component$(() => {
           <div class="card-cute rounded-2xl p-3 sm:p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2 sm:gap-3">
-                <Users class="h-5 w-5 text-green-500 sm:h-6 sm:w-6" />
+                <Users class="h-5 w-5 text-theme-success sm:h-6 sm:w-6" />
                 <div>
                   <h3 class="text-sm font-medium sm:text-base">Users</h3>
-                  <p class="text-xs text-gray-600 sm:text-sm">
+                  <p class="text-xs text-theme-text-muted sm:text-sm">
                     {data.users?.pending || 0} pending approval
                   </p>
                 </div>
               </div>
               {(data.users?.pending || 0) > 0 ? (
-                <AlertTriangle class="h-4 w-4 text-yellow-500 sm:h-5 sm:w-5" />
+                <AlertTriangle class="h-4 w-4 text-theme-warning sm:h-5 sm:w-5" />
               ) : (
-                <CheckCircle class="h-4 w-4 text-green-500 sm:h-5 sm:w-5" />
+                <CheckCircle class="h-4 w-4 text-theme-success sm:h-5 sm:w-5" />
               )}
             </div>
           </div>
@@ -340,19 +340,19 @@ export default component$(() => {
                 <Server class="h-5 w-5 text-indigo-500 sm:h-6 sm:w-6" />
                 <div class="min-w-0 flex-1">
                   <h3 class="text-sm font-medium sm:text-base">System</h3>
-                  <p class="truncate text-xs text-gray-600 sm:text-sm">
+                  <p class="truncate text-xs text-theme-text-muted sm:text-sm">
                     Uptime: {formatUptime(data.system?.uptime || 0)}
                   </p>
                 </div>
               </div>
-              <CheckCircle class="h-4 w-4 flex-shrink-0 text-green-500 sm:h-5 sm:w-5" />
+              <CheckCircle class="h-4 w-4 flex-shrink-0 text-theme-success sm:h-5 sm:w-5" />
             </div>
           </div>
         </div>{" "}
         {/* Key Metrics */}
         <div class="mb-6 grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
           {/* System Performance */}
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <Cpu class="h-4 w-4 sm:h-5 sm:w-5" />
               System Performance
@@ -401,7 +401,7 @@ export default component$(() => {
           </div>
 
           {/* Activity Metrics */}
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <TrendingUp class="h-4 w-4 sm:h-5 sm:w-5" />
               24h Activity
@@ -446,7 +446,7 @@ export default component$(() => {
         {/* Storage & User Analytics */}
         <div class="mb-6 grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
           {/* Storage Breakdown */}
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">            <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">            <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <HardDrive class="h-4 w-4 sm:h-5 sm:w-5" />
               Storage Analytics ({data.storage?.storageType || 'Unknown'})
             </h3>
@@ -472,7 +472,7 @@ export default component$(() => {
                     <span class="text-theme-text-secondary text-sm sm:text-base">
                       R2 Storage
                     </span>
-                    <span class="text-sm font-medium text-blue-600 sm:text-base">
+                    <span class="text-sm font-medium text-theme-info sm:text-base">
                       Unlimited
                     </span>
                   </div>
@@ -480,7 +480,7 @@ export default component$(() => {
                     <span class="text-theme-text-secondary text-sm sm:text-base">
                       Monthly Cost
                     </span>
-                    <span class="text-sm font-medium text-green-600 sm:text-base">
+                    <span class="text-sm font-medium text-theme-success sm:text-base">
                       ${((data.storage?.totalSize || 0) / (1024 * 1024 * 1024) * 0.015).toFixed(2)}
                     </span>
                   </div>
@@ -491,7 +491,7 @@ export default component$(() => {
                     <span class="text-theme-text-secondary text-sm sm:text-base">
                       Disk Free Space
                     </span>
-                    <span class="text-sm font-medium text-green-600 sm:text-base">
+                    <span class="text-sm font-medium text-theme-success sm:text-base">
                       {formatBytes(data.storage?.freeSpace || 0)}
                     </span>
                   </div>
@@ -549,7 +549,7 @@ export default component$(() => {
           </div>
 
           {/* User Statistics */}
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <Users class="h-4 w-4 sm:h-5 sm:w-5" />
               User Statistics
@@ -567,7 +567,7 @@ export default component$(() => {
                 <span class="text-theme-text-secondary text-sm sm:text-base">
                   Approved Users
                 </span>
-                <span class="text-sm font-medium text-green-600 sm:text-base">
+                <span class="text-sm font-medium text-theme-success sm:text-base">
                   {data.users?.approved || 0}
                 </span>
               </div>
@@ -578,8 +578,8 @@ export default component$(() => {
                 <span
                   class={`text-sm font-medium sm:text-base ${
                     (data.users?.pending || 0) > 0
-                      ? "text-yellow-600"
-                      : "text-gray-600"
+                      ? "text-theme-warning"
+                      : "text-theme-text-muted"
                   }`}
                 >
                   {data.users?.pending || 0}
@@ -602,7 +602,7 @@ export default component$(() => {
         </div>{" "}
         {/* Top Active Users */}
         <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <Zap class="h-4 w-4 sm:h-5 sm:w-5" />
               Top Active Users (Last 7 Days)
@@ -668,7 +668,7 @@ export default component$(() => {
         </div>{" "}
         {/* System Events */}
         <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 class="text-gradient-cute flex items-center gap-2 text-base font-bold sm:text-lg">
                 <Info class="h-4 w-4 sm:h-5 sm:w-5" />
@@ -678,22 +678,22 @@ export default component$(() => {
                 {data.systemEvents?.stats && (
                   <>
                     {data.systemEvents.stats.CRITICAL && (
-                      <span class="rounded bg-red-100 px-2 py-1 text-red-800">
+                      <span class="rounded bg-theme-error/15 px-2 py-1 text-theme-error">
                         {data.systemEvents.stats.CRITICAL} Critical
                       </span>
                     )}
                     {data.systemEvents.stats.ERROR && (
-                      <span class="rounded bg-orange-100 px-2 py-1 text-orange-800">
+                      <span class="rounded bg-theme-warning/15 px-2 py-1 text-theme-warning">
                         {data.systemEvents.stats.ERROR} Errors
                       </span>
                     )}
                     {data.systemEvents.stats.WARNING && (
-                      <span class="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
+                      <span class="rounded bg-theme-warning/15 px-2 py-1 text-theme-warning">
                         {data.systemEvents.stats.WARNING} Warnings
                       </span>
                     )}
                     {data.systemEvents.stats.INFO && (
-                      <span class="rounded bg-blue-100 px-2 py-1 text-blue-800">
+                      <span class="rounded bg-theme-info/15 px-2 py-1 text-theme-info">
                         {data.systemEvents.stats.INFO} Info
                       </span>
                     )}
@@ -711,16 +711,16 @@ export default component$(() => {
                   >
                     <div class="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
                       {event.severity === "CRITICAL" && (
-                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-red-500 sm:h-4 sm:w-4" />
+                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-theme-error sm:h-4 sm:w-4" />
                       )}
                       {event.severity === "ERROR" && (
-                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-orange-500 sm:h-4 sm:w-4" />
+                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-theme-warning sm:h-4 sm:w-4" />
                       )}
                       {event.severity === "WARNING" && (
-                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-yellow-500 sm:h-4 sm:w-4" />
+                        <AlertTriangle class="mt-1 h-3 w-3 flex-shrink-0 text-theme-warning sm:h-4 sm:w-4" />
                       )}
                       {event.severity === "INFO" && (
-                        <Info class="mt-1 h-3 w-3 flex-shrink-0 text-blue-500 sm:h-4 sm:w-4" />
+                        <Info class="mt-1 h-3 w-3 flex-shrink-0 text-theme-info sm:h-4 sm:w-4" />
                       )}
                       <div class="min-w-0 flex-1">
                         <div class="text-sm font-medium break-words sm:text-base">
@@ -761,7 +761,7 @@ export default component$(() => {
               </div>
             ) : (
               <div class="py-6 text-center sm:py-8">
-                <CheckCircle class="mx-auto h-8 w-8 text-green-500 sm:h-12 sm:w-12" />
+                <CheckCircle class="mx-auto h-8 w-8 text-theme-success sm:h-12 sm:w-12" />
                 <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
                   No system events in the last 24 hours! 🎉
                 </p>
@@ -770,7 +770,7 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Footer */}
-        <div class="px-4 text-center text-xs text-gray-500 sm:text-sm">
+        <div class="px-4 text-center text-xs text-theme-text-muted sm:text-sm">
           <p>
             Last updated: {data.lastUpdated?.toLocaleString()} •{" "}
             {autoRefresh.value ? "Auto-refreshing every 30s" : "Manual refresh"}

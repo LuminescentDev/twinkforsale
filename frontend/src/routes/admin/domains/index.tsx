@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Globe } from "lucide-icons-qwik";
 import { Toggle } from "@luminescent/ui-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
   const user = await getCurrentUser(serverAuth(requestEvent));
@@ -130,15 +131,12 @@ export default component$(() => {
     "w-full px-3 sm:px-4 py-2 sm:py-3 glass rounded-full placeholder:theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-sm sm:text-base text-theme-primary";
 
   return (
-    <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-          Upload Domains Management~
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Manage available upload domains for users~ Add cute domains! (◕‿◕)♡
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Upload Domains Management~"
+        icon={Globe}
+        subtitle="Manage available upload domains for users~ Add cute domains! (◕‿◕)♡"
+      />
 
       {/* Create Domain Button */}
       <div class="mb-6">
@@ -160,7 +158,7 @@ export default component$(() => {
 
       {/* Create Form */}
       {showCreateForm.value && (
-        <div class="card-cute mb-6 rounded-3xl p-4 sm:p-6">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:p-6">
           <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
             Create New Upload Domain~ 🌐 <span class="sparkle ml-2">✨</span>
           </h2>
@@ -265,7 +263,7 @@ export default component$(() => {
       )}
 
       {/* Domains List */}
-      <div class="card-cute rounded-3xl p-4 sm:p-6">
+      <div class="card-cute rounded-2xl p-4 sm:p-6">
         <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
           Existing Domains~ 📋 <span class="sparkle ml-2">✨</span>
         </h2>
@@ -274,7 +272,7 @@ export default component$(() => {
           {domains.value.map((domain) => (
             <div
               key={domain.id}
-              class="glass bg-red-500 rounded-2xl border-2 p-4"
+              class="glass bg-theme-error rounded-2xl border-2 p-4"
             >
               {editingDomain.value === domain.id ? (
                 <Form action={updateAction}>
@@ -470,6 +468,6 @@ export default component$(() => {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 });

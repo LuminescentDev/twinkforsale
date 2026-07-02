@@ -5,6 +5,7 @@ import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 interface AdminBioLimitUser {
   id: string;
@@ -113,64 +114,62 @@ export default component$(() => {
   );
 
   return (
-    <div class="container mx-auto px-4 py-8">
-      <div class="mb-8">
-        <h1 class="mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
-          Bio Limits Management
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400">
-          Manage bio service limits for individual users
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Bio Limits Management"
+        icon={Settings}
+        align="left"
+        subtitle="Manage bio service limits for individual users"
+      />
 
       {/* Default Limits Info */}
-      <div class="mb-6 rounded-xl bg-blue-50 dark:bg-blue-900/20 p-6">
-        <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-blue-800 dark:text-blue-200">
+      <div class="mb-6 rounded-xl border border-theme-info/30 bg-theme-info/10 p-6">
+        <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-theme-info">
           <Settings class="h-5 w-5" />
           Global Default Limits
         </h2>
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxBioLinks}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Bio Links</div>
+            <div class="text-xs text-theme-info">Bio Links</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxUsernameLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Username</div>
+            <div class="text-xs text-theme-info">Username</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxDisplayNameLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Display Name</div>
+            <div class="text-xs text-theme-info">Display Name</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxDescriptionLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Description</div>
+            <div class="text-xs text-theme-info">Description</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxUrlLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">URL Length</div>
+            <div class="text-xs text-theme-info">URL Length</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxLinkTitleLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Link Title</div>
+            <div class="text-xs text-theme-info">Link Title</div>
           </div>
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div class="text-2xl font-bold text-theme-info">
               {data.value.defaultLimits.maxIconLength}
             </div>
-            <div class="text-xs text-blue-600 dark:text-blue-400">Icon</div>
+            <div class="text-xs text-theme-info">Icon</div>
           </div>
         </div>
       </div>
@@ -178,68 +177,68 @@ export default component$(() => {
       {/* Search */}
       <div class="mb-6">
         <div class="relative">
-          <Search class="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <Search class="absolute left-3 top-3 h-5 w-5 text-theme-text-muted" />
           <input
             type="text"
             bind:value={searchQuery}
             placeholder="Search users by name, email, or bio username..."
-            class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-4 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            class="w-full rounded-xl border border-theme-card-border bg-theme-bg-secondary/40 py-3 pl-10 pr-4 text-theme-text-primary focus:border-theme-accent-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/30"
           />
         </div>
       </div>
 
       {/* Users Table */}
-      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+      <div class="overflow-hidden rounded-xl border border-theme-card-border bg-theme-bg-secondary/40 shadow-lg">
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700">
+            <thead class="bg-theme-bg-tertiary/40">
               <tr>
-                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   User
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Bio Links
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Username Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Display Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Desc Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   URL Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Link Title Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Icon Len
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+            <tbody class="divide-y divide-theme-card-border">
               {filteredUsers.map((user) => (
-                <tr key={user.id} class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={user.id} class="hover:bg-theme-bg-tertiary/20">
                   <td class="px-6 py-4">
                     <div>
-                      <div class="font-medium text-gray-900 dark:text-gray-100">
+                      <div class="font-medium text-theme-text-primary">
                         {user.name || "No name"}
                       </div>
-                      <div class="text-sm text-gray-500 dark:text-gray-400">
+                      <div class="text-sm text-theme-text-muted">
                         {user.email}
                       </div>
                       {user.settings?.bioUsername && (
-                        <div class="text-sm text-blue-600 dark:text-blue-400">
+                        <div class="text-sm text-theme-info">
                           @{user.settings.bioUsername}
                         </div>
                       )}
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs text-theme-text-muted">
                         {user.bioLinksCount} bio links
                       </div>
                     </div>
@@ -308,14 +307,14 @@ export default component$(() => {
                         <div class="flex gap-2 justify-center mt-2">
                           <button
                             type="submit"
-                            class="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                            class="rounded bg-theme-success px-2 py-1 text-xs text-white hover:bg-theme-success"
                           >
                             <Save class="h-4 w-4" />
                           </button>
                           <button
                             type="button"
                             onClick$={() => (editingUser.value = null)}
-                            class="rounded bg-gray-600 px-2 py-1 text-xs text-white hover:bg-gray-700"
+                            class="rounded bg-theme-bg-tertiary px-2 py-1 text-xs text-white hover:bg-theme-bg-tertiary/30"
                           >
                             <X class="h-4 w-4" />
                           </button>
@@ -325,44 +324,44 @@ export default component$(() => {
                   ) : (
                     <>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxBioLinks !== DEFAULT_BIO_LIMITS.maxBioLinks ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxBioLinks !== DEFAULT_BIO_LIMITS.maxBioLinks ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxBioLinks}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxUsernameLength !== DEFAULT_BIO_LIMITS.maxUsernameLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxUsernameLength !== DEFAULT_BIO_LIMITS.maxUsernameLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxUsernameLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxDisplayNameLength !== DEFAULT_BIO_LIMITS.maxDisplayNameLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxDisplayNameLength !== DEFAULT_BIO_LIMITS.maxDisplayNameLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxDisplayNameLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxDescriptionLength !== DEFAULT_BIO_LIMITS.maxDescriptionLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxDescriptionLength !== DEFAULT_BIO_LIMITS.maxDescriptionLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxDescriptionLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxUrlLength !== DEFAULT_BIO_LIMITS.maxUrlLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxUrlLength !== DEFAULT_BIO_LIMITS.maxUrlLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxUrlLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxLinkTitleLength !== DEFAULT_BIO_LIMITS.maxLinkTitleLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxLinkTitleLength !== DEFAULT_BIO_LIMITS.maxLinkTitleLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxLinkTitleLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxIconLength !== DEFAULT_BIO_LIMITS.maxIconLength ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                        <span class={user.effectiveLimits.maxIconLength !== DEFAULT_BIO_LIMITS.maxIconLength ? "font-bold text-theme-warning" : ""}>
                           {user.effectiveLimits.maxIconLength}
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
                         <button
                           onClick$={() => (editingUser.value = user.id)}
-                          class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+                          class="rounded bg-theme-info px-2 py-1 text-xs text-white hover:bg-theme-info"
                         >
                           <Edit class="h-4 w-4" />
                         </button>
@@ -378,10 +377,10 @@ export default component$(() => {
 
       {filteredUsers.length === 0 && (
         <div class="py-12 text-center">
-          <p class="text-gray-500 dark:text-gray-400">No users found matching your search.</p>
+          <p class="text-theme-text-muted">No users found matching your search.</p>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 });
 

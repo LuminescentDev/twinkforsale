@@ -2,8 +2,10 @@ import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
 import { routeLoader$, server$, type DocumentHead } from "@builder.io/qwik-city";
 import { isValidHttpUrl } from "~/lib/url-utils";
 import { useAlert } from "~/lib/use-alert";
+import { Link2 as ChainIcon } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { Callout, PageHeader } from "~/components/ui";
 
 export const useLinks = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -192,24 +194,20 @@ export default component$(() => {
 
   return (
     <>
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 text-3xl font-bold sm:text-4xl">Short Links</h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Create and manage your cute short URLs under <code>/l/&lt;code&gt;</code> ✨
-        </p>
-      </div>
+      <PageHeader
+        title="Short Links"
+        icon={ChainIcon}
+        subtitle="Create and manage your cute short URLs under /l/<code> ✨"
+      />
 
       {!data.value.user.isApproved && (
-        <div class="bg-theme-secondary/10 border-theme-accent-secondary text-theme-text-primary mb-6 rounded-xl border p-4 sm:mb-8 sm:p-6">
-          <div class="text-center">
-            <h3 class="mb-2 text-lg font-semibold">Account Pending Approval</h3>
-            <p class="text-theme-text-secondary text-sm">You cannot create short links until approved by an administrator.</p>
-          </div>
-        </div>
+        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
+          You cannot create short links until approved by an administrator.
+        </Callout>
       )}
 
       {data.value.user.isApproved && (
-        <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
           <div class="mb-3 flex items-center justify-between">
             <h2 class="text-gradient-cute text-lg font-bold sm:text-xl">Create New Short Link</h2>
             <span class="text-theme-text-secondary text-sm">Remaining: {remaining.value}</span>
@@ -264,7 +262,7 @@ export default component$(() => {
         </div>
       )}
 
-      <div class="card-cute rounded-3xl p-4 sm:p-6">
+      <div class="card-cute rounded-2xl p-4 sm:p-6">
         <h2 class="text-gradient-cute mb-4 text-lg font-bold sm:text-xl">Your Short Links</h2>
 
         {data.value.links.length === 0 ? (

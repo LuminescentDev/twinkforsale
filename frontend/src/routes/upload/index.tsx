@@ -3,11 +3,11 @@ import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { 
-  Upload, 
-  Image, 
-  Video, 
-  FileText, 
+import {
+  Upload,
+  Image,
+  Video,
+  FileText,
   File as FileIcon,
   X,
   Copy,
@@ -16,8 +16,21 @@ import {
   Settings,
   Sparkle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Loader,
 } from "lucide-icons-qwik";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  FieldLabel,
+  Input,
+  PageHeader,
+} from "~/components/ui";
 
 interface FileUpload {
   id: string;
@@ -299,22 +312,16 @@ export default component$(() => {
   });
 
   return (
-    <div class="bg-theme-bg min-h-screen">
-      <div class="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div class="mb-8 text-center">
-          <h1 class="text-gradient-cute mb-3 flex items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-            <Upload class="h-8 w-8" />
-            File Upload~
-            <Sparkle class="h-6 w-6" />
-          </h1>
-          <p class="text-theme-text-secondary text-base sm:text-lg">
-            Drag and drop files or click to select files to upload! (◕‿◕)♡
-          </p>
-        </div>
+    <>
+      <PageHeader
+        title="File Upload~"
+        icon={Upload}
+        subtitle="Drag and drop files or click to select files to upload! (◕‿◕)♡"
+      />
 
+      <div class="mx-auto max-w-5xl">
         {/* User Info */}
-        <div class="card-cute mb-6 rounded-2xl p-4">
+        <Card padding="sm" class="mb-6">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 class="text-theme-text-primary font-medium">
@@ -328,10 +335,10 @@ export default component$(() => {
               Max file size: {formatFileSize(sessionData.value.user.maxFileSize)}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Advanced Settings */}
-        <div class="card-cute mb-6 rounded-2xl p-4">
+        <Card padding="sm" class="mb-6">
           <button
             onClick$={() => showAdvancedSettings.value = !showAdvancedSettings.value}
             class="text-theme-text-primary hover:text-theme-accent-primary flex w-full items-center justify-between transition-colors"
@@ -346,54 +353,46 @@ export default component$(() => {
               <ChevronDown class="h-5 w-5" />
             )}
           </button>
-          
+
           {showAdvancedSettings.value && (
-            <div class="mt-4 space-y-4">
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label class="text-theme-text-primary mb-2 block text-sm font-medium">
-                    Expiration (days)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    placeholder="Never expires"
-                    value={expirationDays.value || ''}
-                    onInput$={(e) => {
-                      const value = (e.target as HTMLInputElement).value;
-                      expirationDays.value = value ? parseInt(value) : null;
-                    }}
-                    class="border-theme-card-border text-theme-text-primary w-full rounded-lg border bg-theme-bg-secondary/50 px-3 py-2 focus:border-theme-accent-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label class="text-theme-text-primary mb-2 block text-sm font-medium">
-                    Max Views
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Unlimited"
-                    value={maxViews.value || ''}
-                    onInput$={(e) => {
-                      const value = (e.target as HTMLInputElement).value;
-                      maxViews.value = value ? parseInt(value) : null;
-                    }}
-                    class="border-theme-card-border text-theme-text-primary w-full rounded-lg border bg-theme-bg-secondary/50 px-3 py-2 focus:border-theme-accent-primary focus:outline-none"
-                  />
-                </div>
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Expiration (days)</FieldLabel>
+                <Input
+                  type="number"
+                  min="1"
+                  max="365"
+                  placeholder="Never expires"
+                  value={expirationDays.value || ''}
+                  onInput$={(e) => {
+                    const value = (e.target as HTMLInputElement).value;
+                    expirationDays.value = value ? parseInt(value) : null;
+                  }}
+                />
+              </div>
+              <div>
+                <FieldLabel>Max Views</FieldLabel>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Unlimited"
+                  value={maxViews.value || ''}
+                  onInput$={(e) => {
+                    const value = (e.target as HTMLInputElement).value;
+                    maxViews.value = value ? parseInt(value) : null;
+                  }}
+                />
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Upload Area */}
         <div class="mb-6">
           <div
             class={`card-cute relative overflow-hidden rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
-              isDragOver.value 
-                ? 'border-theme-accent-primary bg-theme-accent-primary/10' 
+              isDragOver.value
+                ? 'border-theme-accent-primary bg-theme-accent-primary/10'
                 : 'border-theme-card-border hover:border-theme-accent-primary/50'
             }`}
             onDragOver$={handleDragOver}
@@ -432,9 +431,9 @@ export default component$(() => {
 
         {/* File List */}
         {files.value.length > 0 && (
-          <div class="card-cute rounded-2xl p-6">
+          <Card padding="md">
             {/* Summary Stats */}
-            <div class="mb-4 grid grid-cols-2 gap-4 rounded-lg bg-theme-bg-secondary/30 p-3 sm:grid-cols-4">
+            <div class="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-theme-bg-secondary/30 p-3 sm:grid-cols-4">
               <div class="text-center">
                 <p class="text-theme-text-primary text-lg font-semibold">
                   {files.value.length}
@@ -448,50 +447,48 @@ export default component$(() => {
                 <p class="text-theme-text-muted text-xs">Pending</p>
               </div>
               <div class="text-center">
-                <p class="text-green-400 text-lg font-semibold">
+                <p class="text-theme-success text-lg font-semibold">
                   {files.value.filter(f => f.status === 'success').length}
                 </p>
                 <p class="text-theme-text-muted text-xs">Uploaded</p>
               </div>
               <div class="text-center">
-                <p class="text-red-400 text-lg font-semibold">
+                <p class="text-theme-error text-lg font-semibold">
                   {files.value.filter(f => f.status === 'error').length}
                 </p>
                 <p class="text-theme-text-muted text-xs">Errors</p>
               </div>
             </div>
-            
+
             <div class="mb-4 flex items-center justify-between">
               <h3 class="text-theme-text-primary text-lg font-medium">
                 Files ({files.value.length})
               </h3>
               <div class="flex gap-2">
-                <button
+                <Button
+                  size="sm"
+                  pill={false}
                   onClick$={uploadAll}
                   disabled={!files.value.some(f => f.status === 'pending')}
-                  class="btn-cute flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
                 >
                   <Upload class="h-4 w-4" />
                   Upload All
-                </button>
-                <button
-                  onClick$={clearAll}
-                  class="text-theme-accent-primary hover:bg-theme-accent-primary/10 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-                >
+                </Button>
+                <Button size="sm" pill={false} variant="ghost" onClick$={clearAll}>
                   <Trash2 class="h-4 w-4" />
                   Clear All
-                </button>
+                </Button>
               </div>
             </div>
 
             <div class="space-y-3">
               {files.value.map((fileUpload) => {
                 const IconComponent = getFileTypeIcon(fileUpload.type);
-                
+
                 return (
                   <div
                     key={fileUpload.id}
-                    class="border-theme-card-border flex items-center gap-4 rounded-lg border bg-theme-bg-secondary/30 p-4"
+                    class="border-theme-card-border flex items-center gap-4 rounded-xl border bg-theme-bg-secondary/30 p-4"
                   >
                     {/* File Icon/Preview */}
                     <div class="flex-shrink-0">
@@ -525,30 +522,28 @@ export default component$(() => {
                       </p>
                       
                       {/* Status */}
-                      {fileUpload.status === 'error' && fileUpload.error && (
-                        <p class="text-red-400 mt-1 text-sm flex items-center gap-1">
-                          <span class="text-xs">❌</span>
-                          {fileUpload.error}
-                        </p>
-                      )}
-                      {fileUpload.status === 'uploading' && (
-                        <p class="text-theme-accent-secondary mt-1 text-sm flex items-center gap-1">
-                          <span class="animate-spin text-xs">⏳</span>
-                          Uploading...
-                        </p>
-                      )}
-                      {fileUpload.status === 'success' && (
-                        <p class="text-green-400 mt-1 text-sm flex items-center gap-1">
-                          <span class="text-xs">✅</span>
-                          Uploaded successfully!
-                        </p>
-                      )}
-                      {fileUpload.status === 'pending' && (
-                        <p class="text-theme-text-muted mt-1 text-sm flex items-center gap-1">
-                          <span class="text-xs">⏸️</span>
-                          Ready to upload
-                        </p>
-                      )}
+                      <div class="mt-1.5">
+                        {fileUpload.status === 'error' && fileUpload.error && (
+                          <Badge status="error" icon={AlertCircle}>
+                            {fileUpload.error}
+                          </Badge>
+                        )}
+                        {fileUpload.status === 'uploading' && (
+                          <Badge status="info" icon={Loader}>
+                            Uploading...
+                          </Badge>
+                        )}
+                        {fileUpload.status === 'success' && (
+                          <Badge status="success" icon={CheckCircle}>
+                            Uploaded successfully!
+                          </Badge>
+                        )}
+                        {fileUpload.status === 'pending' && (
+                          <Badge status="neutral" icon={Clock}>
+                            Ready to upload
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -573,12 +568,13 @@ export default component$(() => {
                           </a>
                         </>
                       ) : fileUpload.status === 'pending' && (
-                        <button
+                        <Button
+                          size="sm"
+                          pill={false}
                           onClick$={() => uploadFile(fileUpload)}
-                          class="btn-cute text-theme-text-primary rounded-lg px-3 py-1 text-sm"
                         >
                           Upload
-                        </button>
+                        </Button>
                       )}
                       
                       <button
@@ -593,37 +589,31 @@ export default component$(() => {
                 );
               })}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Quick Links */}
-        <div class="card-cute mt-6 rounded-2xl p-6">
+        <Card padding="md" class="mt-6">
           <h3 class="text-theme-text-primary mb-4 font-medium">Quick Actions</h3>
           <div class="flex flex-wrap gap-3">
-            <a
-              href="/dashboard/uploads"
-              class="text-theme-accent-secondary hover:bg-theme-accent-secondary/10 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-            >
+            <Button href="/dashboard/uploads" variant="ghost" size="sm">
               <FileIcon class="h-4 w-4" />
               View All Files
-            </a>
-            <a
-              href="/dashboard"
-              class="text-theme-accent-tertiary hover:bg-theme-accent-tertiary/10 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-            >
+            </Button>
+            <Button href="/dashboard" variant="ghost" size="sm">
               <Settings class="h-4 w-4" />
               Dashboard
-            </a>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Instructions */}
-        <div class="card-cute mt-6 rounded-2xl p-6">
+        <Card padding="md" class="mt-6">
           <h3 class="text-theme-text-primary mb-4 flex items-center gap-2 font-medium">
             <Sparkle class="h-5 w-5" />
             How to Upload
           </h3>
-          <div class="text-theme-text-secondary space-y-2 text-sm">
+          <div class="text-theme-text-secondary mb-4 space-y-2 text-sm">
             <p>• Drag and drop files directly onto the upload area</p>
             <p>• Click the upload area to select files from your computer</p>
             <p>• Set expiration dates and view limits in Advanced Settings</p>
@@ -631,16 +621,15 @@ export default component$(() => {
             <p>• Files are uploaded to your account using your API key</p>
             <p>• Supported formats depend on your account settings</p>
           </div>
-          
-          <div class="bg-blue-500/10 border-blue-500/20 mt-4 rounded-lg border p-3">
-            <p class="text-blue-400 text-sm">
-              <strong>✨ Pro Tip:</strong> Your files are uploaded directly to the same API endpoint used by ShareX and other tools. 
-              URLs and deletion keys will be generated automatically!
-            </p>
-          </div>
-        </div>
+
+          <Callout tone="info" title="✨ Pro Tip">
+            Your files are uploaded directly to the same API endpoint used by
+            ShareX and other tools. URLs and deletion keys will be generated
+            automatically!
+          </Callout>
+        </Card>
       </div>
-    </div>
+    </>
   );
 });
 

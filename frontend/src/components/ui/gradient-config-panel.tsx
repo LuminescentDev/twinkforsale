@@ -295,7 +295,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                       <button
                         type="button"
                         onClick$={() => removeColor(index)}
-                        class="glass flex h-10 w-10 items-center justify-center rounded-lg text-red-400 transition-all hover:bg-red-500/20"
+                        class="glass flex h-10 w-10 items-center justify-center rounded-lg text-theme-error transition-all hover:bg-theme-error/20"
                       >
                         ×
                       </button>

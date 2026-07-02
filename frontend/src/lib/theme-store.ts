@@ -45,6 +45,10 @@ export interface ThemeColors {
   confirmHover: string;
   deny: string;
   denyHover: string;
+  warning: string;
+  warningHover: string;
+  info: string;
+  infoHover: string;
 }
 
 export const themes: Record<ThemeName, ThemeColors> = {
@@ -76,6 +80,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#059669',
     deny: '#ef4444',
     denyHover: '#dc2626',
+    warning: '#f59e0b',
+    warningHover: '#d97706',
+    info: '#38bdf8',
+    infoHover: '#0ea5e9',
   }, light: {
     bgPrimary: '#ffffff',
     bgSecondary: '#f8fafc',
@@ -104,6 +112,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#047857',
     deny: '#dc2626',
     denyHover: '#b91c1c',
+    warning: '#d97706',
+    warningHover: '#b45309',
+    info: '#0284c7',
+    infoHover: '#0369a1',
   }, pastel: {
     bgPrimary: '#fef7ff',
     bgSecondary: '#fdf4ff',
@@ -132,6 +144,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#10b981',
     deny: '#f87171',
     denyHover: '#ef4444',
+    warning: '#fbbf24',
+    warningHover: '#f59e0b',
+    info: '#7dd3fc',
+    infoHover: '#38bdf8',
   },
   neon: {
     bgPrimary: '#000000',
@@ -161,6 +177,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#00cc66',
     deny: '#ff4080',
     denyHover: '#ff0066',
+    warning: '#ffcc00',
+    warningHover: '#ffaa00',
+    info: '#00e0ff',
+    infoHover: '#00b8d4',
   }, valentine: {
     bgPrimary: '#fdf2f8',
     bgSecondary: '#fce7f3',
@@ -189,6 +209,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#f43f5e',
     deny: '#be123c',
     denyHover: '#9f1239',
+    warning: '#e8890c',
+    warningHover: '#c2740a',
+    info: '#e05a9c',
+    infoHover: '#c23a7e',
   },
   auto: {
     bgPrimary: '#0f172a',
@@ -218,6 +242,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     confirmHover: '#059669',
     deny: '#ef4444',
     denyHover: '#dc2626',
+    warning: '#f59e0b',
+    warningHover: '#d97706',
+    info: '#38bdf8',
+    infoHover: '#0ea5e9',
   },
 };
 

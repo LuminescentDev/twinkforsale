@@ -43,11 +43,15 @@
   --color-theme-confirm-hover: var(--theme-confirm-hover);
   --color-theme-deny: var(--theme-deny);
   --color-theme-deny-hover: var(--theme-deny-hover);
+  --color-theme-warning-hover: var(--theme-warning-hover);
+  --color-theme-info-hover: var(--theme-info-hover);
 
-  /* Action border colors */
+  /* Semantic status colors (theme-driven; use with opacity modifiers,
+     e.g. bg-theme-success/10 border-theme-success/30 text-theme-success) */
   --color-theme-success: var(--theme-confirm);
   --color-theme-error: var(--theme-deny);
-  --color-theme-warning: #f59e0b;
+  --color-theme-warning: var(--theme-warning);
+  --color-theme-info: var(--theme-info);
 }
 
 /* Custom styles for cute femboy aesthetic */
@@ -79,6 +83,14 @@
   --theme-button-gradient-start: #ec4899;
   --theme-button-gradient-end: #8b5cf6;
   --theme-button-shadow: rgba(236, 72, 153, 0.3);
+  --theme-confirm: #10b981;
+  --theme-confirm-hover: #059669;
+  --theme-deny: #ef4444;
+  --theme-deny-hover: #dc2626;
+  --theme-warning: #f59e0b;
+  --theme-warning-hover: #d97706;
+  --theme-info: #38bdf8;
+  --theme-info-hover: #0ea5e9;
 }
 
 /* Custom scrollbar */
@@ -176,6 +188,13 @@
   left: 100%;
 }
 
+/* Static card surface — same look as card-cute but no hover lift/glow.
+   Used for non-interactive containers via the <Card> primitive. */
+.card-static {
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-card-border);
+}
+
 /* Cute card hover effects */
 .card-cute {
   transition: all 0.3s ease;
@@ -235,9 +254,21 @@
   }
 }
 
-/* Theme transitions */
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+/* Theme transitions — scoped to color properties only so theme switches
+   cross-fade smoothly without animating layout/transform on every element.
+   Elements opting into their own transitions (buttons, cards) still work. */
+:root {
+  --theme-fade: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease;
+}
+
+body,
+.card-cute,
+.glass,
+.btn-cute,
+[class*="bg-theme-"],
+[class*="text-theme-"],
+[class*="border-theme-"] {
+  transition: var(--theme-fade);
 }
 
 /* Light theme specific overrides */

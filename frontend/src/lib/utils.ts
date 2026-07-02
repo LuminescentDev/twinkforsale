@@ -1,3 +1,11 @@
+/**
+ * Join conditional class names. Falsy values (false, null, undefined, "")
+ * are skipped. Keeps component class composition readable.
+ */
+export function cn(...classes: (string | false | null | undefined)[]): string {
+  return classes.filter(Boolean).join(" ");
+}
+
 export function formatBytes(bytes: number | bigint, decimals = 2) {
   // Convert BigInt to number for calculations
   const numBytes = typeof bytes === 'bigint' ? Number(bytes) : bytes;

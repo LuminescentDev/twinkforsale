@@ -23,6 +23,7 @@ import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { setThemePreference } from "~/lib/cookie-utils";
 import { ParticleConfigPanel } from "~/components/ui/particle-config-panel";
+import { PageContainer, PageHeader } from "~/components/ui";
 import {
   useGlobalParticle,
   updateGlobalParticleConfig,
@@ -324,18 +325,15 @@ export default component$(() => {
     (d) => d.id === selectedDomainId.value,
   );
   return (
-    <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-          Settings~
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Configure your upload preferences, domain settings, and themes! (◕‿◕)♡
-        </p>
-      </div>
+    <PageContainer width="narrow">
+      <PageHeader
+        title="Settings~"
+        icon={SettingsIcon}
+        subtitle="Configure your upload preferences, domain settings, and themes! (◕‿◕)♡"
+      />
 
       {/* Upload Domain Settings */}
-      <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
         <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
           Upload Domain Settings~ 🌐 <span class="sparkle ml-2">✨</span>
         </h2>
@@ -483,7 +481,7 @@ export default component$(() => {
       </div>
 
       {/* Theme Settings */}
-      <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
         <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
           Theme Settings~ <Palette class="ml-2 h-5 w-5" />{" "}
           <span class="sparkle ml-2">✨</span>
@@ -618,7 +616,7 @@ export default component$(() => {
       </div>
 
       {/* Particle Settings */}
-      <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
         <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
           Background Particles~ <Sparkles class="ml-2 h-5 w-5" />{" "}
           <span class="sparkle ml-2">✨</span>
@@ -704,8 +702,8 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Save note */}
-        <div class="mt-4 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3">
-          <p class="text-xs text-blue-400">
+        <div class="mt-4 rounded-lg border border-theme-info/20 bg-theme-info/10 p-3">
+          <p class="text-xs text-theme-info">
             💡 Your particle preferences are saved to your account and will sync
             across all your devices~ ✨
           </p>
@@ -728,33 +726,33 @@ export default component$(() => {
       </div>
 
       {/* Account Deletion - Danger Zone */}
-      <div class="glass rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-500/10 to-red-600/10 p-4 sm:p-6">
-        <h2 class="mb-4 flex items-center text-lg font-bold text-red-400 sm:mb-6 sm:text-xl">
+      <div class="glass rounded-2xl border border-theme-error/30 bg-gradient-to-br from-red-500/10 to-red-600/10 p-4 sm:p-6">
+        <h2 class="mb-4 flex items-center text-lg font-bold text-theme-error sm:mb-6 sm:text-xl">
           <AlertTriangle class="mr-2 h-5 w-5" />
           Danger Zone
         </h2>
-        <p class="mb-6 text-sm text-red-300/80">
+        <p class="mb-6 text-sm text-theme-error/80">
           ⚠️ This action is permanent and cannot be undone. All your files,
           data, and account information will be permanently deleted.
         </p>
 
         <Form action={deleteAccountAction} class="space-y-4">
           <div>
-            <label class="mb-2 block text-sm font-medium text-red-300">
+            <label class="mb-2 block text-sm font-medium text-theme-error">
               Type "DELETE MY ACCOUNT" to confirm deletion:
             </label>
             <input
               type="text"
               name="confirmationText"
               placeholder="Type DELETE MY ACCOUNT here..."
-              class="w-full rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-red-200 placeholder-red-400/60 focus:border-red-400 focus:ring-2 focus:ring-red-400/50 focus:outline-none"
+              class="w-full rounded-lg border border-theme-error/30 bg-theme-error/5 px-3 py-2 text-theme-error placeholder-red-400/60 focus:border-theme-error focus:ring-2 focus:ring-red-400/50 focus:outline-none"
               required
             />
           </div>
 
           <button
             type="submit"
-            class="flex w-full items-center justify-center rounded-lg bg-red-600 px-4 py-3 font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-red-700"
+            class="flex w-full items-center justify-center rounded-lg bg-theme-error px-4 py-3 font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-theme-error"
           >
             <Trash2 class="mr-2 h-4 w-4" />
             Delete My Account Forever
@@ -763,13 +761,13 @@ export default component$(() => {
 
         {/* Error/Success Messages */}
         {deleteAccountAction.value?.failed && (
-          <div class="mt-4 rounded-lg border border-red-500/50 bg-red-500/20 p-3">
-            <p class="text-sm text-red-300">
+          <div class="mt-4 rounded-lg border border-theme-error/50 bg-theme-error/20 p-3">
+            <p class="text-theme-error text-sm">
               ❌ {deleteAccountAction.value.message}
             </p>
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 });

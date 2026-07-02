@@ -59,7 +59,7 @@ export const ImagePreview = component$<ImagePreviewProps>(
         {" "}
         {/* Modal Content */}{" "}
         <div
-          class="glass border-theme-card-border relative max-h-[95vh] max-w-[95vw] overflow-hidden rounded-3xl border"
+          class="glass border-theme-card-border relative max-h-[95vh] max-w-[95vw] overflow-hidden rounded-2xl border"
           onClick$={(event) => event.stopPropagation()}
         >
           {/* Header */}
@@ -96,7 +96,7 @@ export const ImagePreview = component$<ImagePreviewProps>(
               </button>
               <button
                 onClick$={onClose}
-                class="rounded-full p-2 text-pink-300 transition-all duration-300 hover:bg-red-500/20 hover:text-white"
+                class="rounded-full p-2 text-pink-300 transition-all duration-300 hover:bg-theme-error/20 hover:text-white"
                 title="Close preview"
               >
                 <X class="h-4 w-4" />

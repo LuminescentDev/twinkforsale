@@ -111,7 +111,7 @@ export default component$(() => {
   };
 
   return (
-    <div class="min-h-screen p-4 sm:p-6">
+    <div>
       {/* Header */}
       <div class="mb-6">
         <div class="mb-4 flex items-center gap-4">
@@ -124,7 +124,7 @@ export default component$(() => {
           </a>
         </div>
 
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 class="text-gradient-cute mb-2 text-2xl font-bold">
@@ -228,7 +228,7 @@ export default component$(() => {
       </div>
 
       {/* Additional Insights */}
-      <div class="card-cute mb-6 rounded-3xl p-6">
+      <div class="card-cute mb-6 rounded-2xl p-6">
         <h3 class="text-gradient-cute mb-4 text-lg font-bold">
           📊 Insights & Summary
         </h3>
@@ -273,7 +273,7 @@ export default component$(() => {
       {/* Charts Section */}
       <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Views Over Time */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <BarChart3 class="h-5 w-5" />
             Views Over Time (30 Days)
@@ -287,7 +287,7 @@ export default component$(() => {
         </div>
 
         {/* Hourly Activity */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <Clock class="h-5 w-5" />
             Hourly Activity (24h)
@@ -301,7 +301,7 @@ export default component$(() => {
                 <div class="mx-3 flex flex-1 items-center gap-2">
                   <div class="bg-theme-card-border h-2 flex-1 overflow-hidden rounded-full">
                     <div
-                      class="bg-gradient-theme-primary h-full transition-all duration-500"
+                      class="h-full bg-gradient-to-r from-theme-accent-primary to-theme-accent-secondary transition-all duration-500"
                       style={{
                         width: `${Math.max(item.count * 10, item.count > 0 ? 5 : 0)}%`,
                       }}
@@ -320,7 +320,7 @@ export default component$(() => {
       {/* Referrer and Device Stats */}
       <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Traffic Sources */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <Globe class="h-5 w-5" />
             Traffic Sources
@@ -336,7 +336,7 @@ export default component$(() => {
                   <div class="flex items-center gap-2">
                     <div class="bg-theme-card-border h-2 w-24 overflow-hidden rounded-full">
                       <div
-                        class="bg-gradient-theme-secondary h-full"
+                        class="h-full bg-gradient-to-r from-theme-accent-secondary to-theme-accent-tertiary"
                         style={{
                           width: `${(count / Math.max(...Object.values(data.value.referrerStats))) * 100}%`,
                         }}
@@ -352,7 +352,7 @@ export default component$(() => {
         </div>
 
         {/* Device Types */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           {" "}
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <BarChart3 class="h-5 w-5" />
@@ -374,7 +374,7 @@ export default component$(() => {
                   <div class="flex items-center gap-2">
                     <div class="bg-theme-card-border h-2 w-24 overflow-hidden rounded-full">
                       <div
-                        class="bg-gradient-theme-tertiary h-full"
+                        class="h-full bg-gradient-to-r from-theme-accent-tertiary to-theme-accent-quaternary"
                         style={{
                           width: `${(count / Math.max(...Object.values(data.value.deviceStats))) * 100}%`,
                         }}
@@ -393,7 +393,7 @@ export default component$(() => {
       {/* Recent Activity */}
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent Views */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <Eye class="h-5 w-5" />
             Recent Views
@@ -428,7 +428,7 @@ export default component$(() => {
         </div>
 
         {/* Recent Downloads */}
-        <div class="card-cute rounded-3xl p-6">
+        <div class="card-cute rounded-2xl p-6">
           <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
             <Download class="h-5 w-5" />
             Recent Downloads

@@ -53,6 +53,7 @@ import {
 } from "~/components/ui/gradient-config-panel";
 import { getLanyardData } from "~/lib/discord";
 import { sanitizeCSS, hasDangerousCSS } from "~/lib/css-sanitizer";
+import { PageHeader } from "~/components/ui";
 
 export const useBioData = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -629,17 +630,15 @@ export default component$(() => {
     "px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center gap-2";
 
   return (
-    <div class="bg-theme-bg min-h-screen">
-      <div class="container mx-auto px-4 py-8">
-        {/* Header */}
+    <div>
+      <div>
+        <PageHeader
+          title="Bio Page Builder"
+          icon={LinkIcon}
+          align="left"
+          subtitle="Create your custom bio link page for sharing all your important links"
+        />
         <div class="mb-8">
-          <h1 class="text-theme-text-primary mb-2 text-3xl font-bold">
-            Bio Page Builder
-          </h1>
-          <p class="text-theme-text-secondary">
-            Create your custom bio link page for sharing all your important
-            links
-          </p>
           {updateBio.value?.success && (
             <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 glass mt-4 rounded-2xl border border-theme-accent-secondary/30 bg-gradient-to-br p-3">
               <p class="text-theme-accent-secondary text-sm">
@@ -655,8 +654,8 @@ export default component$(() => {
             </div>
           )}
           {!bioData.value.user.isApproved && (
-            <div class="glass mt-4 rounded-2xl border border-yellow-500/20 p-4">
-              <p class="text-yellow-400">
+            <div class="glass mt-4 rounded-2xl border border-theme-warning/20 p-4">
+              <p class="text-theme-warning">
                 ⚠️ Your account needs to be approved to use the bio service.
               </p>
             </div>
@@ -832,8 +831,8 @@ export default component$(() => {
                     />
                   </div>
                   {isPublic.value && !username.value && (
-                    <div class="mt-2 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-2">
-                      <p class="text-xs text-yellow-400">
+                    <div class="mt-2 rounded-xl border border-theme-warning/20 bg-theme-warning/10 p-2">
+                      <p class="text-xs text-theme-warning">
                         Set a username above to publish your bio.
                       </p>
                     </div>
@@ -1075,14 +1074,14 @@ export default component$(() => {
 
                         {/* Discord Error Display */}
                         {discordError.value && (
-                          <div class="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
+                          <div class="rounded-lg border border-theme-error/20 bg-theme-error/10 p-3">
                             <div class="flex items-start gap-2">
-                              <div class="text-lg text-red-400">⚠️</div>
+                              <div class="text-lg text-theme-error">⚠️</div>
                               <div>
-                                <p class="mb-1 text-sm font-medium text-red-400">
+                                <p class="mb-1 text-sm font-medium text-theme-error">
                                   Discord Connection Failed
                                 </p>
-                                <p class="text-xs text-red-300">
+                                <p class="text-xs text-theme-error">
                                   {discordError.value}
                                 </p>
                               </div>
@@ -1550,8 +1549,8 @@ export default component$(() => {
                   {/* Max links reached message */}
                   {bioData.value.bioLinks.length >=
                     bioData.value.bioLimits.maxBioLinks && (
-                      <div class="mb-6 rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
-                        <p class="text-sm text-orange-400">
+                      <div class="mb-6 rounded-2xl border border-theme-warning/20 bg-theme-warning/10 p-4">
+                        <p class="text-sm text-theme-warning">
                           You've reached your maximum bio links limit (
                           {bioData.value.bioLimits.maxBioLinks}).
                           {bioData.value.bioLinks.length > 0 &&
@@ -1667,9 +1666,9 @@ export default component$(() => {
                                 />
                                 <button
                                   type="submit"
-                                  class="rounded-lg p-2 transition-all hover:bg-red-500/10"
+                                  class="rounded-lg p-2 transition-all hover:bg-theme-error/10"
                                 >
-                                  <Trash2 class="h-4 w-4 text-red-400" />
+                                  <Trash2 class="h-4 w-4 text-theme-error" />
                                 </button>
                               </Form>
                             </div>
@@ -1795,8 +1794,8 @@ export default component$(() => {
                 />
               </div>
               {!bioData.value.user.bioUsername && (
-                <div class="mt-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4">
-                  <p class="text-sm text-yellow-400">
+                <div class="mt-4 rounded-2xl border border-theme-warning/20 bg-theme-warning/10 p-4">
+                  <p class="text-sm text-theme-warning">
                     Set a username to make your bio page accessible to others
                   </p>
                 </div>
@@ -1807,7 +1806,7 @@ export default component$(() => {
 
         {/* Sticky Save/Reset Bar */}
         {hasChanges.value && (
-          <div class="border-theme-card-border bg-theme-bg/80 fixed right-0 bottom-0 left-0 z-50 border-t p-4 backdrop-blur-lg">
+          <div class="border-theme-card-border bg-theme-bg-secondary/80 fixed right-0 bottom-0 left-0 z-50 border-t p-4 backdrop-blur-lg">
             <div class="container mx-auto flex items-center justify-between">
               <div class="text-theme-text-secondary text-sm">
                 You have unsaved changes

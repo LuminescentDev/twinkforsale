@@ -1,33 +1,22 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { FileText, Shield, AlertTriangle, Users, Globe, Scale } from "lucide-icons-qwik";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export default component$(() => {
   return (
-    <div class="min-h-screen bg-theme-bg-primary p-4 sm:p-6">
-      <div class="mx-auto max-w-4xl">
-        {/* Header */}
-        <div class="mb-8">
-          <div class="card-cute rounded-3xl p-6 text-center">
-            <div class="mb-4 flex justify-center">
-              <div class="rounded-full bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary p-3">
-                <Scale class="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 class="text-gradient-cute mb-2 text-3xl font-bold">
-              Terms of Service
-            </h1>
-            <p class="text-theme-text-secondary">
-              Legal terms and conditions for using twink.forsale
-            </p>
-            <p class="text-theme-text-muted mt-2 text-sm">
-              Last updated: June 28, 2025
-            </p>
-          </div>
-        </div>
+    <PageContainer width="narrow">
+      <PageHeader
+        title="Terms of Service"
+        icon={Scale}
+        subtitle="Legal terms and conditions for using twink.forsale"
+      />
+      <p class="text-theme-text-muted -mt-4 mb-8 text-center text-sm">
+        Last updated: June 28, 2025
+      </p>
 
-        {/* Content */}
-        <div class="space-y-6">
+      {/* Content */}
+      <div class="space-y-6">
           {/* Introduction */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
@@ -62,7 +51,7 @@ export default component$(() => {
                 <li>Be at least 13 years old (or the minimum age in your jurisdiction)</li>
                 <li>Comply with Discord's Terms of Service</li>
               </ul>
-              <div class="bg-yellow-500/10 border-yellow-500/30 rounded-lg border p-3">
+              <div class="bg-theme-warning/10 border-theme-warning/30 rounded-lg border p-3">
                 <p><strong>Account Approval:</strong> We reserve the right to approve or deny account applications at our sole discretion. Accounts may be denied for any reason, including but not limited to suspected misuse or violation of these terms.</p>
               </div>
             </div>
@@ -79,8 +68,8 @@ export default component$(() => {
                 <p class="mb-4">You agree NOT to use the Service to upload, share, or distribute content that:</p>
               </div>
 
-              <div class="bg-red-500/10 border-red-500/30 rounded-lg border p-4">
-                <h3 class="text-red-400 mb-2 font-semibold">Prohibited Content</h3>
+              <div class="bg-theme-error/10 border-theme-error/30 rounded-lg border p-4">
+                <h3 class="text-theme-error mb-2 font-semibold">Prohibited Content</h3>
                 <ul class="text-theme-text-secondary space-y-1 text-sm list-disc list-inside">
                   <li>Violates any local, state, national, or international law</li>
                   <li>Infringes on intellectual property rights (copyright, trademark, etc.)</li>
@@ -93,8 +82,8 @@ export default component$(() => {
                 </ul>
               </div>
 
-              <div class="bg-green-500/10 border-green-500/30 rounded-lg border p-4">
-                <h3 class="text-green-400 mb-2 font-semibold">Appropriate Use</h3>
+              <div class="bg-theme-success/10 border-theme-success/30 rounded-lg border p-4">
+                <h3 class="text-theme-success mb-2 font-semibold">Appropriate Use</h3>
                 <ul class="text-theme-text-secondary space-y-1 text-sm list-disc list-inside">
                   <li>Screenshots and images for legitimate sharing</li>
                   <li>Documents and files for personal or professional use</li>
@@ -120,7 +109,7 @@ export default component$(() => {
                 <li>We reserve the right to remove files that violate these terms</li>
                 <li>You are responsible for maintaining backups of important files</li>
               </ul>
-              <div class="bg-blue-500/10 border-blue-500/30 rounded-lg border p-3">
+              <div class="bg-theme-info/10 border-theme-info/30 rounded-lg border p-3">
                 <p><strong>No Guarantee:</strong> While we strive to maintain file availability, we do not guarantee permanent storage. Always keep backups of important files.</p>
               </div>
             </div>
@@ -139,7 +128,7 @@ export default component$(() => {
               <p>
                 The Service and its original content, features, and functionality are owned by twink.forsale and are protected by international copyright, trademark, and other intellectual property laws.
               </p>
-              <div class="bg-yellow-500/10 border-yellow-500/30 rounded-lg border p-3">
+              <div class="bg-theme-warning/10 border-theme-warning/30 rounded-lg border p-3">
                 <p><strong>DMCA Compliance:</strong> We respond to valid DMCA takedown notices. See our <a href="/dmca" class="text-theme-accent-primary hover:underline">DMCA Policy</a> for more information.</p>
               </div>
             </div>
@@ -190,7 +179,7 @@ export default component$(() => {
               Disclaimers and Limitation of Liability
             </h2>
             <div class="text-theme-text-secondary space-y-4 text-sm leading-relaxed">
-              <div class="bg-red-500/10 border-red-500/30 rounded-lg border p-4">
+              <div class="bg-theme-error/10 border-theme-error/30 rounded-lg border p-4">
                 <p class="font-semibold mb-2">IMPORTANT LEGAL DISCLAIMERS:</p>
                 <ul class="space-y-2 list-disc list-inside">
                   <li>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND</li>
@@ -274,14 +263,13 @@ export default component$(() => {
           </section>
         </div>
 
-        {/* Footer */}
-        <div class="mt-8 text-center">
-          <p class="text-theme-text-muted text-xs">
-            These terms are effective as of June 28, 2025
-          </p>
-        </div>
+      {/* Footer */}
+      <div class="mt-8 text-center">
+        <p class="text-theme-text-muted text-xs">
+          These terms are effective as of June 28, 2025
+        </p>
       </div>
-    </div>
+    </PageContainer>
   );
 });
 

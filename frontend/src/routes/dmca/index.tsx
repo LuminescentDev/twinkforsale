@@ -1,33 +1,22 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Shield, AlertTriangle, FileText, Mail, Scale } from "lucide-icons-qwik";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export default component$(() => {
   return (
-    <div class="min-h-screen bg-theme-bg-primary p-4 sm:p-6">
-      <div class="mx-auto max-w-4xl">
-        {/* Header */}
-        <div class="mb-8">
-          <div class="card-cute rounded-3xl p-6 text-center">
-            <div class="mb-4 flex justify-center">
-              <div class="rounded-full bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary p-3">
-                <Shield class="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 class="text-gradient-cute mb-2 text-3xl font-bold">
-              DMCA Policy
-            </h1>
-            <p class="text-theme-text-secondary">
-              Digital Millennium Copyright Act compliance and takedown procedures
-            </p>
-            <p class="text-theme-text-muted mt-2 text-sm">
-              Last updated: June 28, 2025
-            </p>
-          </div>
-        </div>
+    <PageContainer width="narrow">
+      <PageHeader
+        title="DMCA Policy"
+        icon={Shield}
+        subtitle="Digital Millennium Copyright Act compliance and takedown procedures"
+      />
+      <p class="text-theme-text-muted -mt-4 mb-8 text-center text-sm">
+        Last updated: June 28, 2025
+      </p>
 
-        {/* Content */}
-        <div class="space-y-6">
+      {/* Content */}
+      <div class="space-y-6">
           {/* Introduction */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
@@ -41,7 +30,7 @@ export default component$(() => {
               <p>
                 If you are a copyright owner or an agent thereof and believe that any content hosted on our service infringes your copyrights, you may submit a takedown notice pursuant to the DMCA.
               </p>
-              <div class="bg-blue-500/10 border-blue-500/30 rounded-lg border p-3">
+              <div class="bg-theme-info/10 border-theme-info/30 rounded-lg border p-3">
                 <p><strong>Safe Harbor:</strong> We qualify for DMCA safe harbor protections under 17 U.S.C. § 512 as a service provider that hosts user-generated content.</p>
               </div>
             </div>
@@ -58,8 +47,8 @@ export default component$(() => {
                 <p class="mb-4">To file a valid DMCA takedown notice, please provide the following information:</p>
               </div>
 
-              <div class="bg-yellow-500/10 border-yellow-500/30 rounded-lg border p-4">
-                <h3 class="text-yellow-600 mb-3 font-semibold">Required Elements (17 U.S.C. § 512(c)(3)):</h3>
+              <div class="bg-theme-warning/10 border-theme-warning/30 rounded-lg border p-4">
+                <h3 class="text-theme-warning mb-3 font-semibold">Required Elements (17 U.S.C. § 512(c)(3)):</h3>
                 <ol class="text-theme-text-secondary space-y-2 text-sm list-decimal list-inside">
                   <li><strong>Physical or electronic signature</strong> of the copyright owner or authorized agent</li>
                   <li><strong>Identification of the copyrighted work</strong> claimed to have been infringed</li>
@@ -70,8 +59,8 @@ export default component$(() => {
                 </ol>
               </div>
 
-              <div class="bg-red-500/10 border-red-500/30 rounded-lg border p-4">
-                <h3 class="text-red-400 mb-2 font-semibold">Important Notice:</h3>
+              <div class="bg-theme-error/10 border-theme-error/30 rounded-lg border p-4">
+                <h3 class="text-theme-error mb-2 font-semibold">Important Notice:</h3>
                 <p class="text-theme-text-secondary text-sm">
                   <strong>False claims may result in liability for damages including costs and attorney fees.</strong> Only submit a DMCA notice if you are the copyright owner or authorized to act on behalf of the owner.
                 </p>
@@ -142,7 +131,7 @@ Date: [Date]
                 </ul>
               </div>
 
-              <div class="bg-blue-500/10 border-blue-500/30 rounded-lg border p-3">
+              <div class="bg-theme-info/10 border-theme-info/30 rounded-lg border p-3">
                 <p><strong>Response Time:</strong> We will review and respond to valid DMCA notices within 24-48 hours during business days.</p>
               </div>
             </div>
@@ -164,7 +153,7 @@ Date: [Date]
                 <li>Implement appropriate penalties for repeat infringers</li>
               </ol>
               
-              <div class="bg-green-500/10 border-green-500/30 rounded-lg border p-3">
+              <div class="bg-theme-success/10 border-theme-success/30 rounded-lg border p-3">
                 <p><strong>Repeat Infringer Policy:</strong> We will terminate accounts of users who are found to be repeat infringers in accordance with the DMCA.</p>
               </div>
             </div>
@@ -181,8 +170,8 @@ Date: [Date]
                 If you believe your content was removed in error, you may file a counter-notice under Section 512(g) of the DMCA.
               </p>
               
-              <div class="bg-blue-500/10 border-blue-500/30 rounded-lg border p-4">
-                <h3 class="text-blue-400 mb-2 font-semibold">Counter-Notice Requirements:</h3>
+              <div class="bg-theme-info/10 border-theme-info/30 rounded-lg border p-4">
+                <h3 class="text-theme-info mb-2 font-semibold">Counter-Notice Requirements:</h3>
                 <ol class="space-y-2 list-decimal list-inside">
                   <li>Your physical or electronic signature</li>
                   <li>Identification of the material removed and its previous location</li>
@@ -196,7 +185,7 @@ Date: [Date]
                 Send counter-notices to the same email address: <a href="mailto:dmca@bwmp.dev" class="text-theme-accent-primary hover:underline">dmca@bwmp.dev</a>
               </p>
               
-              <div class="bg-yellow-500/10 border-yellow-500/30 rounded-lg border p-3">
+              <div class="bg-theme-warning/10 border-theme-warning/30 rounded-lg border p-3">
                 <p><strong>Restoration:</strong> If we receive a valid counter-notice and the original complainant doesn't file a court action within 10 business days, we may restore the content.</p>
               </div>
             </div>
@@ -209,8 +198,8 @@ Date: [Date]
               Fair Use and False Claims
             </h2>
             <div class="text-theme-text-secondary space-y-4 text-sm leading-relaxed">
-              <div class="bg-orange-500/10 border-orange-500/30 rounded-lg border p-4">
-                <h3 class="text-orange-400 mb-2 font-semibold">Before Filing a DMCA Notice:</h3>
+              <div class="bg-theme-warning/10 border-theme-warning/30 rounded-lg border p-4">
+                <h3 class="text-theme-warning mb-2 font-semibold">Before Filing a DMCA Notice:</h3>
                 <ul class="space-y-2 list-disc list-inside">
                   <li>Consider whether the use might qualify as fair use under U.S. copyright law</li>
                   <li>Ensure you actually own the copyright or are authorized to act</li>
@@ -248,14 +237,13 @@ Date: [Date]
           </section>
         </div>
 
-        {/* Footer */}
-        <div class="mt-8 text-center">
-          <p class="text-theme-text-muted text-xs">
-            This DMCA policy is effective as of June 28, 2025
-          </p>
-        </div>
+      {/* Footer */}
+      <div class="mt-8 text-center">
+        <p class="text-theme-text-muted text-xs">
+          This DMCA policy is effective as of June 28, 2025
+        </p>
       </div>
-    </div>
+    </PageContainer>
   );
 });
 

@@ -3,6 +3,7 @@ import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Camera, Key, Sparkle, Shield } from "lucide-icons-qwik";
 import { SelectMenu } from "@luminescent/ui-qwik";
+import { PageContainer, PageHeader } from "~/components/ui";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import {
@@ -75,20 +76,15 @@ export default component$(() => {
   });
 
   return (
-    <>
-      <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
-        <div class="mb-8 text-center sm:mb-12">
-          <h1 class="text-gradient-cute mb-4 flex items-center justify-center gap-2 text-2xl font-bold sm:text-3xl md:text-4xl">
-            ShareX Setup~
-            <Camera class="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10" />
-          </h1>{" "}
-          <p class="text-theme-text-secondary px-2 text-lg sm:text-xl">
-            Configure ShareX to work with twink.forsale in just a few clicks!
-            (◕‿◕)♡
-          </p>
-        </div>{" "}
+    <PageContainer width="narrow">
+      <PageHeader
+        title="ShareX Setup~"
+        icon={Camera}
+        subtitle="Configure ShareX to work with twink.forsale in just a few clicks! (◕‿◕)♡"
+      />
+      <div>{" "}
         {/* Step 1: API Key */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:rounded-3xl sm:p-6 md:p-8">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
           <div class="flex flex-col items-start gap-4 sm:flex-row">
             {" "}
             <div class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
@@ -134,7 +130,7 @@ export default component$(() => {
                               <div class="flex items-center justify-between w-full">
                                 <span>{info.label}</span>
                                 {info.recommended && (
-                                  <span class="text-yellow-400">⭐</span>
+                                  <span class="text-theme-warning">⭐</span>
                                 )}
                               </div>
                             ),
@@ -220,7 +216,7 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Step 2: Download ShareX */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:rounded-3xl sm:p-6 md:p-8">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
           <div class="flex flex-col items-start gap-4 sm:flex-row">
             {" "}
             <div class="bg-gradient-to-br from-theme-accent-secondary to-theme-accent-primary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
@@ -249,7 +245,7 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Step 3: Import Config */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:rounded-3xl sm:p-6 md:p-8">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
           <div class="flex flex-col items-start gap-4 sm:flex-row">
             {" "}
             <div class="bg-gradient-to-br from-theme-accent-secondary to-theme-accent-tertiary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
@@ -296,10 +292,10 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Step 4: Start Uploading */}
-        <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6 md:p-8">
+        <div class="card-cute rounded-2xl p-4 sm:p-6 md:p-8">
           <div class="flex flex-col items-start gap-4 sm:flex-row">
             {" "}
-            <div class="bg-gradient-theme-secondary-primary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
+            <div class="bg-gradient-to-br from-theme-accent-tertiary to-theme-accent-quaternary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
               4
             </div>
             <div class="w-full flex-1">
@@ -347,7 +343,7 @@ export default component$(() => {
           </div>
         </div>
       </div>
-    </>
+    </PageContainer>
   );
 });
 

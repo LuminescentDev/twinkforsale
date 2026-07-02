@@ -123,7 +123,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
         {/* Main content - centered */}
         <div class="flex items-center justify-center p-6">
           <div
-            class="bio-content relative z-10 mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-black/20 p-8 text-center shadow-2xl backdrop-blur-sm"
+            class="bio-content relative z-10 mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/20 p-8 text-center shadow-2xl backdrop-blur-sm"
             style={{ backgroundColor: `${bioData.backgroundColor}15` }}
           >            {/* Profile Image */}
             {bioData.profileImage ? (

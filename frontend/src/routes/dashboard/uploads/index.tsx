@@ -37,6 +37,7 @@ import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { getServerUploadsViewMode } from "~/lib/cookie-utils";
 import { formatBytes } from "~/lib/utils";
+import { PageHeader } from "~/components/ui";
 
 export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -329,19 +330,15 @@ export default component$(() => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-          My Files~
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Manage your files with expiration dates and view limits! (◕‿◕)♡
-        </p>
-      </div>
+      <PageHeader
+        title="My Files~"
+        icon={Folder}
+        subtitle="Manage your files with expiration dates and view limits! (◕‿◕)♡"
+      />
 
       {/* Stats Summary */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <div class="card-cute pulse-soft rounded-3xl p-4 sm:p-6">
+        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-2 sm:p-3">
               <Folder class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
@@ -359,7 +356,7 @@ export default component$(() => {
             </div>
           </div>
         </div>
-        <div class="card-cute pulse-soft rounded-3xl p-4 sm:p-6">
+        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="from-theme-accent-secondary to-theme-accent-tertiary rounded-full bg-gradient-to-br p-2 sm:p-3">
               <Eye class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
@@ -383,7 +380,7 @@ export default component$(() => {
             </div>
           </div>
         </div>
-        <div class="card-cute pulse-soft rounded-3xl p-4 sm:p-6">
+        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="from-theme-accent-quaternary to-theme-accent-primary rounded-full bg-gradient-to-br p-2 sm:p-3">
               <TrendingUp class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
@@ -409,7 +406,7 @@ export default component$(() => {
             </div>
           </div>
         </div>
-        <div class="card-cute pulse-soft rounded-3xl p-4 sm:p-6">
+        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="from-theme-accent-tertiary to-theme-accent-quaternary rounded-full bg-gradient-to-br p-2 sm:p-3">
               <HardDrive class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
@@ -426,7 +423,7 @@ export default component$(() => {
             </div>
           </div>
         </div>
-        <div class="card-cute pulse-soft rounded-3xl p-4 sm:p-6">
+        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="from-theme-accent-quaternary to-theme-accent-primary rounded-full bg-gradient-to-br p-2 sm:p-3">
               <Clock class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
@@ -448,7 +445,7 @@ export default component$(() => {
       </div>
 
       {/* Uploads Section */}
-      <div class="card-cute overflow-hidden rounded-3xl">
+      <div class="card-cute overflow-hidden rounded-2xl">
         <div class="border-theme-card-border border-b px-4 py-4 sm:px-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-gradient-cute flex flex-wrap items-center text-lg font-bold sm:text-xl">
@@ -519,7 +516,7 @@ export default component$(() => {
                 <div
                   class={`transition-all duration-300 ${selectedFiles.value.size > 0 ? "opacity-100" : "opacity-50"}`}
                 >
-                  <div class="bg-gradient-theme-secondary/20 text-theme-accent-primary flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-sm">
+                  <div class="bg-theme-bg-secondary/40 text-theme-accent-primary flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-sm">
                     <Sparkle class="h-3 w-3" />
                     <span class="text-sm font-medium">
                       {selectedFiles.value.size} file

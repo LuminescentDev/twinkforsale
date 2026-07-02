@@ -1,15 +1,15 @@
 import { component$ } from "@builder.io/qwik";
+import { Bell } from "lucide-icons-qwik";
 import { useAlert } from "~/lib/use-alert";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export default component$(() => {
   const { success, error, warning, info, confirm, confirmAsync } = useAlert();
 
   return (
-    <div class="container mx-auto px-4 py-8">
-      <div class="mx-auto max-w-4xl">
-        <h1 class="text-theme-text-primary mb-8 text-3xl font-bold">
-          🚨 Alert System Test
-        </h1>
+    <PageContainer width="narrow">
+      <PageHeader title="Alert System Test" icon={Bell} align="left" />
+      <div>
 
         <div class="glass border-theme-card-border mb-8 rounded-2xl border p-6">
           <h2 class="text-theme-text-primary mb-4 text-xl font-semibold">
@@ -173,6 +173,6 @@ export default component$(() => {
           </p>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 });

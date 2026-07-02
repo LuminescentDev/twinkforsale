@@ -107,9 +107,9 @@ export const DiscordProfile = component$<DiscordProfileProps>(
           </div>
         )}
         onRejected={() => (
-          <div class={`rounded-lg bg-red-500/10 p-4 text-red-400 ${className}`}>
+          <div class={`rounded-lg bg-theme-error/10 p-4 text-theme-error ${className}`}>
             <p class="mb-2 text-sm font-medium">Discord Profile Unavailable</p>
-            <p class="text-xs text-red-300">
+            <p class="text-xs text-theme-error">
               Failed to load Discord data. The user might be offline or have privacy settings enabled.
             </p>
           </div>
@@ -117,9 +117,9 @@ export const DiscordProfile = component$<DiscordProfileProps>(
         onResolved={(lanyardData) => {
           if (!lanyardData?.success || !lanyardData.data) {
             return (
-              <div class={`rounded-lg bg-red-500/10 p-4 text-red-400 ${className}`}>
+              <div class={`rounded-lg bg-theme-error/10 p-4 text-theme-error ${className}`}>
                 <p class="mb-2 text-sm font-medium">Discord Profile Unavailable</p>
-                <p class="text-xs text-red-300">No Discord data available.</p>
+                <p class="text-xs text-theme-error">No Discord data available.</p>
               </div>
             );
           }
@@ -364,16 +364,16 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                           <div class="min-w-0 flex-1">
                             <div class="mb-1 flex items-center gap-2">
                               {activity.type === 0 && (
-                                <Gamepad2 class="h-4 w-4 text-green-400" />
+                                <Gamepad2 class="h-4 w-4 text-theme-success" />
                               )}
                               {activity.type === 1 && (
                                 <Zap class="h-4 w-4 text-purple-400" />
                               )}
                               {activity.type === 3 && (
-                                <Eye class="h-4 w-4 text-blue-400" />
+                                <Eye class="h-4 w-4 text-theme-info" />
                               )}
                               {activity.type === 5 && (
-                                <Trophy class="h-4 w-4 text-yellow-400" />
+                                <Trophy class="h-4 w-4 text-theme-warning" />
                               )}
                               <span class="text-xs font-medium tracking-wider text-gray-400 uppercase">
                                 {formatActivityType(activity.type)}

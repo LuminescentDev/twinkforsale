@@ -1,5 +1,5 @@
 import { component$ } from "@builder.io/qwik";
-import { Link, routeLoader$ } from "@builder.io/qwik-city";
+import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { useCurrentUser } from "~/routes/layout";
 import { api } from "~/lib/api-client";
@@ -18,8 +18,14 @@ import {
   Users,
   Palette,
 } from "lucide-icons-qwik";
-import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { LoginButton } from "~/components/auth/login-button";
+import {
+  Button,
+  Card,
+  Section,
+  StatCard,
+  ThemeToggle,
+} from "~/components/ui";
 
 export const usePublicStats = routeLoader$(async (requestEvent) => {
   const empty = {
@@ -46,489 +52,357 @@ export const usePublicStats = routeLoader$(async (requestEvent) => {
   return stats ?? empty;
 });
 
+const features = [
+  {
+    icon: Rocket,
+    accent: "from-theme-accent-primary to-theme-accent-secondary",
+    title: "Femboy Certified ✓",
+    body: "Gay femboy approved file sharing with a focus on simplicity, speed, and maximum cuteness! (◕‿◕)♡",
+  },
+  {
+    icon: Heart,
+    accent: "from-theme-accent-secondary to-theme-accent-tertiary",
+    title: "Super Secure uwu",
+    body: "Your files are protected with love and care~ (´｡• ᵕ •｡`) ♡",
+  },
+  {
+    icon: BarChart3,
+    accent: "from-theme-accent-tertiary to-theme-accent-quaternary",
+    title: "Analytics & Stats",
+    body: "Track views, manage your uploads, and monitor your storage usage with our amazeballs dashboard! (=^･ω･^=)",
+  },
+];
+
+const themePreviews = [
+  { gradient: "from-slate-800 to-slate-900", name: "Dark", desc: "Classic & sleek" },
+  { gradient: "from-yellow-400 to-orange-500", name: "Light", desc: "Clean & bright" },
+  { gradient: "from-pink-300 to-purple-400", name: "Pastel", desc: "Soft & dreamy" },
+  { gradient: "from-pink-500 to-violet-600", name: "Neon", desc: "Cyberpunk vibes" },
+  { gradient: "from-rose-400 to-pink-600", name: "Valentine", desc: "Romantic pink" },
+  { gradient: "from-slate-500 to-slate-600", name: "Auto", desc: "Follows system" },
+];
+
+const setupSteps = [
+  {
+    icon: User,
+    title: "Sign In",
+    body: "Create your account with Discord~ It's quick and easy!",
+  },
+  {
+    icon: FileText,
+    title: "Download Config",
+    body: "Get your personalized ShareX configuration file",
+  },
+  {
+    icon: Rocket,
+    title: "Start Sharing!",
+    body: "Upload files instantly with ShareX uwu",
+  },
+];
+
 export default component$(() => {
   const user = useCurrentUser();
   const publicStats = usePublicStats();
 
   return (
     <>
-      {/* Hero Section */}
-      <div class="relative overflow-hidden">
-        <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-24 lg:px-8">
-          {" "}
-          <div class="text-center">
-            {" "}
-            <h1 class="text-theme-text-primary mb-4 text-3xl leading-tight font-bold sm:mb-6 sm:text-4xl md:text-6xl">
-              Cute femboy
-              <span class="text-gradient-cute block sm:inline">
-                {" "}
-                File Sharing
-              </span>
-            </h1>
-            <p class="text-theme-text-secondary mx-auto mb-6 max-w-3xl px-2 text-lg sm:mb-8 sm:text-xl">
-              Upload and share files with the cutest, most uwu file sharing
-              service ever! I made this 80% with ai cuz i could (´｡• ᵕ •｡`) ♡
-            </p>
-            {user.value ? (
-              <div class="flex flex-col items-center justify-center gap-4 px-4 sm:flex-row">
-                {" "}
-                <Link
-                  href="/dashboard"
-                  class="btn-cute flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-                >
-                  <Home class="h-5 w-5" />
-                  Go to Dashboard
-                </Link>
-                <Link
-                  href="/setup/sharex"
-                  class="glass text-theme-text-primary hover:bg-gradient-to-br from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all duration-300 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-                >
-                  <Settings class="h-5 w-5" />
-                  Setup ShareX
-                </Link>
-              </div>
-            ) : (
-              <LoginButton
-                class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-                iconClass="h-5 w-5"
-                label="Get Started"
-              />
-            )}
+      {/* Hero */}
+      <div class="py-10 text-center sm:py-20">
+        <h1 class="text-theme-text-primary mb-4 text-3xl leading-tight font-bold sm:mb-6 sm:text-5xl md:text-6xl">
+          Cute femboy
+          <span class="text-gradient-cute block sm:inline"> File Sharing</span>
+        </h1>
+        <p class="text-theme-text-secondary mx-auto mb-8 max-w-3xl text-lg sm:text-xl">
+          Upload and share files with the cutest, most uwu file sharing service
+          ever! I made this 80% with ai cuz i could (´｡• ᵕ •｡`) ♡
+        </p>
+        {user.value ? (
+          <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button href="/dashboard" size="lg" class="w-full sm:w-auto">
+              <Home class="h-5 w-5" />
+              Go to Dashboard
+            </Button>
+            <Button
+              href="/setup/sharex"
+              variant="glass"
+              size="lg"
+              class="w-full sm:w-auto"
+            >
+              <Settings class="h-5 w-5" />
+              Setup ShareX
+            </Button>
           </div>
-        </div>
+        ) : (
+          <LoginButton
+            class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-8 py-4 text-lg font-semibold text-white sm:w-auto"
+            iconClass="h-5 w-5"
+            label="Get Started"
+          />
+        )}
       </div>
 
-      {/* Features Section */}
-      <div class="relative py-12 sm:py-24">
-        {" "}
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 class="text-theme-text-primary text-gradient-cute mb-4 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-            Why Choose twink.forsale?
-            <Sparkle class="h-6 w-6 sm:h-8 sm:w-8" />
-          </h2>
-          <p class="text-theme-text-secondary px-4 text-center">
-            Because we're the cutest file hosting uwu
-          </p>
-          <p class="text-theme-text-muted mb-8 px-4 text-center sm:mb-16">
-            Do note this is a private/application only site, hit me up on
-            discord @akiradev to ask for access
-          </p>
-          <div class="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
-            <div class="card-cute rounded-3xl p-8">
-              <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-500">
-                <Rocket class="h-8 w-8 text-white" />
+      {/* Features */}
+      <Section class="py-10 sm:py-16">
+        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
+          Why Choose twink.forsale?
+          <Sparkle class="h-6 w-6 sm:h-8 sm:w-8" />
+        </h2>
+        <p class="text-theme-text-secondary text-center">
+          Because we're the cutest file hosting uwu
+        </p>
+        <p class="text-theme-text-muted mb-10 text-center">
+          Do note this is a private/application only site, hit me up on discord
+          @akiradev to ask for access
+        </p>
+        <div class="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
+          {features.map((f) => (
+            <Card key={f.title} hover padding="lg">
+              <div
+                class={`mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${f.accent}`}
+              >
+                <f.icon class="h-8 w-8 text-white" />
               </div>
               <h3 class="text-theme-text-primary mb-3 text-xl font-semibold">
-                Femboy Certified ✓
-              </h3>{" "}
-              <p class="text-theme-text-secondary">
-                Gay femboy approved file sharing with a focus on simplicity,
-                speed, and maximum cuteness! (◕‿◕)♡
-              </p>
-            </div>{" "}
-            <div class="card-cute rounded-3xl p-8">
-              <div class="animation-delay-200 mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-violet-500">
-                <Heart class="h-8 w-8 text-white" />
-              </div>
-              <h3 class="text-theme-text-primary mb-3 text-xl font-semibold">
-                Super Secure uwu
+                {f.title}
               </h3>
-              <p class="text-theme-text-secondary">
-                Your files are protected with love and care~ (´｡• ᵕ •｡`) ♡
-              </p>
-            </div>{" "}
-            <div class="card-cute rounded-3xl p-8">
-              <div class="animation-delay-400 mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500">
-                <BarChart3 class="h-8 w-8 text-white" />
-              </div>
-              <h3 class="text-theme-text-primary mb-3 text-xl font-semibold">
-                Analytics & Stats
-              </h3>
-              <p class="text-theme-text-secondary">
-                Track views, manage your uploads, and monitor your storage usage
-                with our amazeballs dashboard! (=^･ω･^=)
-              </p>
-            </div>
-          </div>
+              <p class="text-theme-text-secondary">{f.body}</p>
+            </Card>
+          ))}
         </div>
-      </div>
+      </Section>
 
-      {/* Platform Stats Section */}
-      <div class="relative py-12 sm:py-16">
-        {" "}
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 class="text-theme-text-primary text-gradient-cute mb-4 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-            Platform Activity
-            <BarChart3 class="h-6 w-6 sm:h-8 sm:w-8" />
-            <Sparkle class="h-5 w-5 sm:h-6 sm:w-6" />
-          </h2>
-          <p class="text-theme-text-secondary mb-8 px-4 text-center sm:mb-12">
-            See how active our twinks are~ (◕‿◕)♡
-          </p>
+      {/* Platform Stats */}
+      <Section class="py-10 sm:py-16">
+        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
+          Platform Activity
+          <BarChart3 class="h-6 w-6 sm:h-8 sm:w-8" />
+        </h2>
+        <p class="text-theme-text-secondary mb-10 text-center">
+          See how active our twinks are~ (◕‿◕)♡
+        </p>
 
-          <div class="mb-8 grid grid-cols-2 gap-4 sm:mb-12 sm:gap-6 md:grid-cols-4">
-            {/* Total Stats */}
-            <div class="card-cute rounded-3xl p-4 text-center sm:p-6">
-              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-500 sm:mb-4 sm:h-16 sm:w-16">
-                <Upload class="h-6 w-6 text-white sm:h-8 sm:w-8" />
-              </div>{" "}
-              <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
-                {publicStats.value.totalUploads.toLocaleString()}
-              </div>
-              <div class="text-theme-text-secondary text-xs sm:text-sm">
-                Total Files
-              </div>
+        <div class="mb-10 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
+          <StatCard
+            icon={Upload}
+            accent={0}
+            layout="centered"
+            label="Total Files"
+            value={publicStats.value.totalUploads.toLocaleString()}
+          />
+          <StatCard
+            icon={Eye}
+            accent={1}
+            layout="centered"
+            label="Total Views"
+            value={publicStats.value.totalViews.toLocaleString()}
+          />
+          <StatCard
+            icon={Users}
+            accent={2}
+            layout="centered"
+            label="Twinks"
+            value={publicStats.value.totalUsers.toLocaleString()}
+          />
+          <StatCard
+            icon={Sparkle}
+            accent={3}
+            layout="centered"
+            label="Views (7d)"
+            value={publicStats.value.weeklyStats.views.toLocaleString()}
+          />
+        </div>
+
+        {publicStats.value.analyticsData.length > 0 && (
+          <Card variant="glass" padding="lg" class="mx-auto max-w-4xl">
+            <h3 class="text-theme-text-primary mb-6 flex items-center justify-center gap-2 text-center text-lg font-bold sm:text-xl">
+              <BarChart3 class="h-5 w-5" />
+              7-Day Activity Overview
+            </h3>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {(
+                [
+                  {
+                    label: "Daily Views",
+                    key: "totalViews" as const,
+                    bar: "from-theme-accent-primary to-theme-accent-secondary",
+                    total: publicStats.value.weeklyStats.views,
+                  },
+                  {
+                    label: "Daily Uploads",
+                    key: "uploadsCount" as const,
+                    bar: "from-theme-accent-secondary to-theme-accent-tertiary",
+                    total: publicStats.value.weeklyStats.uploads,
+                  },
+                  {
+                    label: "New Users",
+                    key: "usersRegistered" as const,
+                    bar: "from-theme-accent-tertiary to-theme-accent-quaternary",
+                    total: publicStats.value.weeklyStats.users,
+                  },
+                ]
+              ).map((series) => {
+                const max = Math.max(
+                  ...publicStats.value.analyticsData.map((d) => d[series.key]),
+                  1,
+                );
+                return (
+                  <div key={series.key} class="text-center">
+                    <div class="text-theme-text-secondary mb-2 text-sm font-medium">
+                      {series.label}
+                    </div>
+                    <div class="flex h-16 items-end justify-center gap-1 sm:h-20">
+                      {publicStats.value.analyticsData.map((day, index) => {
+                        const height = Math.max((day[series.key] / max) * 100, 5);
+                        return (
+                          <div
+                            key={index}
+                            class={`w-3 rounded-sm bg-gradient-to-t sm:w-4 ${series.bar}`}
+                            style={`height: ${height}%`}
+                            title={`${day.date}: ${day[series.key]}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div class="text-theme-text-primary mt-2 text-lg font-bold">
+                      {series.total}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          </Card>
+        )}
 
-            <div class="card-cute rounded-3xl p-4 text-center sm:p-6">
-              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-violet-500 sm:mb-4 sm:h-16 sm:w-16">
-                <Eye class="h-6 w-6 text-white sm:h-8 sm:w-8" />
-              </div>{" "}
-              <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
-                {publicStats.value.totalViews.toLocaleString()}
-              </div>
-              <div class="text-theme-text-secondary text-xs sm:text-sm">
-                Total Views
-              </div>
-            </div>
-
-            <div class="card-cute rounded-3xl p-4 text-center sm:p-6">
-              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 sm:mb-4 sm:h-16 sm:w-16">
-                <Users class="h-6 w-6 text-white sm:h-8 sm:w-8" />
-              </div>{" "}
-              <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
-                {publicStats.value.totalUsers.toLocaleString()}
-              </div>
-              <div class="text-theme-text-secondary text-xs sm:text-sm">Twinks</div>
-            </div>
-
-            <div class="card-cute rounded-3xl p-4 text-center sm:p-6">
-              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-500 sm:mb-4 sm:h-16 sm:w-16">
-                <Sparkle class="h-6 w-6 text-white sm:h-8 sm:w-8" />
-              </div>{" "}
-              <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
-                {publicStats.value.weeklyStats.views.toLocaleString()}
-              </div>
-              <div class="text-theme-text-secondary text-xs sm:text-sm">
-                Views (7d)
-              </div>
-            </div>
-          </div>
-
-          {/* Activity Chart */}
-          {publicStats.value.analyticsData.length > 0 && (
-            <div class="glass mx-auto max-w-4xl rounded-3xl p-4 sm:p-8">
-              {" "}
-              <h3 class="text-theme-text-primary mb-4 flex items-center justify-center gap-2 text-center text-lg font-bold sm:mb-6 sm:text-xl">
-                <BarChart3 class="h-5 w-5" />
-                7-Day Activity Overview
-              </h3>
-              <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-                {/* Mini Activity Charts */}
-                <div class="text-center">
-                  <div class="text-theme-text-secondary mb-2 text-sm font-medium">
-                    Daily Views
-                  </div>
-                  <div class="flex h-16 items-end justify-center gap-1 sm:h-20">
-                    {publicStats.value.analyticsData.map((day, index) => {
-                      const maxViews = Math.max(
-                        ...publicStats.value.analyticsData.map(
-                          (d) => d.totalViews,
-                        ),
-                        1,
-                      );
-                      const height = Math.max(
-                        (day.totalViews / maxViews) * 100,
-                        5,
-                      );
-                      return (
-                        <div
-                          key={index}
-                          class="w-3 rounded-sm bg-gradient-to-t from-pink-500 to-purple-500 sm:w-4"
-                          style={`height: ${height}%`}
-                          title={`${day.date}: ${day.totalViews} views`}
-                        />
-                      );
-                    })}
-                  </div>{" "}
-                  <div class="text-theme-text-primary mt-2 text-lg font-bold">
-                    {publicStats.value.weeklyStats.views}
-                  </div>
-                </div>
-                <div class="text-center">
-                  <div class="text-theme-text-secondary mb-2 text-sm font-medium">
-                    Daily Uploads
-                  </div>
-                  <div class="flex h-16 items-end justify-center gap-1 sm:h-20">
-                    {publicStats.value.analyticsData.map((day, index) => {
-                      const maxUploads = Math.max(
-                        ...publicStats.value.analyticsData.map(
-                          (d) => d.uploadsCount,
-                        ),
-                        1,
-                      );
-                      const height = Math.max(
-                        (day.uploadsCount / maxUploads) * 100,
-                        5,
-                      );
-                      return (
-                        <div
-                          key={index}
-                          class="w-3 rounded-sm bg-gradient-to-t from-cyan-500 to-blue-500 sm:w-4"
-                          style={`height: ${height}%`}
-                          title={`${day.date}: ${day.uploadsCount} uploads`}
-                        />
-                      );
-                    })}
-                  </div>{" "}
-                  <div class="text-theme-text-primary mt-2 text-lg font-bold">
-                    {publicStats.value.weeklyStats.uploads}
-                  </div>
-                </div>
-                <div class="text-center">
-                  <div class="text-theme-text-secondary mb-2 text-sm font-medium">
-                    New Users
-                  </div>
-                  <div class="flex h-16 items-end justify-center gap-1 sm:h-20">
-                    {publicStats.value.analyticsData.map((day, index) => {
-                      const maxUsers = Math.max(
-                        ...publicStats.value.analyticsData.map(
-                          (d) => d.usersRegistered,
-                        ),
-                        1,
-                      );
-                      const height = Math.max(
-                        (day.usersRegistered / maxUsers) * 100,
-                        5,
-                      );
-                      return (
-                        <div
-                          key={index}
-                          class="w-3 rounded-sm bg-gradient-to-t from-green-500 to-emerald-500 sm:w-4"
-                          style={`height: ${height}%`}
-                          title={`${day.date}: ${day.usersRegistered} new users`}
-                        />
-                      );
-                    })}
-                  </div>{" "}
-                  <div class="text-theme-text-primary mt-2 text-lg font-bold">
-                    {publicStats.value.weeklyStats.users}
-                  </div>
-                </div>{" "}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Activity Feed */}
-          {publicStats.value.recentUploads.length > 0 && (
-            <div class="glass mx-auto mt-8 max-w-2xl rounded-3xl p-4 sm:mt-12 sm:p-6">
-              {" "}
-              <h3 class="text-theme-text-primary mb-4 flex items-center justify-center gap-2 text-center text-lg font-bold">
-                <Sparkle class="h-5 w-5" />
-                Recent Activity
-              </h3>
-              <div class="space-y-3">
-                {publicStats.value.recentUploads.map((upload) => {
-                  const getFileIcon = (mimeType: string) => {
-                    if (mimeType.startsWith("image/")) return "🖼️";
-                    if (mimeType.startsWith("video/")) return "🎥";
-                    if (mimeType.startsWith("audio/")) return "🎵";
-                    if (mimeType.startsWith("text/")) return "📝";
-                    return "📄";
-                  };
-
-                  const getFileType = (mimeType: string) => {
-                    if (mimeType.startsWith("image/")) return "Image";
-                    if (mimeType.startsWith("video/")) return "Video";
-                    if (mimeType.startsWith("audio/")) return "Audio";
-                    if (mimeType.startsWith("text/")) return "Text";
-                    return "File";
-                  };
-                  const timeAgo = (date: string) => {
-                    const now = new Date();
-                    const uploadDate = new Date(date);
-                    const diffInMinutes = Math.floor(
-                      (now.getTime() - uploadDate.getTime()) / (1000 * 60),
-                    );
-
-                    if (diffInMinutes < 1) return "Just now";
-                    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-                    if (diffInMinutes < 1440)
-                      return `${Math.floor(diffInMinutes / 60)}h ago`;
-                    return `${Math.floor(diffInMinutes / 1440)}d ago`;
-                  };
-                  return (
-                    <div
-                      key={upload.id}
-                      class="glass border-theme-card-border flex items-center justify-between rounded-xl border p-3"
-                    >
-                      <div class="flex items-center gap-3">
-                        <span class="text-lg">
-                          {getFileIcon(upload.mimeType)}
-                        </span>
-                        <div>
-                          <div class="text-theme-text-primary text-sm font-medium">
-                            {getFileType(upload.mimeType)} uploaded
-                          </div>{" "}
-                          <div class="text-theme-accent-primary text-xs">
-                            {timeAgo(upload.createdAt)} • {upload.views} views
-                          </div>
+        {publicStats.value.recentUploads.length > 0 && (
+          <Card variant="glass" padding="md" class="mx-auto mt-8 max-w-2xl">
+            <h3 class="text-theme-text-primary mb-4 flex items-center justify-center gap-2 text-center text-lg font-bold">
+              <Sparkle class="h-5 w-5" />
+              Recent Activity
+            </h3>
+            <div class="space-y-3">
+              {publicStats.value.recentUploads.map((upload) => {
+                const getFileIcon = (mimeType: string) => {
+                  if (mimeType.startsWith("image/")) return "🖼️";
+                  if (mimeType.startsWith("video/")) return "🎥";
+                  if (mimeType.startsWith("audio/")) return "🎵";
+                  if (mimeType.startsWith("text/")) return "📝";
+                  return "📄";
+                };
+                const getFileType = (mimeType: string) => {
+                  if (mimeType.startsWith("image/")) return "Image";
+                  if (mimeType.startsWith("video/")) return "Video";
+                  if (mimeType.startsWith("audio/")) return "Audio";
+                  if (mimeType.startsWith("text/")) return "Text";
+                  return "File";
+                };
+                const timeAgo = (date: string) => {
+                  const diffInMinutes = Math.floor(
+                    (Date.now() - new Date(date).getTime()) / (1000 * 60),
+                  );
+                  if (diffInMinutes < 1) return "Just now";
+                  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+                  if (diffInMinutes < 1440)
+                    return `${Math.floor(diffInMinutes / 60)}h ago`;
+                  return `${Math.floor(diffInMinutes / 1440)}d ago`;
+                };
+                return (
+                  <div
+                    key={upload.id}
+                    class="glass border-theme-card-border flex items-center justify-between rounded-xl border p-3"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-lg">{getFileIcon(upload.mimeType)}</span>
+                      <div>
+                        <div class="text-theme-text-primary text-sm font-medium">
+                          {getFileType(upload.mimeType)} uploaded
                         </div>
-                      </div>{" "}
-                      <div class="flex items-center gap-1">
-                        <Eye class="text-theme-accent-primary h-3 w-3" />
-                        <span class="text-theme-accent-primary text-xs">
-                          {upload.views}
-                        </span>
+                        <div class="text-theme-accent-primary text-xs">
+                          {timeAgo(upload.createdAt)} • {upload.views} views
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div class="text-theme-accent-primary flex items-center gap-1">
+                      <Eye class="h-3 w-3" />
+                      <span class="text-xs">{upload.views}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
-      </div>
+          </Card>
+        )}
+      </Section>
 
-      {/* ShareX Setup Section */}
-      <div class="relative py-12 sm:py-24">
-        {" "}
-        <div class="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 class="text-theme-text-primary text-gradient-cute mb-4 flex flex-wrap items-center justify-center gap-2 text-2xl font-bold sm:text-3xl">
+      {/* ShareX Setup */}
+      <Section class="py-10 sm:py-16">
+        <div class="mx-auto max-w-4xl text-center">
+          <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-2xl font-bold sm:text-3xl">
             Super Easy ShareX Setup!
             <Wrench class="h-6 w-6 sm:h-8 sm:w-8" />
-            <Sparkle class="h-5 w-5 sm:h-6 sm:w-6" />
           </h2>
-          <p class="text-theme-text-secondary mb-8 px-2 text-lg sm:mb-12 sm:text-xl">
+          <p class="text-theme-text-secondary mb-10 text-lg sm:text-xl">
             Set up ShareX in seconds with our automatic configuration generator~
             So easy even a catboy could do it! (=^･ω･^=)
           </p>
-          <div class="glass rounded-3xl p-4 sm:p-8">
+          <Card variant="glass" padding="lg">
             <div class="grid grid-cols-1 gap-6 text-left sm:gap-8 md:grid-cols-3">
-              {" "}
-              <div class="flex items-start space-x-3 sm:space-x-4">
-                <div class="pulse-soft flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-500 text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
-                  1
-                </div>
-                <div>
-                  <h3 class="text-theme-text-primary mb-2 flex items-center gap-2 text-sm font-semibold sm:text-base">
-                    <User class="h-4 w-4" />
-                    Sign In
-                  </h3>
-                  <p class="text-theme-text-secondary text-xs sm:text-sm">
-                    Create your account with Discord~ It's quick and easy!
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-start space-x-3 sm:space-x-4">
-                <div class="pulse-soft animation-delay-200 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-violet-500 text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
-                  2
-                </div>
-                <div>
-                  <h3 class="text-theme-text-primary mb-2 flex items-center gap-2 text-sm font-semibold sm:text-base">
-                    <FileText class="h-4 w-4" />
-                    Download Config
-                  </h3>
-                  <p class="text-theme-text-secondary text-xs sm:text-sm">
-                    Get your personalized ShareX configuration file
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-start space-x-3 sm:space-x-4">
-                <div class="pulse-soft animation-delay-400 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
-                  3
-                </div>
-                <div>
-                  <h3 class="text-theme-text-primary mb-2 flex items-center gap-2 text-sm font-semibold sm:text-base">
-                    <Rocket class="h-4 w-4" />
-                    Start Sharing!
-                  </h3>
-                  <p class="text-theme-text-secondary text-xs sm:text-sm">
-                    Upload files instantly with ShareX uwu
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Theme Showcase Section */}
-      <div class="relative py-12 sm:py-16">
-        {" "}
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 class="text-theme-text-primary text-gradient-cute mb-4 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-            Customize Your Experience
-            <Palette class="h-6 w-6 sm:h-8 sm:w-8" />
-            <Sparkle class="h-5 w-5 sm:h-6 sm:w-6" />
-          </h2>
-          <p class="text-theme-text-secondary mb-8 px-4 text-center sm:mb-12">
-            Choose from multiple adorable themes to match your mood~ (◕‿◕)♡
-          </p>
-
-          <div class="mx-auto max-w-4xl">
-            <div class="glass rounded-3xl p-6 sm:p-8">
-              {" "}
-              <div class="mb-6 text-center">
-                <h3 class="text-theme-text-primary mb-2 text-lg font-bold sm:text-xl">
-                  Try Different Themes!
-                </h3>
-                <p class="text-theme-text-secondary text-sm sm:text-base">
-                  Click the theme selector below to see how cute each theme
-                  looks~ ✨
-                </p>
-              </div>{" "}
-              <div class="relative z-10 flex justify-center">
-                <ThemeToggle
-                  variant="dropdown"
-                  showLabel={true}
-                  class="scale-110"
-                />
-              </div>{" "}
-              <div class="relative z-0 mt-6 grid grid-cols-2 gap-4 text-center md:grid-cols-3">
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-slate-800 to-slate-900"></div>
-                  <div class="text-theme-text-secondary text-xs">Dark Theme</div>
-                  <div class="text-theme-text-muted text-xs">Classic & sleek</div>
-                </div>
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
-                  <div class="text-theme-text-secondary text-xs">Light Theme</div>
-                  <div class="text-theme-text-muted text-xs">Clean & bright</div>
-                </div>
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-pink-300 to-purple-400"></div>
-                  <div class="text-theme-text-secondary text-xs">Pastel Theme</div>
-                  <div class="text-theme-text-muted text-xs">Soft & dreamy</div>
-                </div>
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-pink-500 to-violet-600"></div>
-                  <div class="text-theme-text-secondary text-xs">Neon Theme</div>
-                  <div class="text-theme-text-muted text-xs">Cyberpunk vibes</div>
-                </div>
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-rose-400 to-pink-600"></div>
-                  <div class="text-theme-text-secondary text-xs">
-                    Valentine Theme
+              {setupSteps.map((step, i) => (
+                <div key={step.title} class="flex items-start gap-4">
+                  <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-lg font-bold text-white">
+                    {i + 1}
                   </div>
-                  <div class="text-theme-text-muted text-xs">Romantic pink</div>
+                  <div>
+                    <h3 class="text-theme-text-primary mb-2 flex items-center gap-2 font-semibold">
+                      <step.icon class="h-4 w-4" />
+                      {step.title}
+                    </h3>
+                    <p class="text-theme-text-secondary text-sm">{step.body}</p>
+                  </div>
                 </div>
-                <div class="glass rounded-xl p-4">
-                  <div class="mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br from-slate-500 to-slate-600"></div>
-                  <div class="text-theme-text-secondary text-xs">Auto Theme</div>
-                  <div class="text-theme-text-muted text-xs">Follows system</div>
-                </div>
-              </div>
-              <div class="mt-6 text-center">
-                <p class="text-theme-text-muted text-xs">
-                  Your theme preference is saved automatically and syncs across
-                  all your devices~ 💫
-                </p>
-              </div>
+              ))}
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Section>
+
+      {/* Theme Showcase */}
+      <Section class="py-10 sm:py-16">
+        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
+          Customize Your Experience
+          <Palette class="h-6 w-6 sm:h-8 sm:w-8" />
+        </h2>
+        <p class="text-theme-text-secondary mb-10 text-center">
+          Choose from multiple adorable themes to match your mood~ (◕‿◕)♡
+        </p>
+        <Card variant="glass" padding="lg" class="mx-auto max-w-4xl">
+          <div class="mb-6 text-center">
+            <h3 class="text-theme-text-primary mb-2 text-lg font-bold sm:text-xl">
+              Try Different Themes!
+            </h3>
+            <p class="text-theme-text-secondary text-sm sm:text-base">
+              Click the theme selector below to see how cute each theme looks~ ✨
+            </p>
+          </div>
+          <div class="relative z-10 flex justify-center">
+            <ThemeToggle variant="dropdown" showLabel={true} class="scale-110" />
+          </div>
+          <div class="relative z-0 mt-6 grid grid-cols-2 gap-4 text-center md:grid-cols-3">
+            {themePreviews.map((t) => (
+              <div key={t.name} class="glass rounded-xl p-4">
+                <div
+                  class={`mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br ${t.gradient}`}
+                />
+                <div class="text-theme-text-secondary text-xs">{t.name} Theme</div>
+                <div class="text-theme-text-muted text-xs">{t.desc}</div>
+              </div>
+            ))}
+          </div>
+          <p class="text-theme-text-muted mt-6 text-center text-xs">
+            Your theme preference is saved automatically and syncs across all
+            your devices~ 💫
+          </p>
+        </Card>
+      </Section>
     </>
   );
 });

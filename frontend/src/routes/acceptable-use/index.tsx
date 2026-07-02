@@ -1,33 +1,22 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Shield, AlertTriangle, CheckCircle, CircleX } from "lucide-icons-qwik";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export default component$(() => {
   return (
-    <div class="bg-theme-bg-primary min-h-screen p-4 sm:p-6">
-      <div class="mx-auto max-w-4xl">
-        {/* Header */}
-        <div class="mb-8">
-          <div class="card-cute rounded-3xl p-6 text-center">
-            <div class="mb-4 flex justify-center">
-              <div class="from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-3">
-                <Shield class="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 class="text-gradient-cute mb-2 text-3xl font-bold">
-              Acceptable Use Policy
-            </h1>
-            <p class="text-theme-text-secondary">
-              Guidelines for appropriate use of twink.forsale services
-            </p>
-            <p class="text-theme-text-muted mt-2 text-sm">
-              Last updated: June 28, 2025
-            </p>
-          </div>
-        </div>
+    <PageContainer width="narrow">
+      <PageHeader
+        title="Acceptable Use Policy"
+        icon={Shield}
+        subtitle="Guidelines for appropriate use of twink.forsale services"
+      />
+      <p class="text-theme-text-muted -mt-4 mb-8 text-center text-sm">
+        Last updated: June 28, 2025
+      </p>
 
-        {/* Content */}
-        <div class="space-y-6">
+      {/* Content */}
+      <div class="space-y-6">
           {/* Introduction */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
@@ -51,12 +40,12 @@ export default component$(() => {
           {/* Prohibited Content */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
-              <CircleX class="h-5 w-5 text-red-500" />
+              <CircleX class="h-5 w-5 text-theme-error" />
               Prohibited Content and Activities
             </h2>
             <div class="space-y-4">
-              <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-                <h3 class="mb-3 font-semibold text-red-400">
+              <div class="rounded-lg border border-theme-error/30 bg-theme-error/10 p-4">
+                <h3 class="mb-3 font-semibold text-theme-error">
                   Content You May NOT Upload:
                 </h3>
                 <ul class="text-theme-text-secondary list-inside list-disc space-y-2 text-sm">
@@ -131,8 +120,8 @@ export default component$(() => {
                 </ul>
               </div>
 
-              <div class="rounded-lg border border-orange-500/30 bg-orange-500/10 p-4">
-                <h3 class="mb-3 font-semibold text-orange-400">
+              <div class="rounded-lg border border-theme-warning/30 bg-theme-warning/10 p-4">
+                <h3 class="mb-3 font-semibold text-theme-warning">
                   Prohibited Activities:
                 </h3>
                 <ul class="text-theme-text-secondary list-inside list-disc space-y-2 text-sm">
@@ -160,12 +149,12 @@ export default component$(() => {
           {/* Acceptable Content */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
-              <CheckCircle class="h-5 w-5 text-green-500" />
+              <CheckCircle class="h-5 w-5 text-theme-success" />
               Acceptable Content and Use
             </h2>
             <div class="space-y-4">
-              <div class="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
-                <h3 class="mb-3 font-semibold text-green-400">
+              <div class="rounded-lg border border-theme-success/30 bg-theme-success/10 p-4">
+                <h3 class="mb-3 font-semibold text-theme-success">
                   Content You MAY Upload:
                 </h3>
                 <ul class="text-theme-text-secondary list-inside list-disc space-y-2 text-sm">
@@ -200,8 +189,8 @@ export default component$(() => {
                 </ul>
               </div>
 
-              <div class="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
-                <h3 class="mb-3 font-semibold text-blue-400">
+              <div class="rounded-lg border border-theme-info/30 bg-theme-info/10 p-4">
+                <h3 class="mb-3 font-semibold text-theme-info">
                   Appropriate Use Cases:
                 </h3>
                 <ul class="text-theme-text-secondary list-inside list-disc space-y-2 text-sm">
@@ -338,7 +327,7 @@ export default component$(() => {
                 </ul>
               </div>
 
-              <div class="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
+              <div class="rounded-lg border border-theme-info/30 bg-theme-info/10 p-3">
                 <p>
                   <strong>Include in your report:</strong> The file URL,
                   description of the violation, and any relevant context. We
@@ -378,7 +367,7 @@ export default component$(() => {
                 </li>
               </ul>
 
-              <div class="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+              <div class="mt-4 rounded-lg border border-theme-warning/30 bg-theme-warning/10 p-3">
                 <p>
                   <strong>Privacy Note:</strong> We respect your privacy and
                   only access your files when necessary for security, legal
@@ -459,14 +448,13 @@ export default component$(() => {
           </section>
         </div>
 
-        {/* Footer */}
-        <div class="mt-8 text-center">
-          <p class="text-theme-text-muted text-xs">
-            This Acceptable Use Policy is effective as of June 28, 2025
-          </p>
-        </div>
+      {/* Footer */}
+      <div class="mt-8 text-center">
+        <p class="text-theme-text-muted text-xs">
+          This Acceptable Use Policy is effective as of June 28, 2025
+        </p>
       </div>
-    </div>
+    </PageContainer>
   );
 });
 

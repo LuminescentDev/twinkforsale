@@ -20,6 +20,15 @@ import { AnalyticsChart } from "~/components/charts/analytics-chart";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
+import {
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  PageHeader,
+  Section,
+  StatCard,
+} from "~/components/ui";
 
 export const useUserData = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -60,133 +69,139 @@ export const useUserData = routeLoader$(async (requestEvent) => {
   };
 });
 
+const quickActions = [
+  {
+    href: "/dashboard/links",
+    icon: ChainIcon,
+    accent: 1,
+    title: "Short Links",
+    body: "Create and manage /l/<code> short URLs with limits and expiry.",
+  },
+  {
+    href: "/dashboard/uploads",
+    icon: Upload,
+    accent: 3,
+    title: "Manage Files",
+    body: "View and manage your uploaded files with expiration and view limits~ (◕‿◕)♡",
+  },
+  {
+    href: "/dashboard/api-keys",
+    icon: Key,
+    accent: 1,
+    title: "API Keys",
+    body: "Create and manage API keys for ShareX integration~ Keep them safe! (◡ ‿ ◡) ♡",
+  },
+  {
+    href: "/dashboard/embed",
+    icon: Share,
+    accent: 2,
+    title: "Discord Embeds",
+    body: "Customize how your uploads appear on Discord and social media~ Make them extra cute! uwu",
+  },
+  {
+    href: "/dashboard/bio",
+    icon: LinkIcon,
+    accent: 0,
+    title: "Bio Links",
+    body: "Create your custom bio link page to share all your important links in one place~ ✨",
+  },
+  {
+    href: "/dashboard/analytics",
+    icon: TrendingUp,
+    accent: 3,
+    title: "Detailed Analytics",
+    body: "Deep dive into your file analytics with detailed insights and charts~ 📊",
+  },
+  {
+    href: "/dashboard/settings",
+    icon: Sliders,
+    accent: 3,
+    title: "Settings",
+    body: "Configure upload domains, themes, and personalize your experience~ (◕‿◕)♡",
+  },
+  {
+    href: "/setup/sharex",
+    icon: Settings,
+    accent: 3,
+    title: "ShareX Setup",
+    body: "Download your personalized ShareX configuration~ So easy even a sleepy catboy could do it! (=^･ω･^=)",
+  },
+] as const;
+
+const accentGradients = [
+  "from-theme-accent-primary to-theme-accent-secondary",
+  "from-theme-accent-secondary to-theme-accent-tertiary",
+  "from-theme-accent-tertiary to-theme-accent-quaternary",
+  "from-theme-accent-quaternary to-theme-accent-primary",
+];
+
 export default component$(() => {
   const userData = useUserData();
   const imagePreviewStore = useContext(ImagePreviewContext);
   const copyToClipboard = $((shortCode: string) => {
     const url = `${userData.value.origin}/f/${shortCode}`;
     navigator.clipboard.writeText(url);
-    // Could add a toast notification here
   });
   const handleImageClick = $((shortCode: string, fileName: string) => {
-    const imageUrl = `/f/${shortCode}`;
-    imagePreviewStore.openPreview(imageUrl, fileName);
+    imagePreviewStore.openPreview(`/f/${shortCode}`, fileName);
   });
-  const formatFileSize = (bytes: number | bigint) => {
-    return formatBytes(bytes);
-  };
 
   return (
     <>
-      {" "}
-      {/* Page Header */}
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:gap-3 sm:text-4xl">
-          Welcome back, {userData.value.user.name || "cutie"}!
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Your cute dashboard is ready~ Manage uploads, API keys, and more!
-          (◕‿◕)♡
-        </p>
-      </div>{" "}
-      {/* Account Status Banner */}
+      <PageHeader
+        title={`Welcome back, ${userData.value.user.name || "cutie"}!`}
+        subtitle="Your cute dashboard is ready~ Manage uploads, API keys, and more! (◕‿◕)♡"
+      />
+
       {!userData.value.user.isApproved && (
-        <div class="border-theme-accent-secondary bg-theme-secondary/10 text-theme-text-primary mb-6 rounded-xl border p-4 sm:mb-8 sm:p-6">
-          <div class="flex items-center justify-center text-center">
-            <div>
-              <h3 class="mb-2 text-lg font-semibold">
-                Account Pending Approval
-              </h3>
-              <p class="text-theme-text-secondary text-sm">
-                Your account is awaiting admin approval. You'll be able to
-                upload files and create API keys once approved.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
+          Your account is awaiting admin approval. You'll be able to upload files
+          and create API keys once approved.
+        </Callout>
       )}
-      {/* Admin Link */}
+
       {userData.value.user.isAdmin && (
         <div class="mb-6 text-center sm:mb-8">
-          <Link
-            href="/admin"
-            class="from-theme-accent-tertiary to-theme-accent-quaternary text-theme-text-primary hover:bg-theme-accent-tertiary inline-flex items-center rounded-lg bg-gradient-to-br px-4 py-2 font-medium transition-colors"
-          >
-            <Settings class="mr-2 h-4 w-4" />
+          <Button href="/admin" variant="glass" size="sm">
+            <Settings class="h-4 w-4" />
             Admin Dashboard
-          </Link>
+          </Button>
         </div>
       )}
-      {/* Stats Cards */}
+
+      {/* Stats */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        {" "}
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Folder class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Total Uploads
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value.stats.totalUploads}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Eye class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Total Views
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value.stats.totalViews}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="pulse-soft from-theme-accent-tertiary to-theme-accent-quaternary animation-delay-400 rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <HardDrive class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Storage Used
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {formatFileSize(userData.value.stats.storageUsed)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary animation-delay-600 rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Key class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                API Keys
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value.user.apiKeys.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>{" "}
-      {/* Analytics Section */}
-      <div class="mb-6 sm:mb-8">
-        <h2 class="text-gradient-cute mb-4 flex items-center justify-center gap-2 text-center text-xl font-bold sm:mb-6 sm:text-2xl">
-          <TrendingUp class="text-theme-accent-primary h-5 w-5" />
-          Your Analytics - Last 7 Days
-        </h2>
+        <StatCard
+          icon={Folder}
+          accent={0}
+          label="Total Uploads"
+          value={userData.value.stats.totalUploads}
+        />
+        <StatCard
+          icon={Eye}
+          accent={1}
+          pulse
+          label="Total Views"
+          value={userData.value.stats.totalViews}
+        />
+        <StatCard
+          icon={HardDrive}
+          accent={2}
+          pulse
+          label="Storage Used"
+          value={formatBytes(userData.value.stats.storageUsed)}
+        />
+        <StatCard
+          icon={Key}
+          accent={3}
+          pulse
+          label="API Keys"
+          value={userData.value.user.apiKeys.length}
+        />
+      </div>
+
+      {/* Analytics */}
+      <Section title="Your Analytics — Last 7 Days" icon={TrendingUp} align="center">
         <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
           <AnalyticsChart
             data={userData.value.analyticsData || []}
@@ -207,154 +222,36 @@ export default component$(() => {
             color="var(--theme-accent-tertiary)"
           />
         </div>
-      </div>
+      </Section>
+
       {/* Quick Actions */}
-      <div class="mb-6 sm:mb-8">
-        <h2 class="text-gradient-cute mb-4 flex items-center justify-center gap-2 text-center text-xl font-bold sm:mb-6 sm:text-2xl">
-          Quick Actions
-        </h2>{" "}
+      <Section title="Quick Actions" align="center">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          {" "}
-          <Link
-            href="/dashboard/links"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <ChainIcon class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Short Links
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Create and manage /l/&lt;code&gt; short URLs with limits and expiry.
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/uploads"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Upload class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Manage Files
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              View and manage your uploaded files with expiration and view
-              limits~ (◕‿◕)♡
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/api-keys"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Key class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                API Keys
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Create and manage API keys for ShareX integration~ Keep them safe!
-              (◡ ‿ ◡) ♡
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/embed"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-tertiary to-theme-accent-quaternary animation-delay-400 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Share class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Discord Embeds
-              </h3>
-            </div>{" "}
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Customize how your uploads appear on Discord and social media~
-              Make them extra cute! uwu
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/bio"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary animation-delay-600 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <LinkIcon class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Bio Links
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Create your custom bio link page to share all your important links
-              in one place~ ✨
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/analytics"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary animation-delay-600 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <TrendingUp class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Detailed Analytics
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Deep dive into your file analytics with detailed insights and
-              charts~ 📊
-            </p>
-          </Link>
-          <Link
-            href="/dashboard/settings"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary animation-delay-600 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Sliders class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                Settings
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Configure upload domains, themes, and personalize your experience~
-              (◕‿◕)♡
-            </p>
-          </Link>
-          <Link
-            href="/setup/sharex"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary animation-delay-800 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Settings class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                ShareX Setup
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Download your personalized ShareX configuration~ So easy even a
-              sleepy catboy could do it! (=^･ω･^=)
-            </p>
-          </Link>
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href} class="group">
+              <Card hover padding="md" class="h-full">
+                <div class="mb-3 flex items-center sm:mb-4">
+                  <div
+                    class={`pulse-soft rounded-full bg-gradient-to-br p-2 sm:p-3 ${accentGradients[action.accent]}`}
+                  >
+                    <action.icon class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
+                    {action.title}
+                  </h3>
+                </div>
+                <p class="text-theme-text-secondary text-xs sm:text-sm">
+                  {action.body}
+                </p>
+              </Card>
+            </Link>
+          ))}
         </div>
-      </div>{" "}
+      </Section>
+
       {/* Recent Uploads */}
-      <div class="card-cute rounded-3xl p-4 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
+      <Card padding="md">
+        <h2 class="text-gradient-cute mb-4 text-lg font-bold sm:text-xl">
           Recent Uploads
         </h2>
         {userData.value.user.uploads.length > 0 ? (
@@ -362,7 +259,7 @@ export default component$(() => {
             {userData.value.user.uploads.map((upload) => (
               <div
                 key={upload.id}
-                class="glass flex flex-col space-y-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+                class="glass flex flex-col space-y-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
               >
                 <div class="flex items-center space-x-3">
                   <div class="flex-shrink-0">
@@ -370,10 +267,7 @@ export default component$(() => {
                       <div
                         class="border-theme-card-border hover:border-theme-accent-primary h-12 w-12 cursor-pointer overflow-hidden rounded-xl border transition-all duration-300"
                         onClick$={() =>
-                          handleImageClick(
-                            upload.shortCode,
-                            upload.originalName,
-                          )
+                          handleImageClick(upload.shortCode, upload.originalName)
                         }
                       >
                         <img
@@ -384,31 +278,23 @@ export default component$(() => {
                           height="48"
                         />
                       </div>
-                    ) : upload.mimeType.startsWith("video/") ? (
-                      <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">🎬</div>
-                      </div>
-                    ) : upload.mimeType.startsWith("audio/") ? (
-                      <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">🎵</div>
-                      </div>
-                    ) : upload.mimeType.includes("pdf") ? (
-                      <div class="pulse-soft from-theme-accent-tertiary to-theme-accent-quaternary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">📄</div>
-                      </div>
-                    ) : upload.mimeType.includes("zip") ||
-                      upload.mimeType.includes("rar") ||
-                      upload.mimeType.includes("archive") ? (
-                      <div class="pulse-soft from-theme-accent-quaternary to-theme-accent-primary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">📦</div>
-                      </div>
-                    ) : upload.mimeType.includes("text") ? (
-                      <div class="pulse-soft from-theme-accent-primary to-theme-accent-tertiary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">📝</div>
-                      </div>
                     ) : (
                       <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">📄</div>
+                        <div class="text-lg">
+                          {upload.mimeType.startsWith("video/")
+                            ? "🎬"
+                            : upload.mimeType.startsWith("audio/")
+                              ? "🎵"
+                              : upload.mimeType.includes("pdf")
+                                ? "📄"
+                                : upload.mimeType.includes("zip") ||
+                                    upload.mimeType.includes("rar") ||
+                                    upload.mimeType.includes("archive")
+                                  ? "📦"
+                                  : upload.mimeType.includes("text")
+                                    ? "📝"
+                                    : "📄"}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -426,7 +312,7 @@ export default component$(() => {
                   <a
                     href={`/f/${upload.shortCode}`}
                     target="_blank"
-                    class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 hover:text-theme-accent-secondary rounded-full px-3 py-1 text-center text-sm transition-all duration-300"
+                    class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 rounded-full px-3 py-1 text-center text-sm transition-all duration-300"
                   >
                     View <Eye class="inline h-4 w-4" />
                   </a>
@@ -441,20 +327,15 @@ export default component$(() => {
             ))}
           </div>
         ) : (
-          <div class="py-12 text-center">
-            <div class="sparkle mb-4 text-6xl">🌸</div>{" "}
-            <p class="text-theme-text-secondary mb-6 text-lg">
-              No files yet~ Upload via ShareX or API!
-            </p>
-            <a
-              href="/setup/sharex"
-              class="btn-cute text-theme-text-primary inline-block rounded-full px-6 py-3 font-medium"
-            >
-              Setup ShareX to get started 🚀
-            </a>
-          </div>
+          <EmptyState
+            emoji="🌸"
+            title="No files yet~"
+            description="Upload via ShareX or API to see your files here!"
+          >
+            <Button href="/setup/sharex">Setup ShareX to get started 🚀</Button>
+          </EmptyState>
         )}
-      </div>
+      </Card>
     </>
   );
 });

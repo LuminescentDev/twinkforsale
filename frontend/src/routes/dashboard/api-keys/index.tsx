@@ -1,8 +1,10 @@
 import { component$, useSignal, $ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
+import { Key } from "lucide-icons-qwik";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { Callout, PageHeader } from "~/components/ui";
 
 export const useApiKeys = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -100,31 +102,21 @@ export default component$(() => {
   });
   return (
     <>
-      {/* Page Header */}
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-          API Keys Manager
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Create and manage API keys for ShareX integration~ Keep them safe and
-          secure! (◕‿◕)♡
-        </p>
-      </div>
+      <PageHeader
+        title="API Keys Manager"
+        icon={Key}
+        subtitle="Create and manage API keys for ShareX integration~ Keep them safe and secure! (◕‿◕)♡"
+      />
       {/* Account Status Check */}
       {!apiKeysData.value.user.isApproved && (
-        <div class="bg-theme-secondary/10 border-theme-accent-secondary text-theme-text-primary mb-6 rounded-xl border p-4 sm:mb-8 sm:p-6">
-          <div class="text-center">
-            <h3 class="mb-2 text-lg font-semibold">Account Pending Approval</h3>
-            <p class="text-theme-text-secondary text-sm">
-              You cannot create API keys until your account is approved by an
-              administrator. Please wait for approval before proceeding.
-            </p>
-          </div>
-        </div>
+        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
+          You cannot create API keys until your account is approved by an
+          administrator. Please wait for approval before proceeding.
+        </Callout>
       )}
       {/* Create New API Key */}
       {apiKeysData.value.user.isApproved && (
-        <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
           <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
             Create New API Key
           </h2>
@@ -156,7 +148,7 @@ export default component$(() => {
       )}
       {/* New Key Display */}
       {showNewKey.value && (
-        <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mb-6 rounded-3xl border p-4 sm:mb-8 sm:p-6">
+        <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mb-6 rounded-2xl border p-4 sm:mb-8 sm:p-6">
           <h3 class="text-theme-accent-secondary mb-2 flex flex-wrap items-center text-base font-bold sm:text-lg">
             API Key Created! 🎉 <span class="sparkle ml-2">✨</span>
           </h3>
@@ -192,7 +184,7 @@ export default component$(() => {
         </div>
       )}
       {/* API Keys List */}
-      <div class="card-cute rounded-3xl p-4 sm:p-6">
+      <div class="card-cute rounded-2xl p-4 sm:p-6">
         <h2 class="text-gradient-cute mb-4 flex flex-wrap items-center text-lg font-bold sm:text-xl">
           Your API Keys
         </h2>
@@ -266,7 +258,7 @@ export default component$(() => {
       </div>{" "}
       {/* ShareX Integration Info */}
       {apiKeysData.value.user.isApproved && (
-        <div class="bg-gradient-to-br from-theme-accent-tertiary/20 to-theme-accent-quaternary/20 border-theme-accent-tertiary/30 glass mt-6 rounded-3xl border p-4 sm:mt-8 sm:p-6">
+        <div class="bg-gradient-to-br from-theme-accent-tertiary/20 to-theme-accent-quaternary/20 border-theme-accent-tertiary/30 glass mt-6 rounded-2xl border p-4 sm:mt-8 sm:p-6">
           <h3 class="text-theme-accent-tertiary mb-2 flex flex-wrap items-center text-base font-bold sm:text-lg">
             ShareX Integration
           </h3>

@@ -1,33 +1,22 @@
 import { component$ } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Shield, Eye, Database, Users, FileText, Globe } from "lucide-icons-qwik";
+import { PageContainer, PageHeader } from "~/components/ui";
 
 export default component$(() => {
   return (
-    <div class="min-h-screen bg-theme-bg-primary p-4 sm:p-6">
-      <div class="mx-auto max-w-4xl">
-        {/* Header */}
-        <div class="mb-8">
-          <div class="card-cute rounded-3xl p-6 text-center">
-            <div class="mb-4 flex justify-center">
-              <div class="rounded-full bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary p-3">
-                <Shield class="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 class="text-gradient-cute mb-2 text-3xl font-bold">
-              Privacy Policy
-            </h1>
-            <p class="text-theme-text-secondary">
-              How we collect, use, and protect your information
-            </p>
-            <p class="text-theme-text-muted mt-2 text-sm">
-              Last updated: June 28, 2025
-            </p>
-          </div>
-        </div>
+    <PageContainer width="narrow">
+      <PageHeader
+        title="Privacy Policy"
+        icon={Shield}
+        subtitle="How we collect, use, and protect your information"
+      />
+      <p class="text-theme-text-muted -mt-4 mb-8 text-center text-sm">
+        Last updated: June 28, 2025
+      </p>
 
-        {/* Content */}
-        <div class="space-y-6">
+      {/* Content */}
+      <div class="space-y-6">
           {/* Introduction */}
           <section class="card-cute rounded-2xl p-6">
             <h2 class="text-theme-text-primary mb-4 flex items-center gap-2 text-xl font-bold">
@@ -301,14 +290,13 @@ export default component$(() => {
           </section>
         </div>
 
-        {/* Footer */}
-        <div class="mt-8 text-center">
-          <p class="text-theme-text-muted text-xs">
-            This privacy policy is effective as of June 28, 2025
-          </p>
-        </div>
+      {/* Footer */}
+      <div class="mt-8 text-center">
+        <p class="text-theme-text-muted text-xs">
+          This privacy policy is effective as of June 28, 2025
+        </p>
       </div>
-    </div>
+    </PageContainer>
   );
 });
 

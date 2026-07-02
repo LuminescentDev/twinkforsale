@@ -16,6 +16,7 @@ import { UserAnalytics } from "~/components/charts/user-analytics";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
+import { PageHeader } from "~/components/ui";
 
 const DEFAULT_STORAGE_LIMIT = 10737418240;
 
@@ -190,32 +191,27 @@ export default component$(() => {
 
   return (
     <>
-      {/* Page Header */}
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:gap-3 sm:text-4xl">
-          Admin Dashboard
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Manage your twink community~ Approve users and keep everything safe!
-          (◕‿◕)♡
-        </p>
-      </div>
+      <PageHeader
+        title="Admin Dashboard"
+        icon={Users}
+        subtitle="Manage your twink community~ Approve users and keep everything safe! (◕‿◕)♡"
+      />
       {/* Status Messages */}
       {updateUser.value?.success && (
-        <div class="glass mb-6 rounded-3xl border border-green-400/30 bg-green-500/10 p-4 sm:mb-8 sm:p-6">
+        <div class="glass mb-6 rounded-2xl border border-theme-success/30 bg-theme-success/10 p-4 sm:mb-8 sm:p-6">
           <div class="flex items-center justify-center text-center">
-            <CheckCircle class="mr-2 h-5 w-5 text-green-400" />
-            <span class="font-medium text-green-300">
+            <CheckCircle class="mr-2 h-5 w-5 text-theme-success" />
+            <span class="font-medium text-theme-success">
               User updated successfully! ✨
             </span>
           </div>
         </div>
       )}
       {updateUser.value?.error && (
-        <div class="glass mb-6 rounded-3xl border border-red-400/30 bg-red-500/10 p-4 sm:mb-8 sm:p-6">
+        <div class="glass mb-6 rounded-2xl border border-theme-error/30 bg-theme-error/10 p-4 sm:mb-8 sm:p-6">
           <div class="flex items-center justify-center text-center">
-            <Ban class="mr-2 h-5 w-5 text-red-400" />
-            <span class="font-medium text-red-300">
+            <Ban class="mr-2 h-5 w-5 text-theme-error" />
+            <span class="font-medium text-theme-error">
               Error: {updateUser.value.error}
             </span>
           </div>
@@ -223,7 +219,7 @@ export default component$(() => {
       )}
       {/* Stats Cards */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="rounded-full bg-gradient-to-br from-pink-500 to-purple-500 p-2 sm:p-3">
               <Users class="h-4 w-4 text-white sm:h-6 sm:w-6" />
@@ -239,7 +235,7 @@ export default component$(() => {
           </div>
         </div>
 
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="rounded-full bg-gradient-to-br from-green-500 to-emerald-500 p-2 sm:p-3">
               <CheckCircle class="h-4 w-4 text-white sm:h-6 sm:w-6" />
@@ -255,7 +251,7 @@ export default component$(() => {
           </div>
         </div>
 
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 p-2 sm:p-3">
               <Ban class="h-4 w-4 text-white sm:h-6 sm:w-6" />
@@ -271,7 +267,7 @@ export default component$(() => {
           </div>
         </div>
 
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <div class="flex items-center">
             <div class="rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 p-2 sm:p-3">
               <Users class="h-4 w-4 text-white sm:h-6 sm:w-6" />
@@ -330,7 +326,7 @@ export default component$(() => {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="/admin/domains"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
+            class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">
               <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-2 sm:p-3">
@@ -350,7 +346,7 @@ export default component$(() => {
 
           <Link
             href="/admin/health"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
+            class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">
               <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
@@ -370,7 +366,7 @@ export default component$(() => {
 
           <Link
             href="/admin/events"
-            class="card-cute group rounded-3xl p-4 sm:p-6"
+            class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">
               <div class="pulse-soft from-theme-accent-tertiary to-theme-accent-quaternary animation-delay-400 rounded-full bg-gradient-to-br p-2 sm:p-3">
@@ -389,7 +385,7 @@ export default component$(() => {
         </div>
       </div>
       {/* User Management */}
-      <div class="card-cute mb-6 rounded-3xl p-4 sm:mb-8 sm:p-6">
+      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
         <div class="mb-4 flex flex-col gap-4">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-gradient-cute flex items-center gap-2 text-lg font-bold sm:text-xl">
@@ -616,7 +612,7 @@ export default component$(() => {
                 {filteredUsers.value.map((user: any) => (
                   <div
                     key={user.id}
-                    class="glass border-theme-card-border hover:border-theme-accent-primary/40 group relative overflow-hidden rounded-3xl border transition-all duration-300 hover:shadow-lg"
+                    class="glass border-theme-card-border hover:border-theme-accent-primary/40 group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-lg"
                   >
                     {/* Main User Card */}
                     <div class="p-5">
@@ -637,8 +633,8 @@ export default component$(() => {
                               <div
                                 class={`absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 border-white ${
                                   user.isApproved
-                                    ? "bg-green-500"
-                                    : "bg-orange-500"
+                                    ? "bg-theme-success"
+                                    : "bg-theme-warning"
                                 }`}
                               />
                             </div>
@@ -654,8 +650,8 @@ export default component$(() => {
                               <span
                                 class={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                                   user.isApproved
-                                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                                    : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                    ? "bg-theme-success/20 text-theme-success border border-theme-success/30"
+                                    : "bg-theme-warning/20 text-theme-warning border border-theme-warning/30"
                                 }`}
                               >
                                 {user.isApproved ? "✅ Approved" : "⏳ Pending"}

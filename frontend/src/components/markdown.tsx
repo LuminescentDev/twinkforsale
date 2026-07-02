@@ -63,7 +63,7 @@ export const Markdown = component$<MarkdownProps>(({ content, class: extraClass 
   return (
     <div 
       dangerouslySetInnerHTML={processedContent.value} 
-      class={`whitespace-pre-line [&>p>a]:text-blue-400 [&>p>a]:hover:underline [&>p]:mb-2 [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-semibold [&>h3]:font-medium [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>blockquote]:border-l-4 [&>blockquote]:border-gray-400 [&>blockquote]:pl-4 [&>blockquote]:italic ${extraClass}`} 
+      class={`whitespace-pre-line [&>p>a]:text-theme-info [&>p>a]:hover:underline [&>p]:mb-2 [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-semibold [&>h3]:font-medium [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>blockquote]:border-l-4 [&>blockquote]:border-gray-400 [&>blockquote]:pl-4 [&>blockquote]:italic ${extraClass}`} 
     />
   );
 });

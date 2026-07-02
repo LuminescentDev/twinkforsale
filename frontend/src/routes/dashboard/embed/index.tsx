@@ -7,8 +7,10 @@ import {
   zod$,
 } from "@builder.io/qwik-city";
 import { ColorPicker, Toggle } from "@luminescent/ui-qwik";
+import { Share } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { PageHeader } from "~/components/ui";
 export const useUserLoader = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
@@ -278,19 +280,15 @@ export default component$(() => {
     }`;
   });
   return (
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:text-4xl">
-          Discord Embed Settings~
-        </h1>
-        <p class="text-theme-text-secondary px-4 text-base sm:text-lg">
-          Customize how your cute uploads appear when shared on Discord and
-          other platforms! (◕‿◕)♡
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="Discord Embed Settings~"
+        icon={Share}
+        subtitle="Customize how your cute uploads appear when shared on Discord and other platforms! (◕‿◕)♡"
+      />
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
         {/* Settings Form */}
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
             Embed Configuration~ ⚙️ <span class="sparkle ml-2">✨</span>
           </h2>
@@ -528,7 +526,7 @@ export default component$(() => {
         </div>
 
         {/* Preview */}
-        <div class="card-cute rounded-3xl p-4 sm:p-6">
+        <div class="card-cute rounded-2xl p-4 sm:p-6">
           <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
             Discord Embed Preview~<span class="sparkle ml-2">✨</span>
           </h2>

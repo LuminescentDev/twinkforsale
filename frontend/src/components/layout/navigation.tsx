@@ -46,7 +46,7 @@ export default component$(() => {
   return (
     <Nav
       fixed
-      colorClass="bg-theme-secondary/60 backdrop-blur-md !border-b border-theme-card-border"
+      colorClass="bg-theme-bg-secondary/60 backdrop-blur-md !border-b border-theme-card-border"
     >
       {/* Logo/Brand */}
       <Link

@@ -12,6 +12,7 @@ import { DetailedAnalyticsChart } from "~/components/charts/detailed-analytics-c
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
+import { PageHeader } from "~/components/ui";
 export const useAnalyticsOverview = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
@@ -39,18 +40,12 @@ export default component$(() => {
   };
 
   return (
-    <div class="min-h-screen p-4 sm:p-6">
-      {/* Header */}
-      <div class="mb-6">
-        <div class="card-cute rounded-3xl p-6">
-          <h1 class="text-gradient-cute mb-2 text-3xl font-bold">
-            Analytics Overview~
-          </h1>
-          <p class="text-theme-text-secondary">
-            Complete analytics for all your files and activity~ ✨
-          </p>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Analytics Overview~"
+        icon={TrendingUp}
+        subtitle="Complete analytics for all your files and activity~ ✨"
+      />
 
       {/* Summary Stats */}
       <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -117,7 +112,7 @@ export default component$(() => {
       </div>
 
       {/* Activity Chart */}
-      <div class="card-cute mb-6 rounded-3xl p-6">
+      <div class="card-cute mb-6 rounded-2xl p-6">
         <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
           <BarChart3 class="h-5 w-5" />
           Your Activity (30 Days)
@@ -131,7 +126,7 @@ export default component$(() => {
       </div>
 
       {/* Top Performing Files */}
-      <div class="card-cute rounded-3xl p-6">
+      <div class="card-cute rounded-2xl p-6">
         <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
           <Zap class="h-5 w-5" />
           Top Performing Files

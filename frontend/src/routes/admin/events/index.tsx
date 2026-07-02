@@ -191,15 +191,15 @@ export default component$(() => {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "CRITICAL":
-        return "text-red-600 bg-red-100";
+        return "text-theme-error bg-theme-error/15";
       case "ERROR":
-        return "text-orange-600 bg-orange-100";
+        return "text-theme-warning bg-theme-warning/15";
       case "WARNING":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-theme-warning bg-theme-warning/15";
       case "INFO":
-        return "text-blue-600 bg-blue-100";
+        return "text-theme-info bg-theme-info/15";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "text-theme-text-muted bg-theme-bg-tertiary/40";
     }
   };
 
@@ -334,14 +334,14 @@ export default component$(() => {
 
   if (eventsData.value.error) {
     return (
-      <div class="min-h-screen p-4 sm:p-6">
+      <div>
         <div class="mx-auto max-w-7xl">
           <div class="text-center">
-            <AlertTriangle class="mx-auto h-12 w-12 text-red-500" />
-            <h1 class="mt-4 text-2xl font-bold text-red-500">
+            <AlertTriangle class="mx-auto h-12 w-12 text-theme-error" />
+            <h1 class="mt-4 text-2xl font-bold text-theme-error">
               Failed to Load System Events
             </h1>
-            <p class="mt-2 text-gray-600">{eventsData.value.error}</p>
+            <p class="mt-2 text-theme-text-muted">{eventsData.value.error}</p>
           </div>
         </div>
       </div>
@@ -351,7 +351,7 @@ export default component$(() => {
   const data = eventsData.value;
 
   return (
-    <div class="min-h-screen p-4 sm:p-6">
+    <div>
       <div class="mx-auto max-w-7xl">
         {" "}
         {/* Header */}
@@ -382,7 +382,7 @@ export default component$(() => {
                 class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
                 title="Cleanup old events (30+ days)"
               >
-                <Trash class="h-4 w-4 text-gray-500" />
+                <Trash class="h-4 w-4 text-theme-text-muted" />
                 Cleanup
               </button>
               <button
@@ -390,7 +390,7 @@ export default component$(() => {
                 class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
                 title="Clear INFO and WARNING events"
               >
-                <Trash2 class="h-4 w-4 text-blue-500" />
+                <Trash2 class="h-4 w-4 text-theme-info" />
                 Clear Safe
               </button>
             </div>
@@ -408,7 +408,7 @@ export default component$(() => {
                 onClick$={() => window.location.reload()}
                 class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
               >
-                <RefreshCw class="h-4 w-4 text-green-500" />
+                <RefreshCw class="h-4 w-4 text-theme-success" />
                 Refresh
               </button>
             </div>
@@ -429,7 +429,7 @@ export default component$(() => {
                 class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
                 title="Cleanup old events (30+ days)"
               >
-                <Trash class="h-4 w-4 text-gray-500" />
+                <Trash class="h-4 w-4 text-theme-text-muted" />
                 Cleanup Old
               </button>
               <button
@@ -437,7 +437,7 @@ export default component$(() => {
                 class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
                 title="Clear INFO and WARNING events"
               >
-                <Trash2 class="h-4 w-4 text-blue-500" />
+                <Trash2 class="h-4 w-4 text-theme-info" />
                 Clear Safe
               </button>
               <button
@@ -453,14 +453,14 @@ export default component$(() => {
               onClick$={() => window.location.reload()}
               class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
             >
-              <RefreshCw class="h-4 w-4 text-green-500" />
+              <RefreshCw class="h-4 w-4 text-theme-success" />
               Refresh
             </button>
           </div>
         </div>{" "}
         {/* Monitoring Status */}
         <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <Clock class="h-4 w-4 sm:h-5 sm:w-5" />
               Monitoring Status
@@ -473,15 +473,15 @@ export default component$(() => {
                 <div class="flex items-center gap-2">
                   {data.monitoring?.isRunning ? (
                     <>
-                      <CheckCircle class="h-3 w-3 text-green-500 sm:h-4 sm:w-4" />
-                      <span class="text-sm font-medium text-green-600 sm:text-base">
+                      <CheckCircle class="h-3 w-3 text-theme-success sm:h-4 sm:w-4" />
+                      <span class="text-sm font-medium text-theme-success sm:text-base">
                         Running
                       </span>
                     </>
                   ) : (
                     <>
-                      <OctagonX class="h-3 w-3 text-red-500 sm:h-4 sm:w-4" />
-                      <span class="text-sm font-medium text-red-600 sm:text-base">
+                      <OctagonX class="h-3 w-3 text-theme-error sm:h-4 sm:w-4" />
+                      <span class="text-sm font-medium text-theme-error sm:text-base">
                         Stopped
                       </span>
                     </>
@@ -501,42 +501,42 @@ export default component$(() => {
         </div>{" "}
         {/* Event Statistics */}
         <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <Info class="h-4 w-4 sm:h-5 sm:w-5" />
               Event Statistics (Last 24h)
             </h3>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-red-600 sm:text-2xl">
+                <div class="text-xl font-bold text-theme-error sm:text-2xl">
                   {data.stats?.CRITICAL || 0}
                 </div>
-                <div class="text-xs text-gray-600 sm:text-sm">Critical</div>
+                <div class="text-xs text-theme-text-muted sm:text-sm">Critical</div>
               </div>
               <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-orange-600 sm:text-2xl">
+                <div class="text-xl font-bold text-theme-warning sm:text-2xl">
                   {data.stats?.ERROR || 0}
                 </div>
-                <div class="text-xs text-gray-600 sm:text-sm">Errors</div>
+                <div class="text-xs text-theme-text-muted sm:text-sm">Errors</div>
               </div>
               <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-yellow-600 sm:text-2xl">
+                <div class="text-xl font-bold text-theme-warning sm:text-2xl">
                   {data.stats?.WARNING || 0}
                 </div>
-                <div class="text-xs text-gray-600 sm:text-sm">Warnings</div>
+                <div class="text-xs text-theme-text-muted sm:text-sm">Warnings</div>
               </div>
               <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-blue-600 sm:text-2xl">
+                <div class="text-xl font-bold text-theme-info sm:text-2xl">
                   {data.stats?.INFO || 0}
                 </div>
-                <div class="text-xs text-gray-600 sm:text-sm">Info</div>
+                <div class="text-xs text-theme-text-muted sm:text-sm">Info</div>
               </div>
             </div>
           </div>
         </div>{" "}
         {/* Events List */}
         <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
             <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
               <AlertTriangle class="h-4 w-4 sm:h-5 sm:w-5" />
               Recent Events
@@ -574,7 +574,7 @@ export default component$(() => {
                               <summary class="text-theme-text-secondary hover:text-theme-text-primary cursor-pointer text-xs">
                                 View metadata
                               </summary>
-                              <pre class="mt-2 max-w-full overflow-x-auto rounded bg-gray-100 p-2 text-xs">
+                              <pre class="mt-2 max-w-full overflow-x-auto rounded bg-theme-bg-tertiary/40 p-2 text-xs">
                                 {JSON.stringify(event.metadata, null, 2)}
                               </pre>
                             </details>
@@ -626,7 +626,7 @@ export default component$(() => {
                         </div>
                         <button
                           onClick$={() => deleteEvent(event.id)}
-                          class="flex-shrink-0 rounded p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                          class="flex-shrink-0 rounded p-2 text-theme-error transition-colors hover:bg-red-50 hover:text-theme-error"
                           title="Delete this event"
                         >
                           <Trash2 class="h-4 w-4" />
@@ -638,7 +638,7 @@ export default component$(() => {
               </div>
             ) : (
               <div class="py-8 text-center sm:py-12">
-                <CheckCircle class="mx-auto h-8 w-8 text-green-500 sm:h-12 sm:w-12" />
+                <CheckCircle class="mx-auto h-8 w-8 text-theme-success sm:h-12 sm:w-12" />
                 <h3 class="text-theme-text-primary mt-4 text-base font-medium sm:text-lg">
                   No Events Found
                 </h3>
@@ -650,7 +650,7 @@ export default component$(() => {
           </div>
         </div>{" "}
         {/* Footer */}
-        <div class="px-4 text-center text-xs text-gray-500 sm:text-sm">
+        <div class="px-4 text-center text-xs text-theme-text-muted sm:text-sm">
           <p>Last updated: {data.lastUpdated?.toLocaleString()}</p>
           <p class="mt-1">
             System events are automatically monitored every 5 minutes
