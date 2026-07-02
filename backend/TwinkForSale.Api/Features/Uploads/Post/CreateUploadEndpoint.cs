@@ -52,6 +52,7 @@ public sealed class CreateUploadEndpoint(
             var user = await dbContext.Users
                 .Include(x => x.Uploads)
                 .Include(x => x.Settings)
+                .ThenInclude(x => x!.UploadDomain)
                 .FirstAsync(x => x.Id == userId, ct);
 
             var apiKeyId = User.FindFirstValue(AppClaimTypes.ApiKeyId);
@@ -104,7 +105,8 @@ public sealed class CreateUploadEndpoint(
                     : null;
 
             var baseUrl = GetRequestBaseUrl();
-            var fileUrl = $"{baseUrl}/f/{shortCode}";
+            var uploadBaseUrl = GetUploadBaseUrl(settings, baseUrl);
+            var fileUrl = $"{uploadBaseUrl}/f/{shortCode}";
 
             var upload = new Upload
             {
@@ -157,6 +159,23 @@ public sealed class CreateUploadEndpoint(
         }
 
         return configuredBaseUrl;
+    }
+
+    private static string GetUploadBaseUrl(UserSettings settings, string fallbackBaseUrl)
+    {
+        var selectedDomain = settings.UploadDomain;
+        if (selectedDomain?.IsActive == true && !string.IsNullOrWhiteSpace(selectedDomain.Domain))
+        {
+            var domain = selectedDomain.Domain.Trim().Trim('/');
+            if (!string.IsNullOrWhiteSpace(settings.CustomSubdomain) && selectedDomain.SupportsSubdomains)
+            {
+                return $"https://{settings.CustomSubdomain.Trim()}.{domain}";
+            }
+
+            return $"https://{domain}";
+        }
+
+        return fallbackBaseUrl.TrimEnd('/');
     }
 
     private static int? ParseNullableInt(string? value)
