@@ -1,5 +1,5 @@
 services:
-  frontend:
+  twink-frontend:
     image: twinkforsale-frontend:local
     build:
       context: ..
@@ -10,7 +10,7 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://host.docker.internal:5000}
+      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://twink-api:8080}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"

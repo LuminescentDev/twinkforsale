@@ -1,5 +1,5 @@
 services:
-  backend:
+  twink-api:
     image: twinkforsale-backend:local
     build:
       context: .

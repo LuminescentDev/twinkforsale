@@ -1,5 +1,5 @@
 services:
-  frontend:
+  twink-frontend:
     image: twinkforsale-frontend:local
     build:
       context: .
@@ -10,12 +10,12 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://backend:8080}
+      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://twink-api:8080}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      backend:
+      twink-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
@@ -25,7 +25,7 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  backend:
+  twink-api:
     image: twinkforsale-backend:local
     build:
       context: backend
