@@ -13,6 +13,8 @@ using TwinkForSale.Api.Features.Analytics;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddInMemoryCollection(BuildLegacyEnvironmentConfiguration());
+
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.Configure<DiscordOptions>(builder.Configuration.GetSection(DiscordOptions.SectionName));
@@ -130,3 +132,51 @@ app.UseFastEndpoints();
 app.UseSwaggerGen();
 
 app.Run();
+
+static Dictionary<string, string?> BuildLegacyEnvironmentConfiguration()
+{
+    var values = new Dictionary<string, string?>();
+
+    AddIfModernEnvironmentMissing(values, "App__BaseUrl", "App:BaseUrl", "BASE_URL");
+    AddIfModernEnvironmentMissing(values, "Storage__LocalPath", "Storage:LocalPath", "UPLOAD_DIR");
+    AddIfModernEnvironmentMissing(values, "Storage__R2__AccountId", "Storage:R2:AccountId", "R2_ACCOUNT_ID");
+    AddIfModernEnvironmentMissing(values, "Storage__R2__AccessKeyId", "Storage:R2:AccessKeyId", "R2_ACCESS_KEY_ID");
+    AddIfModernEnvironmentMissing(values, "Storage__R2__SecretAccessKey", "Storage:R2:SecretAccessKey", "R2_SECRET_ACCESS_KEY");
+    AddIfModernEnvironmentMissing(values, "Storage__R2__BucketName", "Storage:R2:BucketName", "R2_BUCKET_NAME");
+    AddIfModernEnvironmentMissing(values, "Storage__R2__PublicUrl", "Storage:R2:PublicUrl", "R2_PUBLIC_URL");
+
+    var modernProvider = Environment.GetEnvironmentVariable("Storage__Provider");
+    var storageProvider = Environment.GetEnvironmentVariable("STORAGE_PROVIDER");
+    if (string.IsNullOrWhiteSpace(modernProvider) && !string.IsNullOrWhiteSpace(storageProvider))
+    {
+        values["Storage:Provider"] = storageProvider;
+    }
+
+    var legacyUseR2 = Environment.GetEnvironmentVariable("USE_R2_STORAGE");
+    if (string.IsNullOrWhiteSpace(modernProvider) &&
+        string.IsNullOrWhiteSpace(storageProvider) &&
+        string.Equals(legacyUseR2, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        values["Storage:Provider"] = "R2";
+    }
+
+    return values;
+}
+
+static void AddIfModernEnvironmentMissing(
+    Dictionary<string, string?> values,
+    string modernEnvironmentName,
+    string configurationKey,
+    string legacyEnvironmentName)
+{
+    if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(modernEnvironmentName)))
+    {
+        return;
+    }
+
+    var legacyValue = Environment.GetEnvironmentVariable(legacyEnvironmentName);
+    if (!string.IsNullOrWhiteSpace(legacyValue))
+    {
+        values[configurationKey] = legacyValue;
+    }
+}

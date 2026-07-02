@@ -40,8 +40,14 @@ services:
       Auth__JwtSecret: ${AUTH_JWT_SECRET:-dev-change-me}
       Discord__ClientId: ${DISCORD_CLIENT_ID:-}
       Discord__ClientSecret: ${DISCORD_CLIENT_SECRET:-}
-      Storage__Provider: ${STORAGE_PROVIDER:-Local}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      USE_R2_STORAGE: ${USE_R2_STORAGE:-false}
       Storage__LocalPath: /app/uploads
+      Storage__R2__AccountId: ${R2_ACCOUNT_ID:-}
+      Storage__R2__AccessKeyId: ${R2_ACCESS_KEY_ID:-}
+      Storage__R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY:-}
+      Storage__R2__BucketName: ${R2_BUCKET_NAME:-}
+      Storage__R2__PublicUrl: ${R2_PUBLIC_URL:-}
     ports:
       - "${BACKEND_PORT:-5000}:8080"
     volumes:

@@ -27,14 +27,15 @@ public sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostE
 
     public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(GetRootPath(), key.Replace('/', Path.DirectorySeparatorChar));
-
-        if (!File.Exists(path))
+        foreach (var path in GetCandidatePaths(key))
         {
-            return Task.FromResult<Stream?>(null);
+            if (File.Exists(path))
+            {
+                return Task.FromResult<Stream?>(File.OpenRead(path));
+            }
         }
 
-        return Task.FromResult<Stream?>(File.OpenRead(path));
+        return Task.FromResult<Stream?>(null);
     }
 
     public Task<bool> DeleteAsync(string key, CancellationToken cancellationToken)
@@ -56,6 +57,33 @@ public sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostE
         return Path.IsPathRooted(configuredPath)
             ? configuredPath
             : Path.Combine(environment.ContentRootPath, configuredPath);
+    }
+
+    private IEnumerable<string> GetCandidatePaths(string key)
+    {
+        var root = GetRootPath();
+        var normalizedKey = key.Replace('/', Path.DirectorySeparatorChar);
+        var filename = Path.GetFileName(normalizedKey);
+
+        yield return Path.Combine(root, normalizedKey);
+        yield return Path.Combine(root, "anonymous", filename);
+
+        var parts = normalizedKey.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        if (parts is ["users", var userId, var storedFilename])
+        {
+            yield return Path.Combine(root, userId, storedFilename);
+        }
+        else if (parts.Length == 2)
+        {
+            yield return Path.Combine(root, parts[0], parts[1]);
+        }
+        else if (parts.Length == 1 && Directory.Exists(root))
+        {
+            foreach (var directory in Directory.EnumerateDirectories(root))
+            {
+                yield return Path.Combine(directory, filename);
+            }
+        }
     }
 
     private static string SanitizePathSegment(string value)
