@@ -19,11 +19,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 COPY --from=build /app/publish .
-
-EXPOSE 5000
 
 ENTRYPOINT ["dotnet", "TwinkForSale.Api.dll"]
