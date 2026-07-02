@@ -36,6 +36,8 @@ public sealed class R2FileStorage(IOptions<StorageOptions> options) : IFileStora
                 ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
                 AutoCloseStream = false,
                 AutoResetStreamPosition = false,
+                UseChunkEncoding = false,
+                DisablePayloadSigning = true,
                 Headers =
                 {
                     ContentLength = buffer.Length
