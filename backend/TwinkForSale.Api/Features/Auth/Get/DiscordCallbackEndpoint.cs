@@ -78,6 +78,7 @@ public sealed class DiscordCallbackEndpoint(
             HttpOnly = true,
             Secure = HttpContext.Request.IsHttps,
             SameSite = SameSiteMode.Lax,
+            Domain = string.IsNullOrWhiteSpace(appOptions.Value.CookieDomain) ? null : appOptions.Value.CookieDomain,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(BrowserSessionDefaults.SessionDays)
         });

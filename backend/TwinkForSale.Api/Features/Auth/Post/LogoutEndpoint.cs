@@ -1,11 +1,13 @@
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TwinkForSale.Api.Infrastructure.Auth;
+using TwinkForSale.Api.Infrastructure.Configuration;
 using TwinkForSale.Api.Infrastructure.Database;
 
 namespace TwinkForSale.Api.Features.Auth.Post;
 
-public sealed class LogoutEndpoint(AppDbContext dbContext) : EndpointWithoutRequest
+public sealed class LogoutEndpoint(AppDbContext dbContext, IOptions<AppOptions> appOptions) : EndpointWithoutRequest
 {
     public override void Configure()
     {
@@ -23,7 +25,11 @@ public sealed class LogoutEndpoint(AppDbContext dbContext) : EndpointWithoutRequ
                 .ExecuteDeleteAsync(ct);
         }
 
-        HttpContext.Response.Cookies.Delete(BrowserSessionDefaults.SessionCookieName, new CookieOptions { Path = "/" });
+        HttpContext.Response.Cookies.Delete(BrowserSessionDefaults.SessionCookieName, new CookieOptions
+        {
+            Path = "/",
+            Domain = string.IsNullOrWhiteSpace(appOptions.Value.CookieDomain) ? null : appOptions.Value.CookieDomain
+        });
         await SendNoContentAsync(ct);
     }
 }

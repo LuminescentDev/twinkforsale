@@ -36,6 +36,7 @@ services:
       ConnectionStrings__Default: ${CONNECTION_STRING:-Host=postgres;Port=5432;Database=twinkforsale;Username=postgres;Password=postgres}
       App__BaseUrl: ${API_BASE_URL:-http://localhost:5000}
       App__FrontendUrl: ${FRONTEND_URL:-http://localhost:3000}
+      App__CookieDomain: ${COOKIE_DOMAIN:-.twink.forsale}
       Auth__JwtSecret: ${AUTH_JWT_SECRET:-dev-change-me}
       Discord__ClientId: ${DISCORD_CLIENT_ID:-}
       Discord__ClientSecret: ${DISCORD_CLIENT_SECRET:-}
