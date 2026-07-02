@@ -11,28 +11,42 @@ public sealed class R2FileStorage(IOptions<StorageOptions> options) : IFileStora
     public async Task<FileUploadResult> UploadAsync(IFormFile file, string key, string? userId, CancellationToken cancellationToken)
     {
         var r2 = options.Value.R2;
-        if (string.IsNullOrWhiteSpace(r2.AccountId) || string.IsNullOrWhiteSpace(r2.BucketName))
+        if (string.IsNullOrWhiteSpace(r2.AccountId) ||
+            string.IsNullOrWhiteSpace(r2.AccessKeyId) ||
+            string.IsNullOrWhiteSpace(r2.SecretAccessKey) ||
+            string.IsNullOrWhiteSpace(r2.BucketName))
         {
             return FileUploadResult.Failed("R2 storage is not configured.");
         }
 
-        var objectKey = BuildObjectKey(key, userId);
-        using var client = CreateClient(r2);
-        await using var stream = file.OpenReadStream();
-        await client.PutObjectAsync(new PutObjectRequest
+        try
         {
-            BucketName = r2.BucketName,
-            Key = objectKey,
-            InputStream = stream,
-            ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-            AutoCloseStream = false
-        }, cancellationToken);
+            var objectKey = BuildObjectKey(key, userId);
+            using var client = CreateClient(r2);
+            await using var stream = file.OpenReadStream();
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName = r2.BucketName,
+                Key = objectKey,
+                InputStream = stream,
+                ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                AutoCloseStream = false
+            }, cancellationToken);
 
-        var publicUrl = string.IsNullOrWhiteSpace(r2.PublicUrl)
-            ? null
-            : $"{r2.PublicUrl.TrimEnd('/')}/{objectKey}";
+            var publicUrl = string.IsNullOrWhiteSpace(r2.PublicUrl)
+                ? null
+                : $"{r2.PublicUrl.TrimEnd('/')}/{objectKey}";
 
-        return FileUploadResult.Succeeded(objectKey, publicUrl);
+            return FileUploadResult.Succeeded(objectKey, publicUrl);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            return FileUploadResult.Failed($"R2 upload failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return FileUploadResult.Failed($"Storage upload failed: {ex.Message}");
+        }
     }
 
     public async Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken)

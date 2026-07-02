@@ -137,18 +137,26 @@ public sealed class CreateUploadEndpoint(
         catch (Exception ex)
         {
             logger.LogError(ex, "Upload failed.");
-            await SendAsync(new CreateUploadResponse(Error: "Upload failed. Check server logs for details."), StatusCodes.Status500InternalServerError, ct);
+            await SendAsync(new CreateUploadResponse(Error: $"Upload failed: {ex.GetType().Name}: {ex.Message}"), StatusCodes.Status500InternalServerError, ct);
         }
     }
 
     private string GetRequestBaseUrl()
     {
+        var configuredBaseUrl = appOptions.Value.BaseUrl.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(configuredBaseUrl) &&
+            !configuredBaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase) &&
+            !configuredBaseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+        {
+            return configuredBaseUrl;
+        }
+
         if (HttpContext.Request.Host.HasValue)
         {
             return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}".TrimEnd('/');
         }
 
-        return appOptions.Value.BaseUrl.TrimEnd('/');
+        return configuredBaseUrl;
     }
 
     private static int? ParseNullableInt(string? value)
