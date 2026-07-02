@@ -128,6 +128,7 @@ public sealed class DiscordCallbackEndpoint(
     {
         var account = await dbContext.Accounts
             .Include(x => x.User)
+            .ThenInclude(x => x!.Settings)
             .FirstOrDefaultAsync(x => x.Provider == "discord" && x.ProviderAccountId == discordUser.Id, ct);
 
         var email = string.IsNullOrWhiteSpace(discordUser.Email)
@@ -168,13 +169,17 @@ public sealed class DiscordCallbackEndpoint(
         user.Image = avatar;
         user.UpdatedAt = DateTimeOffset.UtcNow;
 
+        user.Settings ??= await dbContext.UserSettings.FirstOrDefaultAsync(x => x.UserId == user.Id, ct);
+
         if (user.Settings is null)
         {
-            dbContext.UserSettings.Add(new UserSettings
+            user.Settings = new UserSettings
             {
                 User = user,
+                UserId = user.Id,
                 BioDiscordUserId = discordUser.Id
-            });
+            };
+            dbContext.UserSettings.Add(user.Settings);
         }
         else if (string.IsNullOrWhiteSpace(user.Settings.BioDiscordUserId))
         {
