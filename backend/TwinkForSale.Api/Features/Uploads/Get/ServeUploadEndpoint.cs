@@ -30,7 +30,8 @@ public sealed class ServeUploadEndpoint(
 
     public override void Configure()
     {
-        Get("/f/{shortCode}");
+        Verbs(Http.GET, Http.HEAD);
+        Routes("/f/{shortCode}");
         AllowAnonymous();
         Summary(summary =>
         {
@@ -56,6 +57,7 @@ public sealed class ServeUploadEndpoint(
 
         var isDirect = HttpContext.Request.Query.TryGetValue("direct", out var direct) &&
             string.Equals(direct, "true", StringComparison.OrdinalIgnoreCase);
+        var isHead = HttpContext.Request.Method.Equals(HttpMethods.Head, StringComparison.OrdinalIgnoreCase);
         var referrer = HttpContext.Request.Headers.Referer.ToString();
         var isInternalDashboardView = referrer.Contains("/dashboard", StringComparison.OrdinalIgnoreCase) ||
             referrer.Contains("/uploads", StringComparison.OrdinalIgnoreCase) ||
@@ -73,6 +75,13 @@ public sealed class ServeUploadEndpoint(
 
         if (isDirect || !isBotOrCrawler)
         {
+            if (isHead)
+            {
+                SendFileHeaders(stream, upload);
+                await stream.DisposeAsync();
+                return;
+            }
+
             dbContext.DownloadLogs.Add(new DownloadLog
             {
                 UploadId = upload.Id,
@@ -118,6 +127,16 @@ public sealed class ServeUploadEndpoint(
 
     private async Task SendFileAsync(Stream stream, Upload upload, CancellationToken ct)
     {
+        SendFileHeaders(stream, upload);
+
+        await using (stream)
+        {
+            await stream.CopyToAsync(HttpContext.Response.Body, ct);
+        }
+    }
+
+    private void SendFileHeaders(Stream stream, Upload upload)
+    {
         HttpContext.Response.StatusCode = StatusCodes.Status200OK;
         HttpContext.Response.ContentType = string.IsNullOrWhiteSpace(upload.MimeType)
             ? "application/octet-stream"
@@ -133,11 +152,6 @@ public sealed class ServeUploadEndpoint(
             HttpContext.Response.Headers.XContentTypeOptions = "nosniff";
             HttpContext.Response.Headers.AcceptRanges = "bytes";
         }
-
-        await using (stream)
-        {
-            await stream.CopyToAsync(HttpContext.Response.Body, ct);
-        }
     }
 
     private string GenerateDiscordEmbed(Upload upload, UserStats? stats)
@@ -151,7 +165,7 @@ public sealed class ServeUploadEndpoint(
         var showFileInfo = settings?.ShowFileInfo != false;
         var showUploadDate = settings?.ShowUploadDate != false;
         var showUserStats = settings?.ShowUserStats == true;
-        var baseUrl = appOptions.Value.BaseUrl.TrimEnd('/');
+        var baseUrl = GetRequestBaseUrl();
         var domain = string.IsNullOrWhiteSpace(settings?.CustomDomain)
             ? baseUrl.Replace("https://", "", StringComparison.OrdinalIgnoreCase).Replace("http://", "", StringComparison.OrdinalIgnoreCase)
             : settings.CustomDomain!;
@@ -183,7 +197,8 @@ public sealed class ServeUploadEndpoint(
             plainDescription += $"\nUploaded {upload.CreatedAt.ToLocalTime():d}";
         }
 
-        var directUrl = $"{upload.Url}?direct=true";
+        var uploadUrl = $"{baseUrl}/f/{Uri.EscapeDataString(upload.ShortCode)}";
+        var directUrl = $"{uploadUrl}?direct=true";
         var preview = upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
             ? $"<img src=\"{Attr(directUrl)}\" alt=\"{Attr(upload.OriginalName)}\" />"
             : "<div style=\"font-size: 48px; margin-bottom: 16px;\">&#128196;</div>";
@@ -215,7 +230,7 @@ public sealed class ServeUploadEndpoint(
   <meta name="twitter:image" content="{{Attr(directUrl)}}">
   <meta name="twitter:image:alt" content="{{Attr(title)}}">
   {{authorMeta}}
-  <link rel="alternate" href="{{Attr($"{baseUrl}/api/oembed?url={Uri.EscapeDataString(upload.Url)}")}}" type="application/json+oembed" title="{{Attr(title)}}">
+  <link rel="alternate" href="{{Attr($"{baseUrl}/api/oembed?url={Uri.EscapeDataString(uploadUrl)}")}}" type="application/json+oembed" title="{{Attr(title)}}">
   <script>
     const userAgent = navigator.userAgent.toLowerCase();
     const isBotOrCrawler = /bot|crawler|spider|crawling|discord|telegram|whatsapp|facebook|twitter|slack/i.test(userAgent);
@@ -259,6 +274,16 @@ public sealed class ServeUploadEndpoint(
         var totalStorage = await dbContext.Uploads.Where(x => x.UserId == userId).SumAsync(x => (long?)x.Size, ct) ?? 0;
         var totalViews = await dbContext.Uploads.Where(x => x.UserId == userId).SumAsync(x => (int?)x.Views, ct) ?? 0;
         return new UserStats(totalFiles, totalStorage, totalViews);
+    }
+
+    private string GetRequestBaseUrl()
+    {
+        if (HttpContext.Request.Host.HasValue)
+        {
+            return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}".TrimEnd('/');
+        }
+
+        return appOptions.Value.BaseUrl.TrimEnd('/');
     }
 
     private static bool IsBotOrCrawler(string userAgent)

@@ -74,14 +74,15 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
 
         if (upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            response["thumbnail_url"] = $"{upload.Url}?direct=true";
+            var thumbnailUrl = $"{requestUrl.TrimEnd('?')}{(requestUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?")}direct=true";
+            response["thumbnail_url"] = thumbnailUrl;
             response["thumbnail_width"] = upload.Width ?? 400;
             response["thumbnail_height"] = upload.Height ?? 300;
 
             if (upload.MimeType.Equals("image/gif", StringComparison.OrdinalIgnoreCase))
             {
                 response["type"] = "video";
-                response["html"] = $"<img src=\"{upload.Url}?direct=true\" alt=\"{System.Net.WebUtility.HtmlEncode(title)}\" style=\"max-width:100%;height:auto;\" />";
+                response["html"] = $"<img src=\"{thumbnailUrl}\" alt=\"{System.Net.WebUtility.HtmlEncode(title)}\" style=\"max-width:100%;height:auto;\" />";
                 response["width"] = upload.Width ?? 400;
                 response["height"] = upload.Height ?? 300;
             }

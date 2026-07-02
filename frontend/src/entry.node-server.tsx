@@ -43,6 +43,8 @@ function shouldProxyToBackend(url: string | undefined): boolean {
 function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
   return new Promise<void>((resolve, reject) => {
     const targetUrl = new URL(req.url ?? "/", `${API_INTERNAL_BASE_URL}/`);
+    const forwardedProto = req.headers["x-forwarded-proto"] ?? "https";
+    const forwardedHost = req.headers["x-forwarded-host"] ?? req.headers.host;
     const proxyRequest = (targetUrl.protocol === "https:" ? httpsRequest : httpRequest)(
       targetUrl,
       {
@@ -50,6 +52,8 @@ function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
         headers: {
           ...req.headers,
           host: targetUrl.host,
+          "x-forwarded-host": forwardedHost,
+          "x-forwarded-proto": forwardedProto,
         },
       },
       (proxyResponse) => {
