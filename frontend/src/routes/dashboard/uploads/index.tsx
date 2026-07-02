@@ -37,7 +37,7 @@ import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { getServerUploadsViewMode } from "~/lib/cookie-utils";
 import { formatBytes } from "~/lib/utils";
-import { PageHeader } from "~/components/ui";
+import { PageHeader, StatCard } from "~/components/ui";
 
 export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -331,117 +331,64 @@ export default component$(() => {
   return (
     <div>
       <PageHeader
+        align="left"
         title="My Files~"
         icon={Folder}
         subtitle="Manage your files with expiration dates and view limits! (◕‿◕)♡"
       />
 
       {/* Stats Summary */}
-      <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Folder class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium sm:text-sm">
-                {searchQuery.value.trim() ? "Filtered Files~" : "Total Files~"}
-                <Sparkle class="h-3 w-3 sm:h-4 sm:w-4" />
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {searchQuery.value.trim()
-                  ? filteredAndSortedUploads.value.length
-                  : userData.value.user.uploads.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-secondary to-theme-accent-tertiary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Eye class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium sm:text-sm">
-                {searchQuery.value.trim() ? "Filtered Views~" : "Total Views~"}
-                <Sparkle class="h-3 w-3 sm:h-4 sm:w-4" />
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {searchQuery.value.trim()
-                  ? filteredAndSortedUploads.value.reduce(
-                      (sum, upload) => sum + upload.views,
-                      0,
-                    )
-                  : userData.value.user.uploads.reduce(
-                      (sum, upload) => sum + upload.views,
-                      0,
-                    )}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-quaternary to-theme-accent-primary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <TrendingUp class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium sm:text-sm">
-                {searchQuery.value.trim()
-                  ? "Filtered Downloads~"
-                  : "Total Downloads~"}
-                <Sparkle class="h-3 w-3 sm:h-4 sm:w-4" />
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {searchQuery.value.trim()
-                  ? filteredAndSortedUploads.value.reduce(
-                      (sum, upload) => sum + upload.downloads,
-                      0,
-                    )
-                  : userData.value.user.uploads.reduce(
-                      (sum, upload) => sum + upload.downloads,
-                      0,
-                    )}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-tertiary to-theme-accent-quaternary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <HardDrive class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium sm:text-sm">
-                Storage Used~
-                <Sparkle class="h-3 w-3 sm:h-4 sm:w-4" />
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-xl">
-                {formatFileSize(userData.value.user.storageUsed)} /{" "}
-                {formatFileSize(userData.value.effectiveStorageLimit)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="card-cute pulse-soft rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="from-theme-accent-quaternary to-theme-accent-primary rounded-full bg-gradient-to-br p-2 sm:p-3">
-              <Clock class="text-theme-text-primary h-4 w-4 sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium sm:text-sm">
-                Available Space~
-                <Sparkle class="h-3 w-3 sm:h-4 sm:w-4" />
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {formatFileSize(
-                  userData.value.effectiveStorageLimit -
-                    userData.value.user.storageUsed,
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-3 xl:grid-cols-5">
+        <StatCard
+          icon={Folder}
+          accent={0}
+          pulse
+          label={searchQuery.value.trim() ? "Filtered Files" : "Total Files"}
+          value={
+            searchQuery.value.trim()
+              ? filteredAndSortedUploads.value.length
+              : userData.value.user.uploads.length
+          }
+        />
+        <StatCard
+          icon={Eye}
+          accent={1}
+          pulse
+          label={searchQuery.value.trim() ? "Filtered Views" : "Total Views"}
+          value={(searchQuery.value.trim()
+            ? filteredAndSortedUploads.value
+            : userData.value.user.uploads
+          ).reduce((sum, upload) => sum + upload.views, 0)}
+        />
+        <StatCard
+          icon={TrendingUp}
+          accent={3}
+          pulse
+          label={
+            searchQuery.value.trim() ? "Filtered Downloads" : "Total Downloads"
+          }
+          value={(searchQuery.value.trim()
+            ? filteredAndSortedUploads.value
+            : userData.value.user.uploads
+          ).reduce((sum, upload) => sum + upload.downloads, 0)}
+        />
+        <StatCard
+          icon={HardDrive}
+          accent={2}
+          pulse
+          label="Storage Used"
+          value={`${formatFileSize(userData.value.user.storageUsed)} / ${formatFileSize(userData.value.effectiveStorageLimit)}`}
+        />
+        <StatCard
+          icon={Clock}
+          accent={3}
+          pulse
+          label="Available Space"
+          value={formatFileSize(
+            userData.value.effectiveStorageLimit -
+              userData.value.user.storageUsed,
+          )}
+        />
       </div>
 
       {/* Uploads Section */}

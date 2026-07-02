@@ -327,6 +327,7 @@ export default component$(() => {
   return (
     <PageContainer width="narrow">
       <PageHeader
+        align="left"
         title="Settings~"
         icon={SettingsIcon}
         subtitle="Configure your upload preferences, domain settings, and themes! (◕‿◕)♡"

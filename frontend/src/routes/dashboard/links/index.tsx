@@ -2,10 +2,10 @@ import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
 import { routeLoader$, server$, type DocumentHead } from "@builder.io/qwik-city";
 import { isValidHttpUrl } from "~/lib/url-utils";
 import { useAlert } from "~/lib/use-alert";
-import { Link2 as ChainIcon } from "lucide-icons-qwik";
+import { Link2 as ChainIcon, Copy, ExternalLink, Trash2 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Callout, PageHeader } from "~/components/ui";
+import { Button, Callout, Input, PageHeader } from "~/components/ui";
 
 export const useLinks = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -195,6 +195,7 @@ export default component$(() => {
   return (
     <>
       <PageHeader
+        align="left"
         title="Short Links"
         icon={ChainIcon}
         subtitle="Create and manage your cute short URLs under /l/<code> ✨"
@@ -213,24 +214,22 @@ export default component$(() => {
             <span class="text-theme-text-secondary text-sm">Remaining: {remaining.value}</span>
           </div>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
+            <Input
               type="url"
               placeholder="https://example.com/very/long/url"
-              class="glass text-theme-text-primary placeholder:theme-text-muted focus:ring-theme-accent-primary/50 col-span-1 rounded-full px-4 py-3 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:col-span-2 sm:px-6 sm:text-base"
+              class="col-span-1 sm:col-span-2"
               value={url.value}
               onInput$={(e) => (url.value = (e.target as HTMLInputElement).value)}
             />
-            <input
+            <Input
               type="text"
               placeholder="Custom code (optional) e.g., cute-bunny-123"
-              class="glass text-theme-text-primary placeholder:theme-text-muted focus:ring-theme-accent-primary/50 rounded-full px-4 py-3 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-6 sm:text-base"
               value={code.value}
               onInput$={(e) => (code.value = (e.target as HTMLInputElement).value)}
             />
-            <input
+            <Input
               type="number"
               placeholder="Expires in days (optional)"
-              class="glass text-theme-text-primary placeholder:theme-text-muted focus:ring-theme-accent-primary/50 rounded-full px-4 py-3 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-6 sm:text-base"
               value={expiresDays.value as any}
               onInput$={(e) => {
                 const v = (e.target as HTMLInputElement).value;
@@ -238,10 +237,10 @@ export default component$(() => {
               }}
               min={1}
             />
-            <input
+            <Input
               type="number"
               placeholder="Max clicks (optional)"
-              class="glass text-theme-text-primary placeholder:theme-text-muted focus:ring-theme-accent-primary/50 rounded-full px-4 py-3 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-6 sm:text-base"
+              class="sm:col-span-2"
               value={maxClicks.value as any}
               onInput$={(e) => {
                 const v = (e.target as HTMLInputElement).value;
@@ -251,13 +250,9 @@ export default component$(() => {
             />
           </div>
           <div class="mt-4 flex justify-end">
-            <button
-              onClick$={submitCreate}
-              disabled={!url.value.trim() || creating.value}
-              class="btn-cute text-theme-text-primary rounded-full px-6 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
-            >
+            <Button onClick$={submitCreate} disabled={!url.value.trim() || creating.value}>
               {creating.value ? "Creating…" : "Create Link ✨"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -279,7 +274,13 @@ export default component$(() => {
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <a href={shortUrl} target="_blank" class="text-theme-accent-secondary hover:underline break-all">{shortUrl}</a>
-                      <button onClick$={() => copy(shortUrl)} class="text-xs underline">Copy</button>
+                      <button
+                        onClick$={() => copy(shortUrl)}
+                        class="text-theme-text-muted hover:text-theme-accent-primary shrink-0 transition-colors"
+                        title="Copy short URL"
+                      >
+                        <Copy class="h-4 w-4" />
+                      </button>
                     </div>
                     <div class="text-theme-text-secondary mt-1 text-xs break-all sm:text-sm">
                       → {link.url}
@@ -290,8 +291,21 @@ export default component$(() => {
                     </div>
                   </div>
                   <div class="flex items-center gap-2 self-end sm:self-auto">
-                    <a href={shortUrl} target="_blank" class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 rounded-full px-3 py-1 text-sm">Open</a>
-                    <button onClick$={() => handleDelete(link.id)} class="text-theme-accent-primary hover:bg-theme-accent-primary/20 rounded-full px-3 py-1 text-sm">Delete</button>
+                    <a
+                      href={shortUrl}
+                      target="_blank"
+                      class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors"
+                    >
+                      <ExternalLink class="h-4 w-4" />
+                      Open
+                    </a>
+                    <button
+                      onClick$={() => handleDelete(link.id)}
+                      class="text-theme-error hover:bg-theme-error/15 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors"
+                    >
+                      <Trash2 class="h-4 w-4" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               );

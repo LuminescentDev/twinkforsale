@@ -2,47 +2,41 @@ import { component$, $ } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 import { useCurrentUser } from "~/routes/layout";
 import { logout } from "~/lib/auth-client";
-import {
-  Home,
-  Upload,
-  Key,
-  Sparkle,
-  Settings,
-  LogOut,
-  Link as LinkIcon,
-  Plus,
-} from "lucide-icons-qwik";
+import { Home, Folder, Upload, Wrench, LogOut, Shield } from "lucide-icons-qwik";
 import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { LoginButton } from "~/components/auth/login-button";
+import { dashboardNav, isNavItemActive } from "~/lib/dashboard-nav";
+
+// Primary links shown inline on desktop. Everything else moved into the
+// dashboard sidebar (desktop) and the grouped mobile menu, so the top bar
+// stays uncluttered instead of jamming in every destination.
+const primaryLinks = [
+  { href: "/dashboard", label: "Dashboard", icon: Home, exact: true },
+  { href: "/dashboard/uploads", label: "Files", icon: Folder },
+  { href: "/upload", label: "Upload", icon: Upload },
+];
 
 export default component$(() => {
   const user = useCurrentUser();
   const signOut = $(() => logout());
   const location = useLocation();
-  const isCurrentPage = (path: string) => {
-    return (
-      location.url.pathname === path ||
-      location.url.pathname.startsWith(path + "/")
-    );
-  };
-  const isDashboardExact = () => {
-    const pathname = location.url.pathname;
-    return pathname === "/dashboard" || pathname === "/dashboard/";
-  };
-  const getNavLinkClasses = (isActive: boolean, isMobile = false) => {
-    const baseClasses = `font-medium transition-all duration-300 flex items-center gap-${isMobile ? "3" : "2"} whitespace-nowrap`;
-    const sizeClasses = isMobile
-      ? "px-4 py-3 rounded-xl"
-      : "px-4 py-2 rounded-full";
-    const activeClasses = isActive
-      ? "btn-cute text-white shadow-lg"
-      : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20";
+  const pathname = location.url.pathname;
 
-    return `${baseClasses} ${sizeClasses} ${activeClasses}`;
-  };
-  const buttonClasses =
-    "w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-3";
+  const desktopLink = (active: boolean) =>
+    `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+      active
+        ? "btn-cute text-white shadow-lg"
+        : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
+    }`;
+
+  const mobileLink = (active: boolean) =>
+    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+      active
+        ? "btn-cute text-white shadow-lg"
+        : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
+    }`;
+
   return (
     <Nav
       fixed
@@ -57,152 +51,96 @@ export default component$(() => {
         <div class="heart-gradient sm"></div>
         <span>twink.forsale</span>
       </Link>
-      {/* Desktop Center Navigation */}      {user.value && (
-        <div q:slot="center" class="hidden items-center space-x-3 lg:flex">          <Link href="/dashboard" class={getNavLinkClasses(isDashboardExact())}>
-            <Home class="h-4 w-4" />
-            Dashboard
-          </Link>          <Link
-            href="/dashboard/uploads"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/uploads"))}
-          >
-            <Upload class="h-4 w-4" />
-            Files
-          </Link>
-          <Link
-            href="/upload"
-            class={getNavLinkClasses(isCurrentPage("/upload"))}
-          >
-            <Plus class="h-4 w-4" />
-            Upload
-          </Link>
-          <Link
-            href="/dashboard/api-keys"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/api-keys"))}
-          >
-            <Key class="h-4 w-4" />
-            API Keys
-          </Link>{" "}          <Link
-            href="/dashboard/embed"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/embed"))}
-          >
-            <Sparkle class="h-4 w-4" />
-            Embed
-          </Link>          <Link
-            href="/dashboard/bio"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/bio"))}
-          >
-            <LinkIcon class="h-4 w-4" />
-            Bio
-          </Link>
-          <Link
-            href="/dashboard/settings"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/settings"))}
-          >
-            <Settings class="h-4 w-4" />
-            Settings
-          </Link>
-          <ThemeToggle variant="compact" class="mr-4" />
+
+      {/* Desktop primary links */}
+      {user.value && (
+        <div q:slot="center" class="hidden items-center gap-2 lg:flex">
+          {primaryLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              class={desktopLink(
+                link.exact
+                  ? pathname === link.href || pathname === link.href + "/"
+                  : pathname.startsWith(link.href),
+              )}
+            >
+              <link.icon class="h-4 w-4" />
+              {link.label}
+            </Link>
+          ))}
         </div>
       )}
-      {/* Desktop End Navigation */}
-      <div q:slot="end" class="hidden items-center space-x-3 lg:flex">
+
+      {/* Desktop right side */}
+      <div q:slot="end" class="hidden items-center gap-3 lg:flex">
         {user.value ? (
           <>
+            <ThemeToggle variant="compact" />
             <Link
               href="/setup/sharex"
-              class="btn-cute flex items-center gap-2 rounded-full px-5 py-2 font-medium !whitespace-nowrap text-white"
+              class="btn-cute flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium !whitespace-nowrap text-white"
             >
-              <Settings class="h-4 w-4" />
+              <Wrench class="h-4 w-4" />
               ShareX Setup
             </Link>
             <button
               onClick$={signOut}
-              class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex items-center gap-2 rounded-full px-4 py-2 !whitespace-nowrap transition-all duration-300"
+              class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex items-center gap-2 rounded-full px-4 py-2 text-sm !whitespace-nowrap transition-all duration-300"
             >
               <LogOut class="h-4 w-4" />
               Sign Out
             </button>
           </>
         ) : (
-          <LoginButton
-            class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 font-medium text-white"
-          />
+          <>
+            <ThemeToggle variant="compact" />
+            <LoginButton class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 text-sm font-medium text-white" />
+          </>
         )}
       </div>
-      {/* Mobile Navigation Items */}
+
+      {/* Mobile menu — full grouped navigation (sidebar is desktop-only) */}
       {user.value ? (
         <>
-          <Link
-            href="/dashboard"
-            q:slot="mobile"
-            class={getNavLinkClasses(isDashboardExact(), true)}
-          >
-            <Home class="h-5 w-5" />
-            Dashboard
-          </Link>          <Link
-            href="/dashboard/uploads"
-            q:slot="mobile"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/uploads"), true)}
-          >
-            <Upload class="h-5 w-5" />
-            Files
-          </Link>
-          <Link
-            href="/upload"
-            q:slot="mobile"
-            class={getNavLinkClasses(isCurrentPage("/upload"), true)}
-          >
-            <Plus class="h-5 w-5" />
-            Upload
-          </Link>
-          <Link
-            href="/dashboard/api-keys"
-            q:slot="mobile"
-            class={getNavLinkClasses(
-              isCurrentPage("/dashboard/api-keys"),
-              true,
-            )}
-          >
-            <Key class="h-5 w-5" />
-            API Keys
-          </Link>{" "}          <Link
-            href="/dashboard/embed"
-            q:slot="mobile"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/embed"), true)}
-          >
-            <Sparkle class="h-5 w-5" />
-            Embed
-          </Link>          <Link
-            href="/dashboard/bio"
-            q:slot="mobile"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/bio"), true)}
-          >
-            <LinkIcon class="h-5 w-5" />
-            Bio
-          </Link>
-          <Link
-            href="/dashboard/settings"
-            q:slot="mobile"
-            class={getNavLinkClasses(isCurrentPage("/dashboard/settings"), true)}
-          >
-            <Settings class="h-5 w-5" />
-            Settings
-          </Link>
-          <Link
-            href="/setup/sharex"
-            q:slot="mobile"
-            class="btn-cute flex items-center gap-3 rounded-xl px-4 py-3 font-medium !whitespace-nowrap text-white transition-all duration-300"
-          >
-            <Settings class="h-5 w-5" />
-            ShareX Setup
-          </Link>
-          <div q:slot="mobile" class="px-4 py-3">
+          {dashboardNav.map((group) => (
+            <div key={group.title} q:slot="mobile" class="px-2 pt-2">
+              <div class="text-theme-text-muted mb-1 px-2 text-xs font-semibold tracking-wider uppercase">
+                {group.title}
+              </div>
+              <div class="space-y-1">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    class={mobileLink(isNavItemActive(pathname, item))}
+                  >
+                    <item.icon class="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {user.value.isAdmin && (
+            <Link
+              href="/admin"
+              q:slot="mobile"
+              class={`mx-2 mt-2 ${mobileLink(pathname.startsWith("/admin"))}`}
+            >
+              <Shield class="h-5 w-5" />
+              Admin Panel
+            </Link>
+          )}
+
+          <div q:slot="mobile" class="mt-2 border-t border-theme-card-border px-4 py-3">
             <ThemeToggle variant="dropdown" showLabel={true} />
           </div>
           <button
             onClick$={signOut}
             q:slot="mobile"
-            class={`${buttonClasses} text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 !whitespace-nowrap`}
+            class={`mx-2 ${mobileLink(false)}`}
           >
             <LogOut class="h-5 w-5" />
             Sign Out
@@ -215,7 +153,7 @@ export default component$(() => {
           </div>
           <LoginButton
             q:slot="mobile"
-            class={`${buttonClasses} btn-cute text-white`}
+            class={`mx-2 ${mobileLink(false)} btn-cute text-white`}
             iconClass="h-5 w-5"
           />
         </>

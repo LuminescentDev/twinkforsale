@@ -282,6 +282,7 @@ export default component$(() => {
   return (
     <div>
       <PageHeader
+        align="left"
         title="Discord Embed Settings~"
         icon={Share}
         subtitle="Customize how your cute uploads appear when shared on Discord and other platforms! (◕‿◕)♡"

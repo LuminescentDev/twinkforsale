@@ -188,6 +188,33 @@
   left: 100%;
 }
 
+/* Secondary (glass) button. Defined in the components layer so Tailwind
+   utilities on the element (px-*, rounded-*, etc.) still win. Previously this
+   class was referenced in several places but never defined, leaving those
+   buttons completely unstyled. */
+@layer components {
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    color: var(--theme-text-primary);
+    background: var(--theme-glass-bg);
+    border: 1px solid var(--theme-glass-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    background: color-mix(in srgb, var(--theme-bg-tertiary) 25%, transparent);
+    border-color: var(--theme-accent-primary);
+  }
+}
+
 /* Static card surface — same look as card-cute but no hover lift/glow.
    Used for non-interactive containers via the <Card> primitive. */
 .card-static {

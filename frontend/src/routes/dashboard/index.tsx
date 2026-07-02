@@ -1,19 +1,13 @@
 import { component$, $, useContext } from "@builder.io/qwik";
-import { routeLoader$, Link } from "@builder.io/qwik-city";
+import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
   Folder,
   Eye,
   HardDrive,
   Key,
-  Settings,
-  Share,
   File,
   TrendingUp,
-  Sliders,
-  Upload,
-  Link as LinkIcon,
-  Link2 as ChainIcon,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
 import { AnalyticsChart } from "~/components/charts/analytics-chart";
@@ -69,72 +63,6 @@ export const useUserData = routeLoader$(async (requestEvent) => {
   };
 });
 
-const quickActions = [
-  {
-    href: "/dashboard/links",
-    icon: ChainIcon,
-    accent: 1,
-    title: "Short Links",
-    body: "Create and manage /l/<code> short URLs with limits and expiry.",
-  },
-  {
-    href: "/dashboard/uploads",
-    icon: Upload,
-    accent: 3,
-    title: "Manage Files",
-    body: "View and manage your uploaded files with expiration and view limits~ (◕‿◕)♡",
-  },
-  {
-    href: "/dashboard/api-keys",
-    icon: Key,
-    accent: 1,
-    title: "API Keys",
-    body: "Create and manage API keys for ShareX integration~ Keep them safe! (◡ ‿ ◡) ♡",
-  },
-  {
-    href: "/dashboard/embed",
-    icon: Share,
-    accent: 2,
-    title: "Discord Embeds",
-    body: "Customize how your uploads appear on Discord and social media~ Make them extra cute! uwu",
-  },
-  {
-    href: "/dashboard/bio",
-    icon: LinkIcon,
-    accent: 0,
-    title: "Bio Links",
-    body: "Create your custom bio link page to share all your important links in one place~ ✨",
-  },
-  {
-    href: "/dashboard/analytics",
-    icon: TrendingUp,
-    accent: 3,
-    title: "Detailed Analytics",
-    body: "Deep dive into your file analytics with detailed insights and charts~ 📊",
-  },
-  {
-    href: "/dashboard/settings",
-    icon: Sliders,
-    accent: 3,
-    title: "Settings",
-    body: "Configure upload domains, themes, and personalize your experience~ (◕‿◕)♡",
-  },
-  {
-    href: "/setup/sharex",
-    icon: Settings,
-    accent: 3,
-    title: "ShareX Setup",
-    body: "Download your personalized ShareX configuration~ So easy even a sleepy catboy could do it! (=^･ω･^=)",
-  },
-] as const;
-
-const accentGradients = [
-  "from-theme-accent-primary to-theme-accent-secondary",
-  "from-theme-accent-secondary to-theme-accent-tertiary",
-  "from-theme-accent-tertiary to-theme-accent-quaternary",
-  "from-theme-accent-quaternary to-theme-accent-primary",
-];
-
 export default component$(() => {
   const userData = useUserData();
   const imagePreviewStore = useContext(ImagePreviewContext);
@@ -149,6 +77,7 @@ export default component$(() => {
   return (
     <>
       <PageHeader
+        align="left"
         title={`Welcome back, ${userData.value.user.name || "cutie"}!`}
         subtitle="Your cute dashboard is ready~ Manage uploads, API keys, and more! (◕‿◕)♡"
       />
@@ -158,15 +87,6 @@ export default component$(() => {
           Your account is awaiting admin approval. You'll be able to upload files
           and create API keys once approved.
         </Callout>
-      )}
-
-      {userData.value.user.isAdmin && (
-        <div class="mb-6 text-center sm:mb-8">
-          <Button href="/admin" variant="glass" size="sm">
-            <Settings class="h-4 w-4" />
-            Admin Dashboard
-          </Button>
-        </div>
       )}
 
       {/* Stats */}
@@ -201,7 +121,7 @@ export default component$(() => {
       </div>
 
       {/* Analytics */}
-      <Section title="Your Analytics — Last 7 Days" icon={TrendingUp} align="center">
+      <Section title="Your Analytics — Last 7 Days" icon={TrendingUp}>
         <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
           <AnalyticsChart
             data={userData.value.analyticsData || []}
@@ -221,31 +141,6 @@ export default component$(() => {
             title="New Uploads"
             color="var(--theme-accent-tertiary)"
           />
-        </div>
-      </Section>
-
-      {/* Quick Actions */}
-      <Section title="Quick Actions" align="center">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href} class="group">
-              <Card hover padding="md" class="h-full">
-                <div class="mb-3 flex items-center sm:mb-4">
-                  <div
-                    class={`pulse-soft rounded-full bg-gradient-to-br p-2 sm:p-3 ${accentGradients[action.accent]}`}
-                  >
-                    <action.icon class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <h3 class="group-hover:text-gradient-cute text-theme-text-primary ml-2 text-base font-medium transition-all duration-300 sm:ml-3 sm:text-lg">
-                    {action.title}
-                  </h3>
-                </div>
-                <p class="text-theme-text-secondary text-xs sm:text-sm">
-                  {action.body}
-                </p>
-              </Card>
-            </Link>
-          ))}
         </div>
       </Section>
 

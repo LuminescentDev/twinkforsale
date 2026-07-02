@@ -1,10 +1,10 @@
 import { component$, useSignal, $ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Key } from "lucide-icons-qwik";
+import { Key, Trash2, Copy } from "lucide-icons-qwik";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Callout, PageHeader } from "~/components/ui";
+import { Button, Callout, Input, PageHeader } from "~/components/ui";
 
 export const useApiKeys = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -103,6 +103,7 @@ export default component$(() => {
   return (
     <>
       <PageHeader
+        align="left"
         title="API Keys Manager"
         icon={Key}
         subtitle="Create and manage API keys for ShareX integration~ Keep them safe and secure! (◕‿◕)♡"
@@ -121,11 +122,10 @@ export default component$(() => {
             Create New API Key
           </h2>
           <div class="flex flex-col gap-3 sm:flex-row sm:gap-4">
-            {" "}
-            <input
+            <Input
               type="text"
               placeholder="API Key Name (e.g., ShareX, Development) uwu"
-              class="glass text-theme-text-primary placeholder:theme-text-muted focus:ring-theme-accent-primary/50 flex-1 rounded-full px-4 py-3 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-6 sm:text-base"
+              class="flex-1"
               value={newKeyName.value}
               onInput$={(e) => {
                 newKeyName.value = (e.target as HTMLInputElement).value;
@@ -136,13 +136,12 @@ export default component$(() => {
                 }
               }}
             />
-            <button
+            <Button
               onClick$={handleCreateApiKey}
               disabled={!newKeyName.value.trim() || isCreating.value}
-              class="btn-cute text-theme-text-primary w-full rounded-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6 sm:text-base"
             >
               {isCreating.value ? "Creating... ⏳" : "Create API Key 🚀"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -237,18 +236,19 @@ export default component$(() => {
                       </code>
                       <button
                         onClick$={() => copyToClipboard(apiKey.key)}
-                        class="text-theme-accent-tertiary hover:text-theme-accent-tertiary hover:bg-theme-accent-primary/20 w-full rounded-full px-2 py-1 text-center text-xs transition-all duration-300 sm:w-auto sm:px-3 sm:text-sm"
+                        class="text-theme-accent-tertiary hover:text-theme-accent-tertiary hover:bg-theme-accent-primary/20 inline-flex w-full items-center justify-center gap-1.5 rounded-full px-2 py-1 text-center text-xs transition-all duration-300 sm:w-auto sm:px-3 sm:text-sm"
                       >
-                        Copy Full Key 📋
+                        <Copy class="h-3.5 w-3.5" />
+                        Copy Full Key
                       </button>
                     </div>
                   </div>
                   <button
                     onClick$={() => handleDeleteApiKey(apiKey.id, apiKey.name)}
-                    class="text-theme-accent-primary hover:text-theme-accent-primary hover:bg-theme-accent-primary/20 self-end rounded-full p-2 transition-all duration-300 sm:self-auto sm:p-3"
+                    class="text-theme-error hover:bg-theme-error/15 self-end rounded-full p-2 transition-all duration-300 sm:self-auto sm:p-3"
                     title="Delete API Key"
                   >
-                    🗑️
+                    <Trash2 class="h-5 w-5" />
                   </button>
                 </div>
               </div>

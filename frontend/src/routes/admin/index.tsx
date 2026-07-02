@@ -16,7 +16,7 @@ import { UserAnalytics } from "~/components/charts/user-analytics";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
-import { PageHeader } from "~/components/ui";
+import { PageHeader, StatCard } from "~/components/ui";
 
 const DEFAULT_STORAGE_LIMIT = 10737418240;
 
@@ -219,72 +219,35 @@ export default component$(() => {
       )}
       {/* Stats Cards */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="rounded-full bg-gradient-to-br from-pink-500 to-purple-500 p-2 sm:p-3">
-              <Users class="h-4 w-4 text-white sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Total Users
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value?.users.length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="rounded-full bg-gradient-to-br from-green-500 to-emerald-500 p-2 sm:p-3">
-              <CheckCircle class="h-4 w-4 text-white sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Approved
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value?.users.filter((u) => u.isApproved).length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 p-2 sm:p-3">
-              <Ban class="h-4 w-4 text-white sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                Pending
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value?.users.filter((u) => !u.isApproved).length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center">
-            <div class="rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 p-2 sm:p-3">
-              <Users class="h-4 w-4 text-white sm:h-6 sm:w-6" />
-            </div>
-            <div class="ml-3 sm:ml-4">
-              <p class="text-theme-text-secondary text-xs font-medium sm:text-sm">
-                New Users (7d)
-              </p>
-              <p class="text-theme-text-primary text-lg font-bold sm:text-2xl">
-                {userData.value?.analyticsData?.reduce(
-                  (sum, day) => sum + (day.usersRegistered || 0),
-                  0,
-                ) || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={Users}
+          accent={0}
+          label="Total Users"
+          value={userData.value?.users.length || 0}
+        />
+        <StatCard
+          icon={CheckCircle}
+          accent={1}
+          label="Approved"
+          value={userData.value?.users.filter((u) => u.isApproved).length || 0}
+        />
+        <StatCard
+          icon={Ban}
+          accent={2}
+          label="Pending"
+          value={userData.value?.users.filter((u) => !u.isApproved).length || 0}
+        />
+        <StatCard
+          icon={Users}
+          accent={3}
+          label="New Users (7d)"
+          value={
+            userData.value?.analyticsData?.reduce(
+              (sum, day) => sum + (day.usersRegistered || 0),
+              0,
+            ) || 0
+          }
+        />
       </div>
       {/* Analytics Section */}
       <div class="mb-6 sm:mb-8">
