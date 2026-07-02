@@ -18,7 +18,8 @@ public sealed class DiscordCallbackEndpoint(
     AppDbContext dbContext,
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOptions> discordOptions,
-    IOptions<AppOptions> appOptions) : EndpointWithoutRequest
+    IOptions<AppOptions> appOptions,
+    ILogger<DiscordCallbackEndpoint> logger) : EndpointWithoutRequest
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -62,7 +63,8 @@ public sealed class DiscordCallbackEndpoint(
             return;
         }
 
-        var user = await UpsertUserAsync(discordUser, token, ct);
+        var result = await UpsertUserAsync(discordUser, token, ct);
+        var user = result.User;
         var sessionToken = CreateSessionToken();
         dbContext.Sessions.Add(new Session
         {
@@ -72,6 +74,11 @@ public sealed class DiscordCallbackEndpoint(
         });
 
         await dbContext.SaveChangesAsync(ct);
+
+        if (result.Created)
+        {
+            await TryJoinConfiguredGuildAsync(discordUser.Id, token.AccessToken, ct);
+        }
 
         HttpContext.Response.Cookies.Append(BrowserSessionDefaults.SessionCookieName, sessionToken, new CookieOptions
         {
@@ -125,7 +132,7 @@ public sealed class DiscordCallbackEndpoint(
         return await JsonSerializer.DeserializeAsync<DiscordUserResponse>(stream, JsonOptions, ct);
     }
 
-    private async Task<User> UpsertUserAsync(DiscordUserResponse discordUser, DiscordTokenResponse token, CancellationToken ct)
+    private async Task<UserUpsertResult> UpsertUserAsync(DiscordUserResponse discordUser, DiscordTokenResponse token, CancellationToken ct)
     {
         var account = await dbContext.Accounts
             .Include(x => x.User)
@@ -141,14 +148,16 @@ public sealed class DiscordCallbackEndpoint(
             : $"https://cdn.discordapp.com/avatars/{discordUser.Id}/{discordUser.Avatar}.png?size=256";
 
         User user;
+        var created = false;
         if (account?.User is not null)
         {
             user = account.User;
         }
         else
         {
-            user = await dbContext.Users.Include(x => x.Settings).FirstOrDefaultAsync(x => x.Email == email, ct)
-                ?? new User { Email = email, CreatedAt = DateTimeOffset.UtcNow };
+            var existingUser = await dbContext.Users.Include(x => x.Settings).FirstOrDefaultAsync(x => x.Email == email, ct);
+            user = existingUser ?? new User { Email = email, CreatedAt = DateTimeOffset.UtcNow };
+            created = existingUser is null;
 
             if (dbContext.Entry(user).State == EntityState.Detached)
             {
@@ -193,7 +202,44 @@ public sealed class DiscordCallbackEndpoint(
         account.TokenType = token.TokenType;
         account.Scope = token.Scope;
 
-        return user;
+        return new UserUpsertResult(user, created);
+    }
+
+    private async Task TryJoinConfiguredGuildAsync(string discordUserId, string accessToken, CancellationToken ct)
+    {
+        var options = discordOptions.Value;
+        if (string.IsNullOrWhiteSpace(options.GuildId) || string.IsNullOrWhiteSpace(options.BotToken))
+        {
+            return;
+        }
+
+        using var request = new HttpRequestMessage(
+            System.Net.Http.HttpMethod.Put,
+            $"https://discord.com/api/v10/guilds/{Uri.EscapeDataString(options.GuildId)}/members/{Uri.EscapeDataString(discordUserId)}")
+        {
+            Content = new StringContent(
+                JsonSerializer.Serialize(new AddGuildMemberRequest(accessToken), JsonOptions),
+                Encoding.UTF8,
+                "application/json")
+        };
+
+        request.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bot",
+            options.BotToken.StartsWith("Bot ", StringComparison.OrdinalIgnoreCase)
+                ? options.BotToken[4..].Trim()
+                : options.BotToken.Trim());
+
+        var response = await httpClientFactory.CreateClient().SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            logger.LogWarning(
+                "Failed to add Discord user {DiscordUserId} to guild {GuildId}. Status: {StatusCode}. Body: {Body}",
+                discordUserId,
+                options.GuildId,
+                response.StatusCode,
+                body);
+        }
     }
 
     private async Task RedirectToFrontendAsync(string returnTo, string? frontendOrigin, CancellationToken ct)
@@ -240,4 +286,9 @@ public sealed class DiscordCallbackEndpoint(
         [property: JsonPropertyName("global_name")] string? GlobalName,
         [property: JsonPropertyName("email")] string? Email,
         [property: JsonPropertyName("avatar")] string? Avatar);
+
+    private sealed record UserUpsertResult(User User, bool Created);
+
+    private sealed record AddGuildMemberRequest(
+        [property: JsonPropertyName("access_token")] string AccessToken);
 }

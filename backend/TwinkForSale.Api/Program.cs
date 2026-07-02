@@ -138,6 +138,8 @@ static Dictionary<string, string?> BuildLegacyEnvironmentConfiguration()
     var values = new Dictionary<string, string?>();
 
     AddIfModernEnvironmentMissing(values, "App__BaseUrl", "App:BaseUrl", "BASE_URL");
+    AddIfModernEnvironmentMissing(values, "Discord__BotToken", "Discord:BotToken", "DISCORD_BOT_TOKEN");
+    AddIfModernEnvironmentMissing(values, "Discord__GuildId", "Discord:GuildId", "DISCORD_GUILD_ID");
     AddIfModernEnvironmentMissing(values, "Storage__LocalPath", "Storage:LocalPath", "UPLOAD_DIR");
     AddIfModernEnvironmentMissing(values, "Storage__R2__AccountId", "Storage:R2:AccountId", "R2_ACCOUNT_ID");
     AddIfModernEnvironmentMissing(values, "Storage__R2__AccessKeyId", "Storage:R2:AccessKeyId", "R2_ACCESS_KEY_ID");

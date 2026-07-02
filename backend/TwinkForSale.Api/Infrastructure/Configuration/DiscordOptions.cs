@@ -7,4 +7,8 @@ public sealed class DiscordOptions
     public string ClientId { get; init; } = string.Empty;
 
     public string ClientSecret { get; init; } = string.Empty;
+
+    public string BotToken { get; init; } = string.Empty;
+
+    public string GuildId { get; init; } = string.Empty;
 }

@@ -42,9 +42,8 @@ public sealed class DiscordLoginEndpoint(
             ["client_id"] = options.ClientId,
             ["redirect_uri"] = callbackUrl,
             ["response_type"] = "code",
-            ["scope"] = "identify email",
-            ["state"] = state,
-            ["prompt"] = "none"
+            ["scope"] = "identify email guilds.join",
+            ["state"] = state
         };
 
         await SendRedirectAsync(
