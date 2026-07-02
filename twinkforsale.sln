@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwinkForSale.Api", "backend\TwinkForSale.Api\TwinkForSale.Api.csproj", "{AE21311A-84B6-4866-A6B1-A4A020997929}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwinkForSale.Migrator", "backend\TwinkForSale.Migrator\TwinkForSale.Migrator.csproj", "{F21B9AB6-596F-4764-8047-329CEAB8CBEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,12 +31,25 @@ Global
 		{AE21311A-84B6-4866-A6B1-A4A020997929}.Release|x64.Build.0 = Release|Any CPU
 		{AE21311A-84B6-4866-A6B1-A4A020997929}.Release|x86.ActiveCfg = Release|Any CPU
 		{AE21311A-84B6-4866-A6B1-A4A020997929}.Release|x86.Build.0 = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|x64.Build.0 = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Debug|x86.Build.0 = Debug|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|x64.ActiveCfg = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|x64.Build.0 = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|x86.ActiveCfg = Release|Any CPU
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AE21311A-84B6-4866-A6B1-A4A020997929} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{F21B9AB6-596F-4764-8047-329CEAB8CBEA} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {125CF571-0791-4BC0-B21D-5E7591B90FEE}
