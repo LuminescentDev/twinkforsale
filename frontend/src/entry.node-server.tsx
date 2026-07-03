@@ -33,19 +33,40 @@ const PORT = process.env.PORT || process.env.NODE_PORT || 3004;
 const API_INTERNAL_BASE_URL = (
   process.env.API_INTERNAL_BASE_URL || "http://localhost:5000"
 ).replace(/\/$/, "");
+// Paths owned by the C# backend, proxied for every method. Note `/uploads`
+// (plural) is the JSON API and is safe to forward wholesale; the singular
+// `/upload` is handled separately below because it collides with a frontend
+// page.
 const backendProxyPrefixes = [
   "/f/",
   "/l/",
-  "/upload",
   "/uploads",
   "/api/upload",
   "/api/uploads",
   "/api/oembed",
 ];
 
-function shouldProxyToBackend(url: string | undefined): boolean {
+function shouldProxyToBackend(req: IncomingMessage): boolean {
+  const url = req.url;
   if (!url) return false;
-  return backendProxyPrefixes.some((prefix) => url.startsWith(prefix));
+  const path = url.split("?")[0];
+  if (backendProxyPrefixes.some((prefix) => path.startsWith(prefix))) {
+    return true;
+  }
+  // ShareX posts uploads to `/upload` (see sharex-config.ts), which is the same
+  // path as the frontend `/upload` page. Forward only the write to the backend
+  // so `GET /upload` and its `/upload/q-data.json` still render from Qwik — the
+  // in-app uploader itself uses the `/uploads` API, not this path.
+  const method = (req.method ?? "GET").toUpperCase();
+  if (
+    (path === "/upload" || path === "/upload/") &&
+    method !== "GET" &&
+    method !== "HEAD" &&
+    method !== "OPTIONS"
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
@@ -135,7 +156,7 @@ server.on("request", (req, res) => {
     );
   }
 
-  if (shouldProxyToBackend(req.url)) {
+  if (shouldProxyToBackend(req)) {
     proxyToBackend(req, res).catch((error) => {
       console.error("Backend proxy error:", error);
       if (!res.headersSent) {
