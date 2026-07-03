@@ -1,30 +1,87 @@
-version: '3.8'
-
 services:
-  twinkforsale:
-    build: .
+  twink-frontend:
+    image: twinkforsale-frontend:local
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=${DATABASE_URL:-file:/app/data/prod.db}
-      # Add your environment variables here or use an .env file
-      - AUTH_SECRET=${AUTH_SECRET}
-      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
-      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
-      - BASE_URL=${BASE_URL:-https://test.twink.forsale}
-    volumes:
-      # Persistent storage for uploads
-      - uploads_data:/app/uploads
-      # Persistent storage for SQLite database
-      - db_data:/app/data
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://twink-api:8080}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      twink-api:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://0.0.0.0:3000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
+    restart: unless-stopped
+
+  twink-api:
+    image: twinkforsale-backend:local
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Default: ${CONNECTION_STRING:-Host=postgres;Port=5432;Database=twinkforsale;Username=postgres;Password=postgres}
+      App__BaseUrl: ${API_BASE_URL:-http://localhost:5000}
+      App__FrontendUrl: ${FRONTEND_URL:-http://localhost:3000}
+      App__CookieDomain: ${COOKIE_DOMAIN:-.twink.forsale}
+      Auth__JwtSecret: ${AUTH_JWT_SECRET:-dev-change-me}
+      Discord__ClientId: ${DISCORD_CLIENT_ID:-}
+      Discord__ClientSecret: ${DISCORD_CLIENT_SECRET:-}
+      Discord__BotToken: ${DISCORD_BOT_TOKEN:-}
+      Discord__GuildId: ${DISCORD_GUILD_ID:-1384474657603850271}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      USE_R2_STORAGE: ${USE_R2_STORAGE:-false}
+      Storage__LocalPath: /app/uploads
+      Storage__R2__AccountId: ${R2_ACCOUNT_ID:-}
+      Storage__R2__AccessKeyId: ${R2_ACCESS_KEY_ID:-}
+      Storage__R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY:-}
+      Storage__R2__BucketName: ${R2_BUCKET_NAME:-}
+      Storage__R2__PublicUrl: ${R2_PUBLIC_URL:-}
+    ports:
+      - "${BACKEND_PORT:-5000}:8080"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-twinkforsale}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:
+  postgres_data:
   uploads_data:
-  db_data:

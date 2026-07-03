@@ -1,0 +1,35 @@
+services:
+  twink-api:
+    image: twinkforsale-backend:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Default: ${CONNECTION_STRING:-Host=postgres;Port=5432;Database=twinkforsale;Username=postgres;Password=postgres}
+      App__BaseUrl: ${API_BASE_URL:-http://localhost:5000}
+      App__FrontendUrl: ${FRONTEND_URL:-http://localhost:3000}
+      App__CookieDomain: ${COOKIE_DOMAIN:-.twink.forsale}
+      Auth__JwtSecret: ${AUTH_JWT_SECRET:-dev-change-me}
+      Discord__ClientId: ${DISCORD_CLIENT_ID:-}
+      Discord__ClientSecret: ${DISCORD_CLIENT_SECRET:-}
+      Discord__BotToken: ${DISCORD_BOT_TOKEN:-}
+      Discord__GuildId: ${DISCORD_GUILD_ID:-1384474657603850271}
+      Storage__Provider: ${STORAGE_PROVIDER:-s3}
+      Storage__R2__AccountId: ${R2_ACCOUNT_ID:-}
+      Storage__R2__AccessKeyId: ${R2_ACCESS_KEY_ID:-}
+      Storage__R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY:-}
+      Storage__R2__BucketName: ${R2_BUCKET_NAME:-}
+      Storage__R2__PublicUrl: ${R2_PUBLIC_URL:-}
+    ports:
+      - "${BACKEND_PORT:-5000}:8080"
+    volumes:
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped

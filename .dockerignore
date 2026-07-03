@@ -8,8 +8,12 @@ node_modules
 
 # Build artifacts
 dist
+frontend/dist
+frontend/server
 tmp
+frontend/tmp
 .qwik
+frontend/.qwik
 
 # Development files
 .env*

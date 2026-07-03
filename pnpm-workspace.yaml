@@ -1,3 +1,11 @@
+packages:
+  - frontend
+
+packageExtensions:
+  '@luminescent/ui@*':
+    peerDependencies:
+      tailwindcss: '*'
+
 onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
