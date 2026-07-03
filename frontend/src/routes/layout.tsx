@@ -61,6 +61,16 @@ export default component$(() => {
     !location.url.pathname.startsWith("/f/") &&
     !location.url.pathname.startsWith("/upload") &&
     location.url.pathname !== "/";
+
+  // App-shell pages (dashboard/admin/upload/setup) render a sidebar + content,
+  // so they need a wider gutter than the centered marketing/legal pages —
+  // otherwise the ~256px sidebar leaves the content column cramped on wide
+  // screens.
+  const isAppPage = ["/dashboard", "/admin", "/upload", "/setup"].some(
+    (r) =>
+      location.url.pathname === r ||
+      location.url.pathname.startsWith(r + "/"),
+  );
   // Apply server-side theme only on initial load to prevent flash
   // Don't track serverThemeData to avoid overriding client-side theme changes on navigation
   // eslint-disable-next-line qwik/no-use-visible-task
@@ -200,7 +210,11 @@ export default component$(() => {
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
           )}          <Navigation />
-          <div class="relative z-10 mx-auto mt-18 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div
+            class={`relative z-10 mx-auto mt-18 px-4 py-8 sm:px-6 lg:px-8 ${
+              isAppPage ? "max-w-[110rem]" : "max-w-7xl"
+            }`}
+          >
             <Slot />
           </div>
           <Footer />
