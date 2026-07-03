@@ -607,7 +607,7 @@ export const api = {
 
   admin: {
     users: (o?: CallOpts) =>
-      apiFetch<{ users: AdminUserDto[] }>("/admin/users", o),
+      apiFetch<{ users: AdminUserDto[] }>("/api/admin/users", o),
     updateUser: (
       id: string,
       body: {
@@ -619,15 +619,15 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ success: boolean }>(`/admin/users/${id}`, {
+      apiFetch<{ success: boolean }>(`/api/admin/users/${id}`, {
         ...o,
         method: "PUT",
         body,
       }),
     analytics: (o?: CallOpts) =>
-      apiFetch<AdminAnalyticsResponse>("/admin/analytics", o),
+      apiFetch<AdminAnalyticsResponse>("/api/admin/analytics", o),
     events: (o?: CallOpts) =>
-      apiFetch<{ events: EventDto[] }>("/admin/events", o),
+      apiFetch<{ events: EventDto[] }>("/api/admin/events", o),
     createEvent: (
       body: {
         type: string;
@@ -638,18 +638,18 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ id: string }>("/admin/events", {
+      apiFetch<{ id: string }>("/api/admin/events", {
         ...o,
         method: "POST",
         body,
       }),
     deleteEvent: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/admin/events/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/api/admin/events/${id}`, { ...o, method: "DELETE" }),
     health: (o?: CallOpts) =>
-      apiFetch<AdminHealthResponse>("/admin/health", o),
-    bioLimits: (o?: CallOpts) => apiFetch<unknown>("/admin/bio-limits", o),
+      apiFetch<AdminHealthResponse>("/api/admin/health", o),
+    bioLimits: (o?: CallOpts) => apiFetch<unknown>("/api/admin/bio-limits", o),
     updateBioLimits: (userId: string, body: unknown, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>(`/admin/bio-limits/${userId}`, {
+      apiFetch<{ success: boolean }>(`/api/admin/bio-limits/${userId}`, {
         ...o,
         method: "PUT",
         body,
@@ -658,7 +658,7 @@ export const api = {
 
   domains: {
     list: (o?: CallOpts) =>
-      apiFetch<{ domains: DomainDto[] }>("/admin/domains", o),
+      apiFetch<{ domains: DomainDto[] }>("/api/admin/domains", o),
     create: (
       body: {
         domain: string;
@@ -669,19 +669,19 @@ export const api = {
       },
       o?: CallOpts,
     ) =>
-      apiFetch<{ id: string }>("/admin/domains", {
+      apiFetch<{ id: string }>("/api/admin/domains", {
         ...o,
         method: "POST",
         body,
       }),
     update: (id: string, body: Partial<DomainDto>, o?: CallOpts) =>
-      apiFetch<{ success: boolean }>(`/admin/domains/${id}`, {
+      apiFetch<{ success: boolean }>(`/api/admin/domains/${id}`, {
         ...o,
         method: "PUT",
         body,
       }),
     delete: (id: string, o?: CallOpts) =>
-      apiFetch<void>(`/admin/domains/${id}`, { ...o, method: "DELETE" }),
+      apiFetch<void>(`/api/admin/domains/${id}`, { ...o, method: "DELETE" }),
   },
 
   analytics: {

@@ -9,7 +9,7 @@ public sealed class ListEventsEndpoint(AppDbContext dbContext) : EndpointWithout
 {
     public override void Configure()
     {
-        Get("/admin/events");
+        Get("/api/admin/events", "/admin/events");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

@@ -41,6 +41,7 @@ const backendProxyPrefixes = [
   "/f/",
   "/l/",
   "/uploads",
+  "/api/admin",
   "/api/upload",
   "/api/uploads",
   "/api/oembed",

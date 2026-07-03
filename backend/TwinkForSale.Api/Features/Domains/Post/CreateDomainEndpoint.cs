@@ -9,7 +9,7 @@ public sealed class CreateDomainEndpoint(AppDbContext dbContext) : Endpoint<Crea
 {
     public override void Configure()
     {
-        Post("/admin/domains");
+        Post("/api/admin/domains", "/admin/domains");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

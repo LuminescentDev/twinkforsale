@@ -9,7 +9,7 @@ public sealed class CreateEventEndpoint(AppDbContext dbContext) : Endpoint<Creat
 {
     public override void Configure()
     {
-        Post("/admin/events");
+        Post("/api/admin/events", "/admin/events");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }
