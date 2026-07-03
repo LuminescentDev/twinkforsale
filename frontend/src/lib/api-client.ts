@@ -338,6 +338,7 @@ export interface DomainDto {
   isActive: boolean;
   isDefault: boolean;
   supportsSubdomains: boolean;
+  userSettingsCount: number;
 }
 
 export interface EventDto {
