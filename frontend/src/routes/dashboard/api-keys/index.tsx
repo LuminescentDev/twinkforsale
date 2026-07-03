@@ -1,7 +1,7 @@
 import { component$, useSignal, $ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Key, Trash2, Copy } from "lucide-icons-qwik";
+import { Key, Trash2, Copy, Rocket, Check, CheckCircle } from "lucide-icons-qwik";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { Button, Callout, Input, PageHeader } from "~/components/ui";
@@ -140,7 +140,14 @@ export default component$(() => {
               onClick$={handleCreateApiKey}
               disabled={!newKeyName.value.trim() || isCreating.value}
             >
-              {isCreating.value ? "Creating... ⏳" : "Create API Key 🚀"}
+              {isCreating.value ? (
+                "Creating..."
+              ) : (
+                <>
+                  <Rocket class="h-4 w-4" />
+                  Create API Key
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -148,8 +155,9 @@ export default component$(() => {
       {/* New Key Display */}
       {showNewKey.value && (
         <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mb-6 rounded-2xl border p-4 sm:mb-8 sm:p-6">
-          <h3 class="text-theme-accent-secondary mb-2 flex flex-wrap items-center text-base font-bold sm:text-lg">
-            API Key Created! 🎉 <span class="sparkle ml-2">✨</span>
+          <h3 class="text-theme-accent-secondary mb-2 flex flex-wrap items-center gap-2 text-base font-bold sm:text-lg">
+            <CheckCircle class="h-5 w-5" />
+            API Key Created!
           </h3>
           <p class="text-theme-text-secondary mb-4 text-sm sm:text-base">
             Save this API key now~ For security reasons, it won't be shown
@@ -167,18 +175,19 @@ export default component$(() => {
               </div>
               <button
                 onClick$={() => copyToClipboard(showNewKey.value!.key)}
-                class="btn-cute text-theme-text-primary w-full rounded-full px-3 py-2 text-xs sm:w-auto sm:px-4 sm:text-sm"
+                class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-3 py-2 text-xs sm:w-auto sm:px-4 sm:text-sm"
               >
-                {" "}
-                Copy 📋
+                <Copy class="h-4 w-4" />
+                Copy
               </button>
             </div>
           </div>
           <button
             onClick$={() => (showNewKey.value = null)}
-            class="text-theme-accent-tertiary hover:text-theme-text-primary mt-4 text-sm underline"
+            class="text-theme-accent-tertiary hover:text-theme-text-primary mt-4 inline-flex items-center gap-1.5 text-sm underline"
           >
-            I've saved it safely ✓
+            <Check class="h-4 w-4" />
+            I've saved it safely
           </button>
         </div>
       )}
@@ -191,10 +200,10 @@ export default component$(() => {
         {keys.value.length === 0 ? (
           <div class="py-8 text-center sm:py-12">
             <div class="glass mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
-              <div class="text-xl sm:text-2xl">🔑</div>
+              <Key class="text-theme-accent-primary h-6 w-6 sm:h-7 sm:w-7" />
             </div>{" "}
             <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-              No API Keys Yet! ✨
+              No API Keys Yet!
             </h3>
             <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
               Create your first API key to start using the API or configure
@@ -211,8 +220,9 @@ export default component$(() => {
               >
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div class="min-w-0 flex-1">
-                    <h3 class="text-theme-text-primary mb-1 flex items-center text-base font-medium sm:text-lg">
-                      🔐 <span class="ml-1 truncate">{apiKey.name}</span>
+                    <h3 class="text-theme-text-primary mb-1 flex items-center gap-1.5 text-base font-medium sm:text-lg">
+                      <Key class="h-4 w-4 flex-shrink-0" />
+                      <span class="truncate">{apiKey.name}</span>
                     </h3>
                     <div class="text-theme-text-secondary flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:gap-4 sm:text-sm">
                       <span>

@@ -10,6 +10,22 @@ import {
   Globe,
   Activity,
   Bell,
+  Settings,
+  Crown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  Clock,
+  TrendingUp,
+  HardDrive,
+  Mail,
+  MessageCircle,
+  Calendar,
+  Folder,
+  Package,
+  Save,
+  RotateCcw,
+  ChevronRight,
 } from "lucide-icons-qwik";
 import { AnalyticsChart } from "~/components/charts/analytics-chart";
 import { UserAnalytics } from "~/components/charts/user-analytics";
@@ -202,7 +218,7 @@ export default component$(() => {
           <div class="flex items-center justify-center text-center">
             <CheckCircle class="mr-2 h-5 w-5 text-theme-success" />
             <span class="font-medium text-theme-success">
-              User updated successfully! ✨
+              User updated successfully!
             </span>
           </div>
         </div>
@@ -284,7 +300,8 @@ export default component$(() => {
       {/* Admin Quick Actions */}
       <div class="mb-6 sm:mb-8">
         <h2 class="text-gradient-cute mb-4 flex items-center justify-center gap-2 text-center text-xl font-bold sm:mb-6 sm:text-2xl">
-          Admin Actions~ ⚙️
+          <Settings class="h-5 w-5 sm:h-6 sm:w-6" />
+          Admin Actions~
         </h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
@@ -323,7 +340,6 @@ export default component$(() => {
             </div>
             <p class="text-theme-text-secondary text-xs sm:text-sm">
               Monitor server performance, system metrics, and health status~
-              📊✨
             </p>
           </Link>
 
@@ -342,7 +358,7 @@ export default component$(() => {
               </h3>
             </div>
             <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Monitor system alerts, user warnings, and automated events~ 🔔⚡
+              Monitor system alerts, user warnings, and automated events~
             </p>
           </Link>
         </div>
@@ -398,13 +414,13 @@ export default component$(() => {
                   value="approved"
                   class="bg-theme-card text-theme-primary"
                 >
-                  ✅ Approved
+                  Approved
                 </option>
                 <option
                   value="pending"
                   class="bg-theme-card text-theme-primary"
                 >
-                  ⏳ Pending
+                  Pending
                 </option>
               </select>
             </div>
@@ -421,10 +437,10 @@ export default component$(() => {
                   All Roles
                 </option>
                 <option value="admin" class="bg-theme-card text-theme-primary">
-                  👑 Admins
+                  Admins
                 </option>
                 <option value="user" class="bg-theme-card text-theme-primary">
-                  🌸 Users
+                  Users
                 </option>
               </select>
             </div>
@@ -469,9 +485,19 @@ export default component$(() => {
               onClick$={() => {
                 sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
               }}
-              class="glass border-theme-card-border text-theme-text-primary hover:border-theme-accent-primary/40 rounded-full border bg-transparent px-3 py-1 text-sm transition-all duration-300 focus:outline-none"
+              class="glass border-theme-card-border text-theme-text-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border bg-transparent px-3 py-1 text-sm transition-all duration-300 focus:outline-none"
             >
-              {sortOrder.value === "asc" ? "↑ Ascending" : "↓ Descending"}
+              {sortOrder.value === "asc" ? (
+                <>
+                  <ArrowUp class="h-3.5 w-3.5" />
+                  Ascending
+                </>
+              ) : (
+                <>
+                  <ArrowDown class="h-3.5 w-3.5" />
+                  Descending
+                </>
+              )}
             </button>
             {/* Clear Filters */}
             {(searchQuery.value.trim() ||
@@ -487,9 +513,10 @@ export default component$(() => {
                   sortBy.value = "createdAt";
                   sortOrder.value = "desc";
                 }}
-                class="from-theme-deny to-theme-deny-hover border-theme-error text-theme-error rounded-full border bg-gradient-to-br px-3 py-1 text-sm font-medium transition-all duration-300 hover:bg-gradient-to-br"
+                class="from-theme-deny to-theme-deny-hover border-theme-error text-theme-error inline-flex items-center gap-1.5 rounded-full border bg-gradient-to-br px-3 py-1 text-sm font-medium transition-all duration-300 hover:bg-gradient-to-br"
               >
-                🗑️ Clear Filters
+                <X class="h-3.5 w-3.5" />
+                Clear Filters
               </button>
             )}
           </div>
@@ -505,9 +532,10 @@ export default component$(() => {
                 sortBy.value = "createdAt";
                 sortOrder.value = "asc";
               }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 rounded-full border px-2 py-1 text-xs transition-all duration-300"
+              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
             >
-              ⏳ Pending Approval
+              <Clock class="h-3.5 w-3.5" />
+              Pending Approval
             </button>
             <button
               onClick$={() => {
@@ -516,9 +544,10 @@ export default component$(() => {
                 sortBy.value = "uploads";
                 sortOrder.value = "desc";
               }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 rounded-full border px-2 py-1 text-xs transition-all duration-300"
+              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
             >
-              📈 Most Active
+              <TrendingUp class="h-3.5 w-3.5" />
+              Most Active
             </button>
             <button
               onClick$={() => {
@@ -527,9 +556,10 @@ export default component$(() => {
                 sortBy.value = "storageUsed";
                 sortOrder.value = "desc";
               }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 rounded-full border px-2 py-1 text-xs transition-all duration-300"
+              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
             >
-              💾 Storage Usage
+              <HardDrive class="h-3.5 w-3.5" />
+              Storage Usage
             </button>
             <button
               onClick$={() => {
@@ -538,9 +568,10 @@ export default component$(() => {
                 sortBy.value = "createdAt";
                 sortOrder.value = "desc";
               }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 rounded-full border px-2 py-1 text-xs transition-all duration-300"
+              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
             >
-              👑 Admins Only
+              <Crown class="h-3.5 w-3.5" />
+              Admins Only
             </button>
           </div>
         </div>
@@ -549,10 +580,10 @@ export default component$(() => {
             {!userData.value?.users || userData.value.users.length === 0 ? (
               <div class="py-8 text-center sm:py-12">
                 <div class="glass mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
-                  <div class="text-xl sm:text-2xl">👥</div>
+                  <Users class="text-theme-accent-primary h-6 w-6" />
                 </div>
                 <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-                  No Users Yet! ✨
+                  No Users Yet!
                 </h3>
                 <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
                   Waiting for the first twinks to join~ (◕‿◕)♡
@@ -564,7 +595,7 @@ export default component$(() => {
                   <Search class="text-theme-accent-primary h-6 w-6" />
                 </div>
                 <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-                  No Results Found! 🔍
+                  No Results Found!
                 </h3>
                 <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
                   Try adjusting your filters or search terms~ (◕‿◕)♡
@@ -617,11 +648,22 @@ export default component$(() => {
                                     : "bg-theme-warning/20 text-theme-warning border border-theme-warning/30"
                                 }`}
                               >
-                                {user.isApproved ? "✅ Approved" : "⏳ Pending"}
+                                {user.isApproved ? (
+                                  <>
+                                    <CheckCircle class="h-3 w-3" />
+                                    Approved
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock class="h-3 w-3" />
+                                    Pending
+                                  </>
+                                )}
                               </span>
                               {user.isAdmin && (
                                 <span class="bg-purple-500/20 text-purple-400 border-purple-500/30 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                                  👑 Admin
+                                  <Crown class="h-3 w-3" />
+                                  Admin
                                 </span>
                               )}
                             </div>
@@ -629,21 +671,19 @@ export default component$(() => {
                             {/* Contact Info */}
                             <div class="text-theme-text-secondary space-y-1 text-sm">
                               <div class="flex items-center gap-2">
-                                <span class="text-theme-accent-primary">✉️</span>
+                                <Mail class="text-theme-accent-primary h-3.5 w-3.5 flex-shrink-0" />
                                 <span class="truncate">{user.email}</span>
                               </div>
                               {user.accounts?.[0]?.providerAccountId && (
                                 <div class="flex items-center gap-2">
-                                  <span class="text-theme-accent-secondary">
-                                    💬
-                                  </span>
+                                  <MessageCircle class="text-theme-accent-secondary h-3.5 w-3.5 flex-shrink-0" />
                                   <span class="font-mono text-xs">
                                     {user.accounts[0].providerAccountId}
                                   </span>
                                 </div>
                               )}
                               <div class="flex items-center gap-2">
-                                <span class="text-theme-accent-tertiary">📅</span>
+                                <Calendar class="text-theme-accent-tertiary h-3.5 w-3.5 flex-shrink-0" />
                                 <span class="text-xs">
                                   Joined{" "}
                                   {new Date(user.createdAt).toLocaleDateString(
@@ -719,9 +759,10 @@ export default component$(() => {
                                     isApproved: true,
                                   });
                                 }}
-                                class="from-green-500 to-emerald-500 flex-1 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
+                                class="from-green-500 to-emerald-500 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
                               >
-                                ✅ Approve User
+                                <CheckCircle class="h-4 w-4" />
+                                Approve User
                               </button>
                             ) : (
                               <button
@@ -731,9 +772,10 @@ export default component$(() => {
                                     isApproved: false,
                                   });
                                 }}
-                                class="from-orange-500 to-red-500 flex-1 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
+                                class="from-orange-500 to-red-500 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
                               >
-                                ❌ Revoke Access
+                                <Ban class="h-4 w-4" />
+                                Revoke Access
                               </button>
                             )}
                             
@@ -763,10 +805,9 @@ export default component$(() => {
                       <details class="group/limits">
                         <summary class="text-theme-accent-primary hover:bg-theme-accent-primary/5 flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-medium transition-colors">
                           <span class="flex items-center gap-2">
-                            <span class="transition-transform group-open/limits:rotate-90">
-                              ▶
-                            </span>
-                            ⚙️ Edit User Limits
+                            <ChevronRight class="h-4 w-4 transition-transform group-open/limits:rotate-90" />
+                            <Settings class="h-4 w-4" />
+                            Edit User Limits
                           </span>
                         </summary>
                         <div class="bg-theme-card/30 p-5">
@@ -786,7 +827,7 @@ export default component$(() => {
                             {/* Max Uploads */}
                             <div class="space-y-2">
                               <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <span>📁</span>
+                                <Folder class="h-4 w-4" />
                                 Max Uploads
                               </label>
                               <input
@@ -804,7 +845,7 @@ export default component$(() => {
                             {/* Max File Size */}
                             <div class="space-y-2">
                               <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <span>📦</span>
+                                <Package class="h-4 w-4" />
                                 Max File Size
                               </label>
                               <input
@@ -822,7 +863,7 @@ export default component$(() => {
                             {/* Storage Limit */}
                             <div class="space-y-2">
                               <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <span>💾</span>
+                                <HardDrive class="h-4 w-4" />
                                 Storage Limit
                               </label>
                               <input
@@ -846,7 +887,8 @@ export default component$(() => {
                                 type="submit"
                                 class="from-theme-accent-primary to-theme-accent-secondary flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
                               >
-                                💾 Save Changes
+                                <Save class="h-4 w-4" />
+                                Save Changes
                               </button>
                               <button
                                 type="button"
@@ -856,9 +898,10 @@ export default component$(() => {
                                     maxStorageLimit: "",
                                   });
                                 }}
-                                class="glass border-theme-card-border text-theme-text-secondary hover:text-theme-text-primary rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-300"
+                                class="glass border-theme-card-border text-theme-text-secondary hover:text-theme-text-primary inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-300"
                               >
-                                🔄 Reset to Default
+                                <RotateCcw class="h-4 w-4" />
+                                Reset to Default
                               </button>
                             </div>
                           </form>

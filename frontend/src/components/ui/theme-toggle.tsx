@@ -1,6 +1,6 @@
 import { component$, useSignal, useVisibleTask$, $ } from "@builder.io/qwik";
 import { type ThemeName, themes } from "~/lib/theme-store";
-import { Moon, Sun, Palette, Sparkles, Heart, Zap } from "lucide-icons-qwik";
+import { Moon, Sun, Palette, Sparkles, Heart, Zap, Check } from "lucide-icons-qwik";
 import { setThemePreference } from "~/lib/cookie-utils";
 
 export interface ThemeToggleProps {
@@ -192,10 +192,12 @@ export const ThemeToggle = component$<ThemeToggleProps>(
                     </div>
                     <div class="flex-1">
                       <div class="text-theme-text-primary text-sm font-medium">
-                        {option.label}
-                        {isActive && (
-                          <span class="text-theme-accent-primary ml-2 text-xs">✓</span>
-                        )}
+                        <span class="inline-flex items-center gap-1.5">
+                          {option.label}
+                          {isActive && (
+                            <Check class="text-theme-accent-primary h-3.5 w-3.5" />
+                          )}
+                        </span>
                       </div>
                       <div class="text-theme-text-muted text-xs">
                         {option.description}
@@ -207,7 +209,7 @@ export const ThemeToggle = component$<ThemeToggleProps>(
             </div>
             <div class="border-theme-card-border mt-3 border-t pt-3">
               <p class="text-theme-text-muted text-center text-xs">
-                Theme preference saved automatically~ ✨
+                Theme preference saved automatically~
               </p>
             </div>
           </div>

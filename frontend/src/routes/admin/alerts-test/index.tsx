@@ -24,7 +24,7 @@ export default component$(() => {
             {/* Success Alert */}
             <button
               onClick$={() =>
-                success("Success! 🎉", "Your operation completed successfully!")
+                success("Success!", "Your operation completed successfully!")
               }
               class="btn-cute bg-gradient-to-br from-theme-confirm to-theme-confirm-hover text-white transition-all duration-300 hover:scale-105"
             >
@@ -34,7 +34,7 @@ export default component$(() => {
             {/* Error Alert */}
             <button
               onClick$={() =>
-                error("Error! ❌", "Something went wrong. Please try again.")
+                error("Error!", "Something went wrong. Please try again.")
               }
               class="btn-cute bg-gradient-to-br from-theme-deny to-theme-deny-hover text-white transition-all duration-300 hover:scale-105"
             >
@@ -45,7 +45,7 @@ export default component$(() => {
             <button
               onClick$={() =>
                 warning(
-                  "Warning! ⚠️",
+                  "Warning!",
                   "Please review your settings before continuing.",
                 )
               }
@@ -57,7 +57,7 @@ export default component$(() => {
             {/* Info Alert */}
             <button
               onClick$={() =>
-                info("Info 💡", "Here's some helpful information for you.")
+                info("Info", "Here's some helpful information for you.")
               }
               class="btn-cute bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-white transition-all duration-300 hover:scale-105"
             >
@@ -68,10 +68,10 @@ export default component$(() => {
             <button
               onClick$={() =>
                 confirm(
-                  "Confirm Action 💝",
+                  "Confirm Action",
                   "Are you sure you want to proceed?",
-                  () => success("Confirmed! ✅", "You clicked confirm!"),
-                  () => info("Cancelled 🚫", "You clicked cancel."),
+                  () => success("Confirmed!", "You clicked confirm!"),
+                  () => info("Cancelled", "You clicked cancel."),
                   "Yes, do it!",
                   "No, cancel",
                 )
@@ -85,17 +85,17 @@ export default component$(() => {
             <button
               onClick$={async () => {
                 const result = await confirmAsync(
-                  "Async Confirm 🔄",
+                  "Async Confirm",
                   "This is a promise-based confirmation dialog.",
                 );
                 if (result) {
                   success(
-                    "Promise Resolved! ✨",
+                    "Promise Resolved!",
                     "You confirmed the async dialog!",
                   );
                 } else {
                   warning(
-                    "Promise Rejected 😔",
+                    "Promise Rejected",
                     "You cancelled the async dialog.",
                   );
                 }
@@ -116,7 +116,7 @@ export default component$(() => {
             <button
               onClick$={() =>
                 success(
-                  "Quick Success! ⚡",
+                  "Quick Success!",
                   "This alert will disappear in 1 second.",
                   1000,
                 )
@@ -129,7 +129,7 @@ export default component$(() => {
             <button
               onClick$={() =>
                 info(
-                  "Persistent Info 📌",
+                  "Persistent Info",
                   "This alert will stay for 10 seconds.",
                   10000,
                 )
@@ -149,15 +149,15 @@ export default component$(() => {
           <button
             onClick$={() => {
               // Show multiple alerts with slight delays
-              success("First Alert! 1️⃣", "This is the first alert.");
+              success("First Alert!", "This is the first alert.");
               setTimeout(() => {
-                warning("Second Alert! 2️⃣", "This is the second alert.");
+                warning("Second Alert!", "This is the second alert.");
               }, 500);
               setTimeout(() => {
-                info("Third Alert! 3️⃣", "This is the third alert.");
+                info("Third Alert!", "This is the third alert.");
               }, 1000);
               setTimeout(() => {
-                error("Fourth Alert! 4️⃣", "This is the fourth alert.");
+                error("Fourth Alert!", "This is the fourth alert.");
               }, 1500);
             }}
             class="btn-cute bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 text-white transition-all duration-300 hover:scale-105"
@@ -168,7 +168,7 @@ export default component$(() => {
 
         <div class="mt-8 text-center">
           <p class="text-theme-text-muted text-sm">
-            💡 Tip: Try switching themes to see how alerts adapt to different
+            Tip: Try switching themes to see how alerts adapt to different
             color schemes!
           </p>
         </div>

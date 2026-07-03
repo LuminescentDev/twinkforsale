@@ -6,7 +6,16 @@ import {
   z,
   zod$,
 } from "@builder.io/qwik-city";
-import { Plus, Edit, Trash2, Globe } from "lucide-icons-qwik";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Globe,
+  List,
+  Save,
+  CheckCircle,
+  CircleX,
+} from "lucide-icons-qwik";
 import { Toggle } from "@luminescent/ui-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -159,15 +168,16 @@ export default component$(() => {
       {/* Create Form */}
       {showCreateForm.value && (
         <div class="card-cute mb-6 rounded-2xl p-4 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-            Create New Upload Domain~ 🌐 <span class="sparkle ml-2">✨</span>
+          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+            <Globe class="h-5 w-5" />
+            Create New Upload Domain~
           </h2>
 
           <Form action={createAction}>
             <div class="space-y-4 sm:space-y-6">
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Domain~ 🌍
+                  Domain~
                 </label>
                 <input
                   type="text"
@@ -178,13 +188,12 @@ export default component$(() => {
                 />
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   The top-level domain (e.g., "twink.forsale", "example.com")~
-                  ✨
                 </p>
               </div>
 
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Display Name~ 💝
+                  Display Name~
                 </label>
                 <input
                   type="text"
@@ -194,14 +203,14 @@ export default component$(() => {
                   required
                 />
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Friendly name shown to users~ 💕
+                  Friendly name shown to users~
                 </p>
               </div>
 
               <div class="flex items-center gap-3">
                 <Toggle
                   id="isDefault"
-                  label="Set as default domain~ ⭐"
+                  label="Set as default domain~"
                   checkbox
                   name="isDefault"
                 />
@@ -210,7 +219,7 @@ export default component$(() => {
               <div class="flex items-center gap-3">
                 <Toggle
                   id="supportsSubdomains"
-                  label="Supports subdomains~ 🌐"
+                  label="Supports subdomains~"
                   checkbox
                   name="supportsSubdomains"
                 />
@@ -223,9 +232,10 @@ export default component$(() => {
               <div class="flex gap-3">
                 <button
                   type="submit"
-                  class="btn-cute text-theme-text-primary flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                  class="btn-cute text-theme-text-primary inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
                 >
-                  Create Domain~ 💾✨
+                  <Save class="h-4 w-4" />
+                  Create Domain~
                 </button>
                                  <button
                    type="button"
@@ -246,16 +256,18 @@ export default component$(() => {
 
           {createAction.value?.success && (
             <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-                ✅ {createAction.value.message}~ ✨
+              <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+                <CheckCircle class="h-4 w-4 flex-shrink-0" />
+                {createAction.value.message}~
               </p>
             </div>
           )}
 
           {createAction.value?.failed && (
             <div class="bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-primary flex items-center text-xs sm:text-sm">
-                ❌ {createAction.value.message}~ 💔
+              <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
+                <CircleX class="h-4 w-4 flex-shrink-0" />
+                {createAction.value.message}~
               </p>
             </div>
           )}
@@ -264,8 +276,9 @@ export default component$(() => {
 
       {/* Domains List */}
       <div class="card-cute rounded-2xl p-4 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-          Existing Domains~ 📋 <span class="sparkle ml-2">✨</span>
+        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+          <List class="h-5 w-5" />
+          Existing Domains~
         </h2>
 
         <div class="space-y-4">
@@ -445,25 +458,27 @@ export default component$(() => {
 
         {updateAction.value?.success && (
           <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-              ✅ {updateAction.value.message}~ ✨
+            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+              <CheckCircle class="h-4 w-4 flex-shrink-0" />
+              {updateAction.value.message}~
             </p>
           </div>
         )}
 
         {(updateAction.value?.failed || deleteAction.value?.failed) && (
           <div class="bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center text-xs sm:text-sm">
-              ❌ {updateAction.value?.message || deleteAction.value?.message}~
-              💔
+            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
+              <CircleX class="h-4 w-4 flex-shrink-0" />
+              {updateAction.value?.message || deleteAction.value?.message}~
             </p>
           </div>
         )}
 
         {deleteAction.value?.success && (
           <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-              ✅ {deleteAction.value.message}~ ✨
+            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+              <CheckCircle class="h-4 w-4 flex-shrink-0" />
+              {deleteAction.value.message}~
             </p>
           </div>
         )}

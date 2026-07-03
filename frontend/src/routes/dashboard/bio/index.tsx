@@ -31,6 +31,10 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  CheckCircle,
+  CircleX,
+  AlertTriangle,
+  Search,
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -641,22 +645,25 @@ export default component$(() => {
         <div class="mb-8">
           {updateBio.value?.success && (
             <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 glass mt-4 rounded-2xl border border-theme-accent-secondary/30 bg-gradient-to-br p-3">
-              <p class="text-theme-accent-secondary text-sm">
-                ✅ {updateBio.value.message}
+              <p class="text-theme-accent-secondary flex items-center gap-2 text-sm">
+                <CheckCircle class="h-4 w-4 flex-shrink-0" />
+                {updateBio.value.message}
               </p>
             </div>
           )}
           {updateBio.value?.failed && (
             <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 glass mt-4 rounded-2xl border border-theme-accent-primary/30 bg-gradient-to-br p-3">
-              <p class="text-theme-accent-primary text-sm">
-                ❌ {updateBio.value.message}
+              <p class="text-theme-accent-primary flex items-center gap-2 text-sm">
+                <CircleX class="h-4 w-4 flex-shrink-0" />
+                {updateBio.value.message}
               </p>
             </div>
           )}
           {!bioData.value.user.isApproved && (
             <div class="glass mt-4 rounded-2xl border border-theme-warning/20 p-4">
-              <p class="text-theme-warning">
-                ⚠️ Your account needs to be approved to use the bio service.
+              <p class="text-theme-warning flex items-center gap-2">
+                <AlertTriangle class="h-4 w-4 flex-shrink-0" />
+                Your account needs to be approved to use the bio service.
               </p>
             </div>
           )}
@@ -1067,7 +1074,10 @@ export default component$(() => {
                                 Testing...
                               </>
                             ) : (
-                              <>🔍 Test Connection</>
+                              <>
+                                <Search class="h-3.5 w-3.5" />
+                                Test Connection
+                              </>
                             )}
                           </button>
                         </div>
@@ -1076,7 +1086,7 @@ export default component$(() => {
                         {discordError.value && (
                           <div class="rounded-lg border border-theme-error/20 bg-theme-error/10 p-3">
                             <div class="flex items-start gap-2">
-                              <div class="text-lg text-theme-error">⚠️</div>
+                              <AlertTriangle class="text-theme-error mt-0.5 h-4 w-4 flex-shrink-0" />
                               <div>
                                 <p class="mb-1 text-sm font-medium text-theme-error">
                                   Discord Connection Failed

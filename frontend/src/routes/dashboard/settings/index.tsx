@@ -18,6 +18,15 @@ import {
   Settings as SettingsIcon,
   Trash2,
   AlertTriangle,
+  Globe,
+  CheckCircle,
+  CircleX,
+  Save,
+  Snowflake,
+  Star,
+  Circle,
+  CircleOff,
+  PartyPopper,
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -266,7 +275,7 @@ export default component$(() => {
         "The classic dark theme - perfect for late night file sharing sessions",
       icon: Moon,
       gradient: "from-slate-800 to-slate-900",
-      preview: "Sleek, dark, and mysterious~ Perfect for femboy ninjas! 🥷",
+      preview: "Sleek, dark, and mysterious~ Perfect for femboy ninjas!",
     },
     {
       name: "light" as ThemeName,
@@ -274,7 +283,7 @@ export default component$(() => {
       description: "Clean and bright theme for daytime productivity",
       icon: Sun,
       gradient: "from-yellow-400 to-orange-500",
-      preview: "Bright and cheerful like a sunny day! ☀️",
+      preview: "Bright and cheerful like a sunny day!",
     },
     {
       name: "pastel" as ThemeName,
@@ -291,7 +300,7 @@ export default component$(() => {
       icon: Zap,
       gradient: "from-pink-500 to-violet-600",
       preview:
-        "Cyberpunk vibes with extra sparkle! Perfect for hacker femboys! ⚡",
+        "Cyberpunk vibes with extra sparkle! Perfect for hacker femboys!",
     },
     {
       name: "valentine" as ThemeName,
@@ -301,7 +310,7 @@ export default component$(() => {
       icon: Heart,
       gradient: "from-rose-400 to-pink-600",
       preview:
-        "Romantic and lovely~ Perfect for sharing files with your crush! 💕",
+        "Romantic and lovely~ Perfect for sharing files with your crush!",
     },
   ];
 
@@ -335,15 +344,16 @@ export default component$(() => {
 
       {/* Upload Domain Settings */}
       <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-          Upload Domain Settings~ 🌐 <span class="sparkle ml-2">✨</span>
+        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+          <Globe class="h-5 w-5" />
+          Upload Domain Settings~
         </h2>
 
         <Form action={updateAction}>
           <div class="space-y-4 sm:space-y-6">
             <div>
               <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Upload Domain~ 🌍
+                Upload Domain~
               </label>{" "}
               <select
                 name="uploadDomainId"
@@ -365,14 +375,14 @@ export default component$(() => {
                 ))}
               </select>
               <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                Choose the base domain for your file uploads~ ✨
+                Choose the base domain for your file uploads~
               </p>
             </div>
 
             {selectedDomain?.supportsSubdomains && (
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Custom Subdomain (Optional)~ 🎀
+                  Custom Subdomain (Optional)~
                 </label>
                 <input
                   type="text"
@@ -388,7 +398,7 @@ export default component$(() => {
                 />
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   Add a custom subdomain to your uploads (e.g., "files" →
-                  files.{selectedDomain.domain})~ 💕
+                  files.{selectedDomain.domain})~
                 </p>
               </div>
             )}
@@ -396,7 +406,7 @@ export default component$(() => {
             {/* File Expiration Settings */}
             <div>
               <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Default File Expiration (Days)~ ⏰
+                Default File Expiration (Days)~
               </label>
               <input
                 type="number"
@@ -414,14 +424,14 @@ export default component$(() => {
               />
               <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                 Files will automatically delete after this many days. Leave
-                empty for no expiration~ 🕐
+                empty for no expiration~
               </p>
             </div>
 
             {/* View Limits Settings */}
             <div>
               <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Default Max Views~ 👁️
+                Default Max Views~
               </label>
               <input
                 type="number"
@@ -438,14 +448,15 @@ export default component$(() => {
               />
               <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                 Files will automatically delete after this many views. Leave
-                empty for unlimited views~ 👀✨
+                empty for unlimited views~
               </p>
             </div>
 
             {/* Preview */}
             <div class="glass border-theme-accent-quaternary/20 rounded-2xl border p-4">
-              <h3 class="text-theme-accent-quaternary mb-3 flex items-center text-sm font-medium">
-                Upload URL Preview~ 👀 <span class="ml-2">✨</span>
+              <h3 class="text-theme-accent-quaternary mb-3 flex items-center gap-2 text-sm font-medium">
+                <Eye class="h-4 w-4" />
+                Upload URL Preview~
               </h3>
               <div class="text-theme-text-primary bg-theme-bg-tertiary/20 rounded-lg p-3 font-mono text-sm">
                 {getCurrentDomainPreview()}/f/cute-filename-123
@@ -457,25 +468,28 @@ export default component$(() => {
 
             <button
               type="submit"
-              class="btn-cute text-theme-text-primary w-full rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+              class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
             >
-              Save Settings~ 💾✨
+              <Save class="h-4 w-4" />
+              Save Settings~
             </button>
           </div>
         </Form>
 
         {updateAction.value?.success && (
           <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-              ✅ {updateAction.value.message}~ ✨
+            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+              <CheckCircle class="h-4 w-4 flex-shrink-0" />
+              {updateAction.value.message}~
             </p>
           </div>
         )}
 
         {updateAction.value?.failed && (
           <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center text-xs sm:text-sm">
-              ❌ {updateAction.value.message}~ 💔
+            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
+              <CircleX class="h-4 w-4 flex-shrink-0" />
+              {updateAction.value.message}~
             </p>
           </div>
         )}
@@ -483,9 +497,9 @@ export default component$(() => {
 
       {/* Theme Settings */}
       <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-          Theme Settings~ <Palette class="ml-2 h-5 w-5" />{" "}
-          <span class="sparkle ml-2">✨</span>
+        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+          <Palette class="h-5 w-5" />
+          Theme Settings~
         </h2>
 
         {/* Theme Gallery */}
@@ -618,18 +632,18 @@ export default component$(() => {
 
       {/* Particle Settings */}
       <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-          Background Particles~ <Sparkles class="ml-2 h-5 w-5" />{" "}
-          <span class="sparkle ml-2">✨</span>
+        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+          <Sparkles class="h-5 w-5" />
+          Background Particles~
         </h2>
         <p class="text-theme-text-secondary mb-6 text-sm">
           Control the animated particles that appear in the background of the
-          site~ ✨
+          site~
         </p>
         {/* Quick Presets */}
         <div class="mb-6">
           <label class="text-theme-text-secondary mb-3 block text-sm font-medium">
-            Quick Presets~ 🎀
+            Quick Presets~
           </label>
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {" "}
@@ -655,20 +669,29 @@ export default component$(() => {
                     : ""
                 }`}
               >
-                <div class="text-sm font-medium">
-                  {name === "disabled"
-                    ? "❌ Off"
-                    : name === "hearts"
-                      ? "💕 Hearts"
-                      : name === "snow"
-                        ? "❄️ Snow"
-                        : name === "stars"
-                          ? "⭐ Stars"
-                          : name === "bubbles"
-                            ? "🫧 Bubbles"
-                            : name === "confetti"
-                              ? "🎉 Confetti"
-                              : name}
+                <div class="flex items-center justify-center gap-1.5 text-sm font-medium capitalize">
+                  {(() => {
+                    const preset: Record<
+                      string,
+                      { icon: any; label: string }
+                    > = {
+                      disabled: { icon: CircleOff, label: "Off" },
+                      hearts: { icon: Heart, label: "Hearts" },
+                      snow: { icon: Snowflake, label: "Snow" },
+                      stars: { icon: Star, label: "Stars" },
+                      bubbles: { icon: Circle, label: "Bubbles" },
+                      confetti: { icon: PartyPopper, label: "Confetti" },
+                    };
+                    const entry = preset[name];
+                    if (!entry) return name;
+                    const Icon = entry.icon;
+                    return (
+                      <>
+                        <Icon class="h-4 w-4" />
+                        {entry.label}
+                      </>
+                    );
+                  })()}
                 </div>
               </button>
             ))}
@@ -696,31 +719,37 @@ export default component$(() => {
                   config: particleConfigSignal.value,
                 });
               }}
-              class="btn-cute text-theme-text-primary w-full rounded-full px-4 py-2 text-sm font-medium transition-all duration-300"
+              class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300"
             >
-              Save Advanced Settings~ 💾✨
+              <Save class="h-4 w-4" />
+              Save Advanced Settings~
             </button>
           </div>
         </div>{" "}
         {/* Save note */}
         <div class="mt-4 rounded-lg border border-theme-info/20 bg-theme-info/10 p-3">
-          <p class="text-xs text-theme-info">
-            💡 Your particle preferences are saved to your account and will sync
-            across all your devices~ ✨
+          <p class="text-theme-info flex items-start gap-2 text-xs">
+            <Sparkles class="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>
+              Your particle preferences are saved to your account and will sync
+              across all your devices~
+            </span>
           </p>
         </div>
         {/* Particle save status */}
         {updateParticleAction.value?.success && (
           <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-              ✅ {updateParticleAction.value.message}~ ✨
+            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+              <CheckCircle class="h-4 w-4 flex-shrink-0" />
+              {updateParticleAction.value.message}~
             </p>
           </div>
         )}{" "}
         {updateParticleAction.value?.failed && (
           <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center text-xs sm:text-sm">
-              ❌ {updateParticleAction.value.message}~ 💔
+            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
+              <CircleX class="h-4 w-4 flex-shrink-0" />
+              {updateParticleAction.value.message}~
             </p>
           </div>
         )}
@@ -732,9 +761,12 @@ export default component$(() => {
           <AlertTriangle class="mr-2 h-5 w-5" />
           Danger Zone
         </h2>
-        <p class="mb-6 text-sm text-theme-error/80">
-          ⚠️ This action is permanent and cannot be undone. All your files,
-          data, and account information will be permanently deleted.
+        <p class="text-theme-error/80 mb-6 flex items-start gap-2 text-sm">
+          <AlertTriangle class="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>
+            This action is permanent and cannot be undone. All your files,
+            data, and account information will be permanently deleted.
+          </span>
         </p>
 
         <Form action={deleteAccountAction} class="space-y-4">
@@ -763,8 +795,9 @@ export default component$(() => {
         {/* Error/Success Messages */}
         {deleteAccountAction.value?.failed && (
           <div class="mt-4 rounded-lg border border-theme-error/50 bg-theme-error/20 p-3">
-            <p class="text-theme-error text-sm">
-              ❌ {deleteAccountAction.value.message}
+            <p class="text-theme-error flex items-center gap-2 text-sm">
+              <CircleX class="h-4 w-4 flex-shrink-0" />
+              {deleteAccountAction.value.message}
             </p>
           </div>
         )}

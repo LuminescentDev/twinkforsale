@@ -1,7 +1,20 @@
 import { component$, $, useSignal } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Camera, Key, Sparkle, Shield } from "lucide-icons-qwik";
+import {
+  Camera,
+  Key,
+  Sparkle,
+  Shield,
+  Download,
+  Copy,
+  Rocket,
+  Lightbulb,
+  Smartphone,
+  Settings,
+  AlertTriangle,
+  Star,
+} from "lucide-icons-qwik";
 import { SelectMenu } from "@luminescent/ui-qwik";
 import { PageContainer, PageHeader } from "~/components/ui";
 import { api, serverAuth } from "~/lib/api-client";
@@ -78,6 +91,7 @@ export default component$(() => {
   return (
     <PageContainer width="narrow">
       <PageHeader
+        align="left"
         title="ShareX Setup~"
         icon={Camera}
         subtitle="Configure ShareX to work with twink.forsale in just a few clicks! (◕‿◕)♡"
@@ -91,12 +105,9 @@ export default component$(() => {
               1
             </div>
             <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex flex-col items-start gap-2 text-xl font-bold sm:mb-4 sm:flex-row sm:items-center sm:text-2xl">
+              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
+                <Key class="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Get Your API Key~</span>
-                <div class="flex items-center gap-1">
-                  <Key class="h-4 w-4 sm:h-6 sm:w-6" />
-                  <Sparkle class="h-4 w-4 sm:h-5 sm:w-5" />
-                </div>
               </h2>{" "}
               {/* Freshly created key — shown once with the full, working value */}
               {createdKey.value && (
@@ -110,9 +121,12 @@ export default component$(() => {
                       <p class="text-theme-text-secondary mt-1 rounded bg-black/20 px-2 py-1 font-mono text-xs break-all sm:text-sm">
                         {createdKey.value.key}
                       </p>
-                      <p class="text-theme-accent-primary mt-2 text-xs">
-                        ⚠️ Copy this key now — for security it won't be shown
-                        again after you leave this page!
+                      <p class="text-theme-accent-primary mt-2 flex items-start gap-1.5 text-xs">
+                        <AlertTriangle class="mt-0.5 h-3 w-3 flex-shrink-0" />
+                        <span>
+                          Copy this key now — for security it won't be shown
+                          again after you leave this page!
+                        </span>
                       </p>
                     </div>
 
@@ -130,7 +144,7 @@ export default component$(() => {
                               <div class="flex items-center justify-between w-full">
                                 <span>{info.label}</span>
                                 {info.recommended && (
-                                  <span class="text-theme-warning">⭐</span>
+                                  <Star class="text-theme-warning h-3.5 w-3.5" />
                                 )}
                               </div>
                             ),
@@ -148,15 +162,17 @@ export default component$(() => {
                   <div class="flex flex-col gap-2 sm:flex-row">
                     <button
                       onClick$={() => handleDownloadConfig(createdKey.value!.key)}
-                      class="btn-cute w-full rounded-full px-4 py-2 text-sm font-medium text-white sm:px-6 sm:py-3 sm:text-base"
+                      class="btn-cute flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white sm:px-6 sm:py-3 sm:text-base"
                     >
-                      Download Config~ 📥✨
+                      <Download class="h-4 w-4" />
+                      Download Config~
                     </button>
                     <button
                       onClick$={() => copyKey(createdKey.value!.key)}
-                      class="glass border-theme-card-border hover:border-theme-accent-primary/40 w-full rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                      class="glass border-theme-card-border hover:border-theme-accent-primary/40 flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
                     >
-                      Copy Key 📋
+                      <Copy class="h-4 w-4" />
+                      Copy Key
                     </button>
                   </div>
                 </div>
@@ -192,24 +208,25 @@ export default component$(() => {
                 {!createdKey.value && (
                   <>
                     <div class="glass mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full sm:mb-4 sm:h-16 sm:w-16">
-                      <div class="text-2xl sm:text-3xl">🔑</div>
+                      <Key class="text-theme-accent-primary h-6 w-6 sm:h-7 sm:w-7" />
                     </div>{" "}
                     <p class="text-theme-text-secondary mb-3 px-2 text-sm sm:mb-4 sm:text-base">
-                      Generate an API key to download your ShareX config~ ✨
+                      Generate an API key to download your ShareX config~
                     </p>
                   </>
                 )}
                 <button
                   onClick$={handleCreateApiKey}
                   disabled={creating.value}
-                  class="btn-cute text-theme-text-primary w-full rounded-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6 sm:text-base"
+                  class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6 sm:text-base"
                 >
+                  {!creating.value && <Rocket class="h-4 w-4" />}
                   {creating.value
                     ? "Creating..."
                     : userData.value.user?.apiKeys.length ||
                         createdKey.value
-                      ? "Create Another API Key 🚀"
-                      : "Create API Key 🚀"}
+                      ? "Create Another API Key"
+                      : "Create API Key"}
                 </button>
               </div>
             </div>
@@ -223,12 +240,9 @@ export default component$(() => {
               2
             </div>
             <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex flex-col items-start gap-2 text-xl font-bold sm:mb-4 sm:flex-row sm:items-center sm:text-2xl">
+              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
+                <Smartphone class="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Install ShareX~</span>
-                <div class="flex items-center gap-1">
-                  <span class="text-lg sm:text-xl">📱</span>
-                  <span class="sparkle ml-1 text-sm sm:text-base">✨</span>
-                </div>
               </h2>{" "}
               <p class="text-theme-text-secondary mb-3 text-sm sm:mb-4 sm:text-base">
                 If you don't have ShareX installed, download it from the
@@ -237,9 +251,10 @@ export default component$(() => {
               <a
                 href="https://getsharex.com/"
                 target="_blank"
-                class="glass text-theme-text-primary hover:bg-theme-accent-primary/20 border-theme-card-border hover:border-theme-accent-primary/40 inline-block rounded-full border px-4 py-2 text-sm transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                class="glass text-theme-text-primary hover:bg-theme-accent-primary/20 border-theme-card-border hover:border-theme-accent-primary/40 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
               >
-                Download ShareX~ 📥
+                <Download class="h-4 w-4" />
+                Download ShareX~
               </a>
             </div>
           </div>
@@ -252,12 +267,9 @@ export default component$(() => {
               3
             </div>
             <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex flex-col items-start gap-2 text-xl font-bold sm:mb-4 sm:flex-row sm:items-center sm:text-2xl">
+              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
+                <Settings class="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Import Configuration~</span>
-                <div class="flex items-center gap-1">
-                  <span class="text-lg sm:text-xl">⚙️</span>
-                  <span class="sparkle ml-1 text-sm sm:text-base">✨</span>
-                </div>
               </h2>
               <div class="space-y-3 sm:space-y-4">
                 {" "}
@@ -266,7 +278,7 @@ export default component$(() => {
                     1
                   </span>
                   <span>
-                    Download your configuration file using the button above~ 📥
+                    Download your configuration file using the button above~
                   </span>
                 </div>
                 <div class="text-theme-text-secondary flex flex-col items-start gap-2 text-sm sm:flex-row sm:gap-3 sm:text-base">
@@ -275,7 +287,7 @@ export default component$(() => {
                   </span>
                   <span>
                     Double-click the downloaded .sxcu file to import it into
-                    ShareX~ 🖱️
+                    ShareX~
                   </span>
                 </div>
                 <div class="text-theme-text-secondary flex flex-col items-start gap-2 text-sm sm:flex-row sm:gap-3 sm:text-base">
@@ -284,7 +296,7 @@ export default component$(() => {
                   </span>
                   <span>
                     ShareX will automatically configure twink.forsale as your
-                    upload destination~ ✨
+                    upload destination~
                   </span>
                 </div>
               </div>
@@ -299,43 +311,37 @@ export default component$(() => {
               4
             </div>
             <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex flex-col items-start gap-2 text-xl font-bold sm:mb-4 sm:flex-row sm:items-center sm:text-2xl">
+              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
+                <Rocket class="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Start Uploading!~</span>
-                <div class="flex items-center gap-1">
-                  <span class="text-lg sm:text-xl">🚀</span>
-                  <span class="sparkle ml-1 text-sm sm:text-base">✨</span>
-                </div>
               </h2>{" "}
               <p class="text-theme-text-secondary mb-3 text-sm sm:mb-4 sm:text-base">
                 You're all set! Use ShareX's capture tools or drag files to
                 upload them to twink.forsale~ (◕‿◕)♡
               </p>{" "}
               <div class="glass border-theme-card-border rounded-xl border p-3 sm:rounded-2xl sm:p-4">
-                <h3 class="text-theme-accent-primary mb-2 flex flex-col items-start gap-2 text-sm font-semibold sm:mb-3 sm:flex-row sm:items-center sm:text-base">
+                <h3 class="text-theme-accent-primary mb-2 flex items-center gap-2 text-sm font-semibold sm:mb-3 sm:text-base">
+                  <Lightbulb class="h-4 w-4" />
                   <span>Quick Tips~</span>
-                  <div class="flex items-center gap-1">
-                    <span class="text-sm sm:text-base">💡</span>
-                    <span class="ml-1 text-xs sm:text-sm">✨</span>
-                  </div>
                 </h3>
                 <ul class="text-theme-text-secondary space-y-1 text-xs sm:space-y-2 sm:text-sm">
                   <li class="flex items-start gap-2">
                     <span class="mt-0.5">•</span>
                     <span>
-                      Use Ctrl+Shift+4 for region capture (default hotkey)~ ⌨️
+                      Use Ctrl+Shift+4 for region capture (default hotkey)~
                     </span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span class="mt-0.5">•</span>
-                    <span>Drag and drop files directly onto ShareX~ 🖱️</span>
+                    <span>Drag and drop files directly onto ShareX~</span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span class="mt-0.5">•</span>
-                    <span>View your uploads in the Dashboard~ 📊</span>
+                    <span>View your uploads in the Dashboard~</span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span class="mt-0.5">•</span>
-                    <span>Each upload gets a short, shareable URL~ 🔗</span>
+                    <span>Each upload gets a short, shareable URL~</span>
                   </li>
                 </ul>
               </div>

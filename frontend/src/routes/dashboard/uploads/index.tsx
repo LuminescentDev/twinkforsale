@@ -30,6 +30,8 @@ import {
   BarChart3,
   CheckSquare,
   Square,
+  Rocket,
+  X,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
 import { FileTypeIcon } from "~/components/file-type-icon";
@@ -395,8 +397,9 @@ export default component$(() => {
       <div class="card-cute overflow-hidden rounded-2xl">
         <div class="border-theme-card-border border-b px-4 py-4 sm:px-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 class="text-gradient-cute flex flex-wrap items-center text-lg font-bold sm:text-xl">
-              All Files~ 📋 <span class="sparkle ml-2">✨</span>
+            <h2 class="text-gradient-cute flex flex-wrap items-center gap-2 text-lg font-bold sm:text-xl">
+              <Folder class="h-5 w-5" />
+              All Files~
               {searchQuery.value.trim() && (
                 <span class="text-theme-text-muted ml-2 text-sm font-normal">
                   ({filteredAndSortedUploads.value.length} of{" "}
@@ -886,10 +889,10 @@ export default component$(() => {
         ) : userData.value.user.uploads.length === 0 ? (
           <div class="py-12 text-center">
             <div class="glass mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-              <div class="text-3xl">📁</div>
+              <Folder class="text-theme-accent-primary h-8 w-8" />
             </div>
             <h3 class="text-theme-text-primary mb-2 text-lg font-medium">
-              No files yet~ ✨
+              No files yet~
             </h3>
             <p class="text-theme-text-secondary mb-4">
               Your files will appear here once uploaded via ShareX or API!
@@ -897,9 +900,10 @@ export default component$(() => {
             </p>
             <Link
               href="/setup/sharex"
-              class="btn-cute text-theme-text-primary inline-block rounded-full px-6 py-3 font-medium"
+              class="btn-cute text-theme-text-primary inline-flex items-center gap-2 rounded-full px-6 py-3 font-medium"
             >
-              Setup ShareX to get started~ 🚀
+              <Rocket class="h-4 w-4" />
+              Setup ShareX to get started~
             </Link>
           </div>
         ) : (
@@ -910,7 +914,7 @@ export default component$(() => {
               </div>
             </div>
             <h3 class="text-theme-text-primary mb-2 text-lg font-medium">
-              No files found~ 🔍
+              No files found~
             </h3>
             <p class="text-theme-text-secondary mb-4">
               Try searching with a different term! (◕‿◕)♡
@@ -919,9 +923,10 @@ export default component$(() => {
               onClick$={() => {
                 searchQuery.value = "";
               }}
-              class="btn-cute text-theme-text-primary inline-block rounded-full px-6 py-3 font-medium"
+              class="btn-cute text-theme-text-primary inline-flex items-center gap-2 rounded-full px-6 py-3 font-medium"
             >
-              Clear Search~ ✨
+              <X class="h-4 w-4" />
+              Clear Search~
             </button>
           </div>
         )}
@@ -955,7 +960,8 @@ export default component$(() => {
               }}
               class="text-theme-text-muted hover:text-theme-text-secondary flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
             >
-              ✕ Clear
+              <X class="h-4 w-4" />
+              Clear
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
 import { AppShell } from "~/components/layout/app-shell";
 
-/** Shell for every /dashboard route: persistent grouped sidebar + content. */
+/** Give /upload the same signed-in sidebar shell as the dashboard. */
 export default component$(() => (
   <AppShell>
     <Slot />

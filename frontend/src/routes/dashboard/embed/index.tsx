@@ -7,7 +7,14 @@ import {
   zod$,
 } from "@builder.io/qwik-city";
 import { ColorPicker, Toggle } from "@luminescent/ui-qwik";
-import { Share } from "lucide-icons-qwik";
+import {
+  Share,
+  Settings,
+  Save,
+  CheckCircle,
+  CircleX,
+  Info,
+} from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { PageHeader } from "~/components/ui";
@@ -290,20 +297,21 @@ export default component$(() => {
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
         {/* Settings Form */}
         <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-            Embed Configuration~ ⚙️ <span class="sparkle ml-2">✨</span>
+          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+            <Settings class="h-5 w-5" />
+            Embed Configuration~
           </h2>
           <Form action={updateAction} onSubmit$={generatePreview}>
             <div class="space-y-4 sm:space-y-6">
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Embed Title~ 💝
+                  Embed Title~
                 </label>
                 <input
                   type="text"
                   name="embedTitle"
                   value={titleValue.value}
-                  placeholder="File Upload~ ✨"
+                  placeholder="File Upload~"
                   class={inputClasses}
                   onInput$={(event) => {
                     titleValue.value = (event.target as HTMLInputElement).value;
@@ -313,12 +321,12 @@ export default component$(() => {
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   Use placeholders: {"{filename}"}, {"{filesize}"},
                   {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~ ✨
+                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
                 </p>
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Description~ 📝
+                  Description~
                 </label>
                 <textarea
                   name="embedDescription"
@@ -336,12 +344,12 @@ export default component$(() => {
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   Use placeholders: {"{filename}"}, {"{filesize}"},
                   {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~ ✨
+                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
                 </p>
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Embed Color~ 🎨
+                  Embed Color~
                 </label>
                 <ColorPicker
                   id="color-picker"
@@ -354,13 +362,13 @@ export default component$(() => {
                 />
               </div>              <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Author Name~ ✏️
+                  Author Name~
                 </label>
                 <input
                   type="text"
                   name="embedAuthor"
                   value={authorValue.value}
-                  placeholder={userData.value.user.name || "Cute User~ 💕"}
+                  placeholder={userData.value.user.name || "Cute User~"}
                   class={inputClasses}
                   onInput$={(event) => {
                     authorValue.value = (
@@ -372,17 +380,17 @@ export default component$(() => {
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   Use placeholders: {"{filename}"}, {"{filesize}"},
                   {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~ ✨
+                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
                 </p>
               </div>              <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Header Text~ 📄
+                  Header Text~
                 </label>
                 <input
                   type="text"
                   name="embedFooter"
                   value={footerValue.value}
-                  placeholder="twink.forsale~ ✨"
+                  placeholder="twink.forsale~"
                   class={inputClasses}
                   onInput$={(event) => {
                     footerValue.value = (
@@ -394,12 +402,12 @@ export default component$(() => {
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
                   Use placeholders: {"{filename}"}, {"{filesize}"},
                   {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~ ✨
+                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
                 </p>
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Custom Domain (Optional)~ 🌐
+                  Custom Domain (Optional)~
                 </label>
                 <input
                   type="text"
@@ -409,7 +417,7 @@ export default component$(() => {
                   class={inputClasses}
                 />
                 <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Override the domain shown in embeds (for custom domains)~ ✨
+                  Override the domain shown in embeds (for custom domains)~
                 </p>
               </div>
               <div class="space-y-3 sm:space-y-4">
@@ -425,7 +433,7 @@ export default component$(() => {
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Show file information (name, size, type)~ 📊
+                    Show file information (name, size, type)~
                   </span>
                 </label>
                 <label class={toggleClasses}>
@@ -440,7 +448,7 @@ export default component$(() => {
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Show upload date~ 📅
+                    Show upload date~
                   </span>
                 </label>
                 <label class={toggleClasses}>
@@ -456,7 +464,7 @@ export default component$(() => {
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
                     Show user statistics (files uploaded, storage used, total
-                    views)~ 📊
+                    views)~
                   </span>
                 </label>
                 <label class={toggleClasses}>
@@ -471,7 +479,7 @@ export default component$(() => {
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Use cute words for file URLs~ 💕
+                    Use cute words for file URLs~
                   </span>
                 </label>
                 <p class="text-theme-text-muted -mt-2 ml-8 text-xs">
@@ -502,25 +510,28 @@ export default component$(() => {
               />
               <button
                 type="submit"
-                class="btn-cute text-theme-text-primary w-full rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
               >
-                Save Settings~ 💾✨
+                <Save class="h-4 w-4" />
+                Save Settings~
               </button>
             </div>
           </Form>
 
           {updateAction.value?.success && (
             <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-secondary flex items-center text-xs sm:text-sm">
-                ✅ {updateAction.value.message}~ ✨
+              <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
+                <CheckCircle class="h-4 w-4 flex-shrink-0" />
+                {updateAction.value.message}~
               </p>
             </div>
           )}
 
           {updateAction.value?.failed && (
             <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-primary flex items-center text-xs sm:text-sm">
-                ❌ {updateAction.value.message}~ 💔
+              <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
+                <CircleX class="h-4 w-4 flex-shrink-0" />
+                {updateAction.value.message}~
               </p>
             </div>
           )}
@@ -528,33 +539,35 @@ export default component$(() => {
 
         {/* Preview */}
         <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center text-lg font-bold sm:mb-6 sm:text-xl">
-            Discord Embed Preview~<span class="sparkle ml-2">✨</span>
+          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
+            <Share class="h-5 w-5" />
+            Discord Embed Preview~
           </h2>
           <div class="glass rounded-2xl border-l-4 p-3 sm:p-4">
             <div class="text-theme-text-muted mb-3 flex items-center text-xs">
-              Example embed structure~ 📋 <span class="ml-1">💕</span>
+              Example embed structure~
             </div>
             <pre class="text-theme-text-secondary bg-theme-bg-tertiary/20 overflow-x-auto rounded-lg p-3 font-mono text-xs whitespace-pre-wrap">
               {previewCode.value}
             </pre>
           </div>
           <div class="glass border-theme-accent-quaternary/20 mt-6 rounded-2xl border p-4">
-            <h3 class="text-theme-accent-quaternary mb-3 flex items-center text-sm font-medium">
-              How it works~ ⚙️ <span class="ml-2">✨</span>
+            <h3 class="text-theme-accent-quaternary mb-3 flex items-center gap-2 text-sm font-medium">
+              <Info class="h-4 w-4" />
+              How it works~
             </h3>
             <ul class="text-theme-text-secondary space-y-2 text-xs">
               <li class="flex items-center">
-                • Discord bots/crawlers see the embed metadata~ 🤖
+                • Discord bots/crawlers see the embed metadata~
               </li>
               <li class="flex items-center">
-                • Regular users are redirected to the actual file~ 📁
+                • Regular users are redirected to the actual file~
               </li>
               <li class="flex items-center">
-                • Images show inline previews in Discord~ 🖼️
+                • Images show inline previews in Discord~
               </li>
               <li class="flex items-center">
-                • Custom domains override the site name~ 🌐
+                • Custom domains override the site name~
               </li>
             </ul>
           </div>

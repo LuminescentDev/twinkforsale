@@ -163,14 +163,16 @@
 /* Cute button styles */
 .btn-cute {
   background: linear-gradient(135deg, var(--theme-button-gradient-start), var(--theme-button-gradient-end));
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
 }
 
+/* Calmer hover — no lift, just a gentle brighten + soft shadow so buttons feel
+   responsive without everything springing off the page. */
 .btn-cute:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px var(--theme-button-shadow);
+  filter: brightness(1.06);
+  box-shadow: 0 4px 16px var(--theme-button-shadow);
 }
 
 .btn-cute:before {
@@ -224,15 +226,16 @@
 
 /* Cute card hover effects */
 .card-cute {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
 }
 
+/* Calmer hover — accent the border and add a soft shadow, but no lift. Reserved
+   for genuinely interactive/linked cards. */
 .card-cute:hover {
-  transform: translateY(-5px);
   border-color: var(--theme-accent-primary);
-  box-shadow: 0 20px 40px var(--theme-button-shadow);
+  box-shadow: 0 4px 20px var(--theme-button-shadow);
 }
 
 /* Cute text gradient */
@@ -315,11 +318,11 @@ body,
 
 /* Neon theme specific effects */
 [data-theme-variant="neon"] .card-cute:hover {
-  box-shadow: 0 0 30px var(--theme-accent-primary), 0 20px 40px var(--theme-button-shadow);
+  box-shadow: 0 0 18px var(--theme-accent-primary), 0 4px 20px var(--theme-button-shadow);
 }
 
 [data-theme-variant="neon"] .btn-cute:hover {
-  box-shadow: 0 0 25px var(--theme-accent-primary), 0 20px 40px var(--theme-button-shadow);
+  box-shadow: 0 0 16px var(--theme-accent-primary), 0 4px 16px var(--theme-button-shadow);
 }
 
 [data-theme-variant="neon"] .text-gradient-cute {

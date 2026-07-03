@@ -1,4 +1,5 @@
 import { component$ } from "@builder.io/qwik";
+import { TrendingUp, BarChart3 } from "lucide-icons-qwik";
 
 interface AnalyticsData {
   date: string;
@@ -20,7 +21,7 @@ export const AnalyticsChart = component$<AnalyticsChartProps>(
     if (!data || data.length === 0) {
       return (
         <div class="py-8 text-center">
-          <div class="text-theme-accent-tertiary mb-2">📈</div>
+          <TrendingUp class="text-theme-accent-tertiary mx-auto mb-2 h-6 w-6" />
           <p class="text-theme-text-secondary text-sm">No data available</p>
         </div>
       );
@@ -52,7 +53,7 @@ export const AnalyticsChart = component$<AnalyticsChartProps>(
     return (
       <div class="card-cute rounded-2xl p-4">
         <h3 class="text-theme-text-secondary mb-3 flex items-center gap-2 text-sm font-medium">
-          <span class="text-lg">📊</span>
+          <BarChart3 class="h-4 w-4" />
           {title}
         </h3>
         <svg width={chartWidth} height={chartHeight} class="w-full">

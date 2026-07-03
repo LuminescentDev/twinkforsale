@@ -60,7 +60,7 @@ export const StatCard = component$<StatCardProps>(
 
     if (layout === "centered") {
       return (
-        <div class={cn("card-cute rounded-2xl p-4 text-center sm:p-6", className)}>
+        <div class={cn("card-static rounded-2xl p-4 text-center sm:p-6", className)}>
           {badge}
           <div class="text-theme-text-primary mb-1 text-lg font-bold sm:text-2xl">
             {value}
@@ -71,7 +71,7 @@ export const StatCard = component$<StatCardProps>(
     }
 
     return (
-      <div class={cn("card-cute rounded-2xl p-4 sm:p-6", className)}>
+      <div class={cn("card-static rounded-2xl p-4 sm:p-6", className)}>
         <div class="flex items-center">
           {badge}
           <div class="ml-3 sm:ml-4">

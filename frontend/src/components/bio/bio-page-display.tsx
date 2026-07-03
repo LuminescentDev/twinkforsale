@@ -235,8 +235,9 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
 
                 {isPreview ? (
                   <div class="mx-auto max-w-sm rounded-2xl bg-black/30 p-6 backdrop-blur-sm">
-                    <div class="mb-2 text-sm opacity-75">
-                      🎵 Spotify {spotifyEmbed.type}
+                    <div class="mb-2 flex items-center justify-center gap-1.5 text-sm opacity-75">
+                      <Music class="h-4 w-4" />
+                      Spotify {spotifyEmbed.type}
                     </div>
                     <div class="text-xs opacity-60">
                       Preview mode - embed will appear on live page

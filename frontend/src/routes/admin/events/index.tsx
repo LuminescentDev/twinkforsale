@@ -362,7 +362,7 @@ export default component$(() => {
               System Events Management
             </h1>
             <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-              Monitor and manage system events and alerts~ 🔔
+              Monitor and manage system events and alerts~
             </p>
           </div>
 
@@ -643,7 +643,7 @@ export default component$(() => {
                   No Events Found
                 </h3>
                 <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-                  System is running smoothly with no events to report! 🎉
+                  System is running smoothly with no events to report!
                 </p>
               </div>
             )}

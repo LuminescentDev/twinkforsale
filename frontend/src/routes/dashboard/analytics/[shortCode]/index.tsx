@@ -127,8 +127,9 @@ export default component$(() => {
         <div class="card-cute rounded-2xl p-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 class="text-gradient-cute mb-2 text-2xl font-bold">
-                File Analytics~ 📊
+              <h1 class="text-gradient-cute mb-2 flex items-center gap-2 text-2xl font-bold">
+                <BarChart3 class="h-6 w-6" />
+                File Analytics~
               </h1>
               <p class="text-theme-text-primary mb-1 font-medium">
                 {data.value.upload.originalName}
@@ -229,8 +230,9 @@ export default component$(() => {
 
       {/* Additional Insights */}
       <div class="card-cute mb-6 rounded-2xl p-6">
-        <h3 class="text-gradient-cute mb-4 text-lg font-bold">
-          📊 Insights & Summary
+        <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold">
+          <BarChart3 class="h-5 w-5" />
+          Insights & Summary
         </h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div class="text-center">
@@ -421,7 +423,7 @@ export default component$(() => {
               ))
             ) : (
               <p class="text-theme-text-secondary py-4 text-center">
-                No views yet~ ✨
+                No views yet~
               </p>
             )}
           </div>
@@ -456,7 +458,7 @@ export default component$(() => {
               ))
             ) : (
               <p class="text-theme-text-secondary py-4 text-center">
-                No downloads yet~ ✨
+                No downloads yet~
               </p>
             )}
           </div>

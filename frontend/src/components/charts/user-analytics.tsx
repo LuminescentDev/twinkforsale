@@ -1,4 +1,5 @@
 import { component$, useSignal, useTask$ } from "@builder.io/qwik";
+import { BarChart3, ChevronRight } from "lucide-icons-qwik";
 import type { DailyMetric } from "~/lib/api-client";
 
 interface UserAnalyticsProps {
@@ -53,8 +54,9 @@ export const UserAnalytics = component$<UserAnalyticsProps>(
             isExpanded.value = !isExpanded.value;
           }}
         >
-          <span class="transition-transform group-open:rotate-90">▶</span>
-          📊 Analytics for {userName}
+          <ChevronRight class="h-4 w-4 transition-transform group-open:rotate-90" />
+          <BarChart3 class="h-4 w-4" />
+          Analytics for {userName}
         </summary>
         <div class="glass border-theme-card-border mt-3 rounded-xl border p-3">
           {" "}
@@ -244,7 +246,7 @@ export const UserAnalytics = component$<UserAnalyticsProps>(
             </div>
           ) : (
             <div class="py-4 text-center">
-              <div class="text-theme-accent-primary mb-2">📊</div>
+              <BarChart3 class="text-theme-accent-primary mx-auto mb-2 h-6 w-6" />
               <p class="text-theme-text-secondary text-xs">
                 No recent activity for {userName}
               </p>

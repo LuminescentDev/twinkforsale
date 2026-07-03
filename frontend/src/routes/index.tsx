@@ -17,6 +17,10 @@ import {
   Upload,
   Users,
   Palette,
+  Image as ImageIcon,
+  Video,
+  Music,
+  File as FileIcon,
 } from "lucide-icons-qwik";
 import { LoginButton } from "~/components/auth/login-button";
 import {
@@ -282,11 +286,11 @@ export default component$(() => {
             <div class="space-y-3">
               {publicStats.value.recentUploads.map((upload) => {
                 const getFileIcon = (mimeType: string) => {
-                  if (mimeType.startsWith("image/")) return "🖼️";
-                  if (mimeType.startsWith("video/")) return "🎥";
-                  if (mimeType.startsWith("audio/")) return "🎵";
-                  if (mimeType.startsWith("text/")) return "📝";
-                  return "📄";
+                  if (mimeType.startsWith("image/")) return ImageIcon;
+                  if (mimeType.startsWith("video/")) return Video;
+                  if (mimeType.startsWith("audio/")) return Music;
+                  if (mimeType.startsWith("text/")) return FileText;
+                  return FileIcon;
                 };
                 const getFileType = (mimeType: string) => {
                   if (mimeType.startsWith("image/")) return "Image";
@@ -305,13 +309,14 @@ export default component$(() => {
                     return `${Math.floor(diffInMinutes / 60)}h ago`;
                   return `${Math.floor(diffInMinutes / 1440)}d ago`;
                 };
+                const FileIconCmp = getFileIcon(upload.mimeType);
                 return (
                   <div
                     key={upload.id}
                     class="glass border-theme-card-border flex items-center justify-between rounded-xl border p-3"
                   >
                     <div class="flex items-center gap-3">
-                      <span class="text-lg">{getFileIcon(upload.mimeType)}</span>
+                      <FileIconCmp class="text-theme-accent-primary h-5 w-5" />
                       <div>
                         <div class="text-theme-text-primary text-sm font-medium">
                           {getFileType(upload.mimeType)} uploaded
@@ -380,7 +385,7 @@ export default component$(() => {
               Try Different Themes!
             </h3>
             <p class="text-theme-text-secondary text-sm sm:text-base">
-              Click the theme selector below to see how cute each theme looks~ ✨
+              Click the theme selector below to see how cute each theme looks~
             </p>
           </div>
           <div class="relative z-10 flex justify-center">
@@ -399,7 +404,7 @@ export default component$(() => {
           </div>
           <p class="text-theme-text-muted mt-6 text-center text-xs">
             Your theme preference is saved automatically and syncs across all
-            your devices~ 💫
+            your devices~
           </p>
         </Card>
       </Section>
@@ -408,7 +413,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: "twink.forsale - Cutest File Sharing Ever! 💕",
+  title: "twink.forsale - Cutest File Sharing Ever!",
   meta: [
     {
       name: "description",
@@ -421,7 +426,7 @@ export const head: DocumentHead = {
     },
     {
       property: "og:title",
-      content: "twink.forsale - Cutest File Sharing Ever! 💕",
+      content: "twink.forsale - Cutest File Sharing Ever!",
     },
     {
       property: "og:description",

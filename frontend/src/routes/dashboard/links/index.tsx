@@ -198,7 +198,7 @@ export default component$(() => {
         align="left"
         title="Short Links"
         icon={ChainIcon}
-        subtitle="Create and manage your cute short URLs under /l/<code> ✨"
+        subtitle="Create and manage your cute short URLs under /l/<code>"
       />
 
       {!data.value.user.isApproved && (
@@ -251,7 +251,14 @@ export default component$(() => {
           </div>
           <div class="mt-4 flex justify-end">
             <Button onClick$={submitCreate} disabled={!url.value.trim() || creating.value}>
-              {creating.value ? "Creating…" : "Create Link ✨"}
+              {creating.value ? (
+                "Creating…"
+              ) : (
+                <>
+                  <ChainIcon class="h-4 w-4" />
+                  Create Link
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -262,7 +269,7 @@ export default component$(() => {
 
         {data.value.links.length === 0 ? (
           <div class="py-10 text-center">
-            <div class="mb-2 text-4xl">🔗</div>
+            <ChainIcon class="text-theme-accent-primary mx-auto mb-2 h-10 w-10" />
             <p class="text-theme-text-secondary">No short links yet~ Create your first one above!</p>
           </div>
         ) : (

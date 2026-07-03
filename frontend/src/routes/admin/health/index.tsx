@@ -183,7 +183,7 @@ export default component$(() => {
               Health Dashboard
             </h1>
             <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-              Real-time system monitoring and performance metrics~ 📊
+              Real-time system monitoring and performance metrics~
             </p>
           </div>
 
@@ -763,7 +763,7 @@ export default component$(() => {
               <div class="py-6 text-center sm:py-8">
                 <CheckCircle class="mx-auto h-8 w-8 text-theme-success sm:h-12 sm:w-12" />
                 <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-                  No system events in the last 24 hours! 🎉
+                  No system events in the last 24 hours!
                 </p>
               </div>
             )}

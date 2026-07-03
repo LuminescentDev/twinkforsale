@@ -4,6 +4,14 @@ import {
   useVisibleTask$,
   type QRL,
 } from "@builder.io/qwik";
+import {
+  Video,
+  Music,
+  FileText,
+  FileArchive,
+  File as FileIcon,
+  ImageOff,
+} from "lucide-icons-qwik";
 
 interface LazyImageProps {
   src: string;
@@ -69,7 +77,7 @@ export const LazyImage = component$<LazyImageProps>(
         {hasError.value && (
           <div class="bg-gradient-to-br from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 absolute inset-0 flex items-center justify-center">
             <div class="text-center">
-              <div class="text-2xl">❌</div>
+              <ImageOff class="text-theme-text-muted mx-auto h-6 w-6" />
               <div class="text-theme-text-muted text-xs mt-1">Failed to load</div>
             </div>
           </div>
@@ -113,9 +121,9 @@ export const FileTypeIcon = component$<{
   };
 
   const iconSizes = {
-    sm: "text-sm sm:text-base",
-    md: "text-2xl sm:text-3xl",
-    lg: "text-6xl",
+    sm: "h-4 w-4 sm:h-5 sm:w-5",
+    md: "h-6 w-6 sm:h-8 sm:w-8",
+    lg: "h-16 w-16",
   };
 
   if (upload.mimeType.startsWith("image/")) {
@@ -125,25 +133,23 @@ export const FileTypeIcon = component$<{
         alt={upload.originalName}
         class={`${sizeClasses[size]} cursor-pointer overflow-hidden rounded-lg transition-all duration-300 hover:scale-110 object-cover`}        width={size === "lg" ? 400 : 80}
         height={size === "lg" ? 400 : 80}
-        placeholder="🖼️"
         onClick$={onClick$}
       />
     );
   }
 
-  // Non-image file types
+  // Non-image file types → Lucide icon + a theme-accent gradient tile.
   const getFileIcon = () => {
-    if (upload.mimeType.startsWith("video/")) return "🎬";
-    if (upload.mimeType.startsWith("audio/")) return "🎵";
-    if (upload.mimeType.includes("pdf")) return "📄";
+    if (upload.mimeType.startsWith("video/")) return Video;
+    if (upload.mimeType.startsWith("audio/")) return Music;
+    if (upload.mimeType.includes("text")) return FileText;
     if (
       upload.mimeType.includes("zip") ||
       upload.mimeType.includes("rar") ||
       upload.mimeType.includes("archive")
     )
-      return "📦";
-    if (upload.mimeType.includes("text")) return "📝";
-    return "📄";
+      return FileArchive;
+    return FileIcon;
   };
 
   const getGradientClass = () => {
@@ -155,17 +161,19 @@ export const FileTypeIcon = component$<{
       upload.mimeType.includes("rar") ||
       upload.mimeType.includes("archive")
     )
-      return "bg-gradient-to-br from-them-accent-quaternary to-theme-accent-primary";
+      return "bg-gradient-to-br from-theme-accent-quaternary to-theme-accent-primary";
     if (upload.mimeType.includes("text")) return "bg-gradient-to-br from-theme-accent-primary to-theme-accent-tertiary";
     return "glass";
   };
+
+  const Icon = getFileIcon();
 
   return (
     <div
       class={`${getGradientClass()} ${sizeClasses[size]} flex items-center justify-center rounded-lg cursor-pointer transition-all duration-300 hover:scale-105`}
       onClick$={onClick$}
     >
-      <div class={iconSizes[size]}>{getFileIcon()}</div>
+      <Icon class={`text-white ${iconSizes[size]}`} />
     </div>
   );
 });

@@ -45,7 +45,7 @@ export default component$(() => {
         align="left"
         title="Analytics Overview~"
         icon={TrendingUp}
-        subtitle="Complete analytics for all your files and activity~ ✨"
+        subtitle="Complete analytics for all your files and activity~"
       />
 
       {/* Summary Stats */}
@@ -167,12 +167,12 @@ export default component$(() => {
           </div>
         ) : (
           <div class="py-8 text-center">
-            <div class="mb-4 text-6xl">📊</div>
+            <BarChart3 class="text-theme-accent-primary mx-auto mb-4 h-12 w-12" />
             <h4 class="text-theme-text-primary mb-2 font-medium">
               No files yet~
             </h4>
             <p class="text-theme-text-secondary">
-              Upload some files to see analytics here! ✨
+              Upload some files to see analytics here!
             </p>
           </div>
         )}

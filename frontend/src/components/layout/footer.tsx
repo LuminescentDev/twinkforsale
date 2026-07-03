@@ -171,7 +171,7 @@ export const Footer = component$(() => {
             </div>
             <p class="text-theme-text-muted text-sm">
               © 2025 twink.forsale • Made with AI assistance and lots of kawaii
-              energy! ✨
+              energy!
             </p>
           </div>
         </div>

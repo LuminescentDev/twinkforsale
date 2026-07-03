@@ -2,11 +2,11 @@ import { component$, $ } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 import { useCurrentUser } from "~/routes/layout";
 import { logout } from "~/lib/auth-client";
-import { Home, Folder, Upload, Wrench, LogOut, Shield } from "lucide-icons-qwik";
+import { Home, Folder, Upload, Wrench, LogOut } from "lucide-icons-qwik";
 import { Nav } from "@luminescent/ui-qwik";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { LoginButton } from "~/components/auth/login-button";
-import { dashboardNav, isNavItemActive } from "~/lib/dashboard-nav";
+import { adminNav, dashboardNav, isNavItemActive } from "~/lib/dashboard-nav";
 
 // Primary links shown inline on desktop. Everything else moved into the
 // dashboard sidebar (desktop) and the grouped mobile menu, so the top bar
@@ -23,24 +23,26 @@ export default component$(() => {
   const location = useLocation();
   const pathname = location.url.pathname;
 
+  // Calmer active state: accent text + a subtle tinted pill instead of a full
+  // gradient button that "pops" out of the bar.
   const desktopLink = (active: boolean) =>
-    `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+    `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
       active
-        ? "btn-cute text-white shadow-lg"
+        ? "text-theme-accent-primary bg-theme-accent-primary/10"
         : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
     }`;
 
   const mobileLink = (active: boolean) =>
-    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
       active
-        ? "btn-cute text-white shadow-lg"
+        ? "text-theme-accent-primary bg-theme-accent-primary/10"
         : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
     }`;
 
   return (
     <Nav
       fixed
-      colorClass="bg-theme-bg-secondary/60 backdrop-blur-md !border-b border-theme-card-border"
+      colorClass="bg-theme-bg-primary/80 backdrop-blur-md !border-b border-theme-card-border"
     >
       {/* Logo/Brand */}
       <Link
@@ -124,14 +126,23 @@ export default component$(() => {
           ))}
 
           {user.value.isAdmin && (
-            <Link
-              href="/admin"
-              q:slot="mobile"
-              class={`mx-2 mt-2 ${mobileLink(pathname.startsWith("/admin"))}`}
-            >
-              <Shield class="h-5 w-5" />
-              Admin Panel
-            </Link>
+            <div q:slot="mobile" class="px-2 pt-2">
+              <div class="text-theme-text-muted mb-1 px-2 text-xs font-semibold tracking-wider uppercase">
+                Admin
+              </div>
+              <div class="space-y-1">
+                {adminNav.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    class={mobileLink(isNavItemActive(pathname, item))}
+                  >
+                    <item.icon class="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
 
           <div q:slot="mobile" class="mt-2 border-t border-theme-card-border px-4 py-3">

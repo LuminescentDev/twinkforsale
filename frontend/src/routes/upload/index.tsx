@@ -314,6 +314,7 @@ export default component$(() => {
   return (
     <>
       <PageHeader
+        align="left"
         title="File Upload~"
         icon={Upload}
         subtitle="Drag and drop files or click to select files to upload! (◕‿◕)♡"
@@ -622,7 +623,7 @@ export default component$(() => {
             <p>• Supported formats depend on your account settings</p>
           </div>
 
-          <Callout tone="info" title="✨ Pro Tip">
+          <Callout tone="info" icon={Sparkle} title="Pro Tip">
             Your files are uploaded directly to the same API endpoint used by
             ShareX and other tools. URLs and deletion keys will be generated
             automatically!

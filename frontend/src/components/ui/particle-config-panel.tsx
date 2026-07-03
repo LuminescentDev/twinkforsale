@@ -6,7 +6,17 @@ import {
   type ParticleType,
   type ParticleDirection
 } from "~/components/effects/particle-background";
-import { Palette, Settings, Eye, EyeOff } from "lucide-icons-qwik";
+import {
+  Palette,
+  Settings,
+  Eye,
+  EyeOff,
+  Heart,
+  Snowflake,
+  Star,
+  Circle,
+  PartyPopper,
+} from "lucide-icons-qwik";
 
 export interface ParticleConfigPanelProps {
   config: Signal<ParticleConfig>;
@@ -15,12 +25,12 @@ export interface ParticleConfigPanelProps {
 
 export const ParticleConfigPanel = component$<ParticleConfigPanelProps>(
   ({ config, previewEnabled = true }) => {
-    const particleTypes: { value: ParticleType; label: string; emoji: string }[] = [
-      { value: "hearts", label: "Hearts", emoji: "💕" },
-      { value: "snow", label: "Snow", emoji: "❄️" },
-      { value: "stars", label: "Stars", emoji: "⭐" },
-      { value: "bubbles", label: "Bubbles", emoji: "🫧" },
-      { value: "confetti", label: "Confetti", emoji: "🎉" },
+    const particleTypes: { value: ParticleType; label: string; icon: any }[] = [
+      { value: "hearts", label: "Hearts", icon: Heart },
+      { value: "snow", label: "Snow", icon: Snowflake },
+      { value: "stars", label: "Stars", icon: Star },
+      { value: "bubbles", label: "Bubbles", icon: Circle },
+      { value: "confetti", label: "Confetti", icon: PartyPopper },
     ];
 
     const directions: { value: ParticleDirection; label: string }[] = [
@@ -28,7 +38,7 @@ export const ParticleConfigPanel = component$<ParticleConfigPanelProps>(
       { value: "up", label: "Up ↑" },
       { value: "left", label: "Left ←" },
       { value: "right", label: "Right →" },
-      { value: "random", label: "Random 🎲" },
+      { value: "random", label: "Random" },
     ];
 
     const defaultColors: { [key in ParticleType]: string[] } = {
@@ -104,7 +114,7 @@ export const ParticleConfigPanel = component$<ParticleConfigPanelProps>(
                           : ""
                       }`}
                     >
-                      <div class="text-lg">{type.emoji}</div>
+                      <type.icon class="text-theme-accent-primary mx-auto h-5 w-5" />
                       <div class="text-xs text-theme-text-secondary mt-1">
                         {type.label}
                       </div>

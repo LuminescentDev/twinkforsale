@@ -7,6 +7,12 @@ import {
   HardDrive,
   Key,
   File,
+  FileText,
+  Video,
+  Music,
+  FileArchive,
+  Flower2,
+  Rocket,
   TrendingUp,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
@@ -175,21 +181,20 @@ export default component$(() => {
                       </div>
                     ) : (
                       <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        <div class="text-lg">
-                          {upload.mimeType.startsWith("video/")
-                            ? "🎬"
+                        {(() => {
+                          const Icon = upload.mimeType.startsWith("video/")
+                            ? Video
                             : upload.mimeType.startsWith("audio/")
-                              ? "🎵"
-                              : upload.mimeType.includes("pdf")
-                                ? "📄"
-                                : upload.mimeType.includes("zip") ||
-                                    upload.mimeType.includes("rar") ||
-                                    upload.mimeType.includes("archive")
-                                  ? "📦"
-                                  : upload.mimeType.includes("text")
-                                    ? "📝"
-                                    : "📄"}
-                        </div>
+                              ? Music
+                              : upload.mimeType.includes("zip") ||
+                                  upload.mimeType.includes("rar") ||
+                                  upload.mimeType.includes("archive")
+                                ? FileArchive
+                                : upload.mimeType.includes("text")
+                                  ? FileText
+                                  : File;
+                          return <Icon class="h-6 w-6 text-white" />;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -223,11 +228,14 @@ export default component$(() => {
           </div>
         ) : (
           <EmptyState
-            emoji="🌸"
+            icon={Flower2}
             title="No files yet~"
             description="Upload via ShareX or API to see your files here!"
           >
-            <Button href="/setup/sharex">Setup ShareX to get started 🚀</Button>
+            <Button href="/setup/sharex">
+              <Rocket class="h-4 w-4" />
+              Setup ShareX to get started
+            </Button>
           </EmptyState>
         )}
       </Card>
@@ -236,7 +244,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: "Dashboard - twink.forsale 💕",
+  title: "Dashboard - twink.forsale",
   meta: [
     {
       name: "description",

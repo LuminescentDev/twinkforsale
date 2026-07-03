@@ -9,6 +9,11 @@ import {
   Key,
   Settings,
   Wrench,
+  Users,
+  Globe,
+  Bell,
+  Activity,
+  SlidersHorizontal,
 } from "lucide-icons-qwik";
 
 export interface NavItem {
@@ -64,6 +69,20 @@ export const dashboardNav: NavGroup[] = [
       { href: "/setup/sharex", label: "ShareX Setup", icon: Wrench },
     ],
   },
+];
+
+/**
+ * Admin sub-navigation. Rendered as its own group at the bottom of the sidebar
+ * only for admins, so admin tools are reachable from every signed-in page
+ * (dashboard, upload, ShareX and the admin section itself) instead of hiding
+ * behind a single "Admin Panel" link.
+ */
+export const adminNav: NavItem[] = [
+  { href: "/admin", label: "Users", icon: Users, exact: true },
+  { href: "/admin/domains", label: "Domains", icon: Globe },
+  { href: "/admin/events", label: "Events", icon: Bell },
+  { href: "/admin/health", label: "Health", icon: Activity },
+  { href: "/admin/bio-limits", label: "Bio Limits", icon: SlidersHorizontal },
 ];
 
 /**

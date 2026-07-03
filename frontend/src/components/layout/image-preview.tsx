@@ -5,7 +5,7 @@ import {
   useOnDocument,
   type QRL,
 } from "@builder.io/qwik";
-import { X, Download, ExternalLink } from "lucide-icons-qwik";
+import { X, Download, ExternalLink, Image as ImageIcon } from "lucide-icons-qwik";
 
 export interface ImagePreviewProps {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export const ImagePreview = component$<ImagePreviewProps>(
           <div class="border-theme-card-border flex items-center justify-between border-b bg-slate-900/50 p-4">
             <div class="flex items-center space-x-3">
               <div class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary flex h-8 w-8 items-center justify-center rounded-full">
-                <div class="text-sm">🖼️</div>
+                <ImageIcon class="h-4 w-4 text-white" />
               </div>
               <div>
                 <h3 class="text-theme-text-primary max-w-[200px] truncate text-sm font-medium sm:max-w-[300px] sm:text-base">
