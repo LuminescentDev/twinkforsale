@@ -9,7 +9,7 @@ public sealed class BioLimitsEndpoint(AppDbContext dbContext) : EndpointWithoutR
 {
     public override void Configure()
     {
-        Get("/api/admin/bio-limits", "/admin/bio-limits");
+        Get("/api/admin/bio-limits");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

@@ -132,7 +132,20 @@ app.UseAuthorization();
 app.UseFastEndpoints();
 app.UseSwaggerGen();
 
+app.MapMethods("/admin", ["GET", "HEAD"], RedirectLegacyAdminPageAsync);
+app.MapMethods("/admin/{**path}", ["GET", "HEAD"], RedirectLegacyAdminPageAsync);
+
 app.Run();
+
+static Task RedirectLegacyAdminPageAsync(HttpContext context)
+{
+    var path = context.Request.Path.Value ?? "/admin";
+    var suffix = path.Equals("/admin", StringComparison.OrdinalIgnoreCase)
+        ? string.Empty
+        : path["/admin".Length..];
+    context.Response.Redirect($"/dashboard/admin{suffix}{context.Request.QueryString}", permanent: false);
+    return Task.CompletedTask;
+}
 
 static Dictionary<string, string?> BuildLegacyEnvironmentConfiguration()
 {

@@ -305,7 +305,7 @@ export default component$(() => {
         </h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            href="/admin/domains"
+            href="/dashboard/admin/domains"
             class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">
@@ -325,7 +325,7 @@ export default component$(() => {
           </Link>
 
           <Link
-            href="/admin/health"
+            href="/dashboard/admin/health"
             class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">
@@ -344,7 +344,7 @@ export default component$(() => {
           </Link>
 
           <Link
-            href="/admin/events"
+            href="/dashboard/admin/events"
             class="card-cute group rounded-2xl p-4 sm:p-6"
           >
             <div class="mb-3 flex items-center sm:mb-4">

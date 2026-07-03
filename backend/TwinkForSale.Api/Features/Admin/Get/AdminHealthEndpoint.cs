@@ -9,7 +9,7 @@ public sealed class AdminHealthEndpoint(AppDbContext dbContext) : EndpointWithou
 {
     public override void Configure()
     {
-        Get("/api/admin/health", "/admin/health");
+        Get("/api/admin/health");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

@@ -10,7 +10,7 @@ public sealed class AdminAnalyticsEndpoint(AppDbContext dbContext, AnalyticsServ
 {
     public override void Configure()
     {
-        Get("/api/admin/analytics", "/admin/analytics");
+        Get("/api/admin/analytics");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }

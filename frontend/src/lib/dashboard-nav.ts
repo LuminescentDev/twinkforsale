@@ -78,11 +78,15 @@ export const dashboardNav: NavGroup[] = [
  * behind a single "Admin Panel" link.
  */
 export const adminNav: NavItem[] = [
-  { href: "/admin", label: "Users", icon: Users, exact: true },
-  { href: "/admin/domains", label: "Domains", icon: Globe },
-  { href: "/admin/events", label: "Events", icon: Bell },
-  { href: "/admin/health", label: "Health", icon: Activity },
-  { href: "/admin/bio-limits", label: "Bio Limits", icon: SlidersHorizontal },
+  { href: "/dashboard/admin", label: "Users", icon: Users, exact: true },
+  { href: "/dashboard/admin/domains", label: "Domains", icon: Globe },
+  { href: "/dashboard/admin/events", label: "Events", icon: Bell },
+  { href: "/dashboard/admin/health", label: "Health", icon: Activity },
+  {
+    href: "/dashboard/admin/bio-limits",
+    label: "Bio Limits",
+    icon: SlidersHorizontal,
+  },
 ];
 
 /**

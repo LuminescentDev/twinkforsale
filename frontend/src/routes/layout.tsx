@@ -56,17 +56,16 @@ export default component$(() => {
   const isBioPage =
     location.url.pathname.match(/^\/[^/]+\/?$/) &&
     !location.url.pathname.startsWith("/dashboard") &&
-    !location.url.pathname.startsWith("/admin") &&
     !location.url.pathname.startsWith("/setup") &&
     !location.url.pathname.startsWith("/f/") &&
     !location.url.pathname.startsWith("/upload") &&
     location.url.pathname !== "/";
 
-  // App-shell pages (dashboard/admin/upload/setup) render a sidebar + content,
+  // App-shell pages (dashboard/upload/setup) render a sidebar + content,
   // so they need a wider gutter than the centered marketing/legal pages —
   // otherwise the ~256px sidebar leaves the content column cramped on wide
   // screens.
-  const isAppPage = ["/dashboard", "/admin", "/upload", "/setup"].some(
+  const isAppPage = ["/dashboard", "/upload", "/setup"].some(
     (r) =>
       location.url.pathname === r ||
       location.url.pathname.startsWith(r + "/"),

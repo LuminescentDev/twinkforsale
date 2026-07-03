@@ -9,7 +9,7 @@ public sealed class UpdateDomainEndpoint(AppDbContext dbContext) : Endpoint<Upda
 {
     public override void Configure()
     {
-        Put("/api/admin/domains/{id}", "/admin/domains/{id}");
+        Put("/api/admin/domains/{id}");
         AuthSchemes(ApiKeyAuthenticationDefaults.Scheme);
         Policies(AuthPolicies.Admin);
     }
