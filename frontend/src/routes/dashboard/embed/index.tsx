@@ -1,4 +1,5 @@
-import { component$, useSignal, $, useTask$ } from "@builder.io/qwik";
+import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
+import type { QRL, Signal } from "@builder.io/qwik";
 import {
   routeLoader$,
   Form,
@@ -14,10 +15,14 @@ import {
   CheckCircle,
   CircleX,
   Info,
+  Code,
+  Image as ImageIcon,
+  Eye,
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { PageHeader } from "~/components/ui";
+
 export const useUserLoader = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
@@ -108,184 +113,124 @@ export const useUpdateEmbedSettings = routeAction$(
   }),
 );
 
+// Placeholders users can drop into any of the text fields. Kept in one place so
+// the chip row below stays in sync with the example values used for the preview.
+const PLACEHOLDERS = [
+  "filename",
+  "filesize",
+  "filetype",
+  "uploaddate",
+  "views",
+  "username",
+  "totalfiles",
+  "totalstorage",
+  "totalviews",
+] as const;
+
+// Small row of clickable tokens that append into the field the chips belong to.
+// Inserting beats making people memorise the `{token}` syntax from a hint blob.
+const PlaceholderChips = component$<{ onInsert$: QRL<(token: string) => void> }>(
+  ({ onInsert$ }) => (
+    <div class="mt-2 flex flex-wrap gap-1.5 pl-1">
+      {PLACEHOLDERS.map((token) => (
+        <button
+          key={token}
+          type="button"
+          onClick$={() => onInsert$(`{${token}}`)}
+          class="glass text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-accent-primary/15 rounded-full px-2.5 py-1 font-mono text-[11px] transition-all duration-200"
+        >
+          {`{${token}}`}
+        </button>
+      ))}
+    </div>
+  ),
+);
+
 export default component$(() => {
   const userData = useUserLoader();
   const updateAction = useUpdateEmbedSettings();
-  const previewCode = useSignal(""); // Reactive form state
-  const showFileInfo = useSignal(userData.value.user.showFileInfo);
-  const showUploadDate = useSignal(userData.value.user.showUploadDate);
-  const showUserStats = useSignal(userData.value.user.showUserStats);
-  const useCustomWords = useSignal(userData.value.user.useCustomWords);
-
-  // Form field signals to track current values
-  const titleValue = useSignal(userData.value.user.embedTitle || "");
-  const descriptionValue = useSignal(
-    userData.value.user.embedDescription || "",
-  );
-  const colorValue = useSignal(userData.value.user.embedColor || "#8B5CF6");
-  const authorValue = useSignal(userData.value.user.embedAuthor || "");
-  const footerValue = useSignal(userData.value.user.embedFooter || ""); // Initialize preview code with user data (non-reactive)
   const user = userData.value.user;
+
+  // Reactive form state — everything the preview reads lives in a signal so the
+  // preview stays in lockstep without hand-rolled regenerate calls.
+  const showFileInfo = useSignal(user.showFileInfo);
+  const showUploadDate = useSignal(user.showUploadDate);
+  const showUserStats = useSignal(user.showUserStats);
+  const useCustomWords = useSignal(user.useCustomWords);
+
+  const titleValue = useSignal(user.embedTitle || "");
+  const descriptionValue = useSignal(user.embedDescription || "");
+  const colorValue = useSignal(user.embedColor || "#8B5CF6");
+  const authorValue = useSignal(user.embedAuthor || "");
+  const footerValue = useSignal(user.embedFooter || "");
+
+  const showJson = useSignal(false);
+
   const inputClasses =
     "w-full px-3 sm:px-4 py-2 sm:py-3 glass rounded-full placeholder:theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-sm sm:text-base text-theme-primary";
   const toggleClasses =
     "flex gap-2 items-center p-3 glass rounded-full hover:bg-theme-accent-primary/10 transition-all duration-300 cursor-pointer";
-  // Use useTask$ to set initial preview without violating Qwik's reactivity rules
-  useTask$(() => {
-    const title = user.embedTitle || "File Upload";
-    const description = user.embedDescription || "Uploaded via twink.forsale";
-    const color = user.embedColor || "#8B5CF6";
-    const author = user.embedAuthor || user.name || "User";
-    const footer = user.embedFooter || "twink.forsale";    // Replace placeholders with example values for initial preview
-    const replacedTitle = title
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
 
-    let initialDesc = description
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
+  // Helper to append a placeholder token to a given field signal.
+  const insertInto = (field: Signal<string>) =>
+    $((token: string) => {
+      field.value = `${field.value}${token}`;
+    });
 
-    const replacedAuthor = author
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
+  // Derived preview model — resolves placeholders to example values and folds in
+  // the optional file-info / upload-date / user-stats blocks.
+  const preview = useComputed$(() => {
+    const name = user.name || "User";
+    const values: Record<string, string> = {
+      filename: "example-image.png",
+      filesize: "2.34 MB",
+      filetype: "image/png",
+      uploaddate: new Date().toLocaleDateString(),
+      views: "42",
+      username: name,
+      totalfiles: "127",
+      totalstorage: "2.1 GB",
+      totalviews: "5,432",
+    };
+    const fill = (s: string) =>
+      s.replace(/\{(\w+)\}/g, (m, key) => values[key] ?? m);
 
-    if (user.showFileInfo) {
-      initialDesc += "\\n\\n📁 **example-image.png**\\n📏 2.34 MB • image/png";
-    }
-    if (user.showUploadDate) {
-      initialDesc += "\\n📅 Uploaded " + new Date().toLocaleDateString();
-    }    // Set initial footer based on user stats setting
-    let initialFooter = footer;
-    if (user.showUserStats) {
-      initialFooter = "📁 127 files   💾 2.1 GB   👁️ 5,432 views";
-    } else {
-      // Apply placeholder replacements to footer if not using user stats
-      initialFooter = footer
-        .replace(/\{filename\}/g, "example-image.png")
-        .replace(/\{filesize\}/g, "2.34 MB")
-        .replace(/\{filetype\}/g, "image/png")
-        .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-        .replace(/\{views\}/g, "42")
-        .replace(/\{username\}/g, user.name || "User")
-        .replace(/\{totalfiles\}/g, "127")
-        .replace(/\{totalstorage\}/g, "2.1 GB")
-        .replace(/\{totalviews\}/g, "5,432");
-    }
-
-    previewCode.value = `{
-      "type": "rich",
-      "title": "${replacedTitle}",
-      "description": "${initialDesc}",
-      "color": ${parseInt(color.slice(1), 16)},
-      "author": {
-        "name": "${replacedAuthor}"
-      },
-      "header": {
-        "text": "${initialFooter}"
-      },
-      "image": {
-        "url": "https://twink.forsale/f/abc123"
-      }
-    }`;
-  });
-  const generatePreview = $(() => {
-    const title = titleValue.value || "File Upload";
-    const description = descriptionValue.value || "Uploaded via twink.forsale";
-    const color = colorValue.value || "#8B5CF6";
-    const author = authorValue.value || userData.value.user.name || "User";
-    const footer = footerValue.value || "twink.forsale";    // Replace placeholders with example values
-    const replacedTitle = title
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, userData.value.user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
-
-    let desc = description
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, userData.value.user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
-
-    const replacedAuthor = author
-      .replace(/\{filename\}/g, "example-image.png")
-      .replace(/\{filesize\}/g, "2.34 MB")
-      .replace(/\{filetype\}/g, "image/png")
-      .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-      .replace(/\{views\}/g, "42")
-      .replace(/\{username\}/g, userData.value.user.name || "User")
-      .replace(/\{totalfiles\}/g, "127")
-      .replace(/\{totalstorage\}/g, "2.1 GB")
-      .replace(/\{totalviews\}/g, "5,432");
+    const descLines = [fill(descriptionValue.value || "Uploaded via twink.forsale")];
     if (showFileInfo.value) {
-      desc += "\\n\\n📁 **example-image.png**\\n📏 2.34 MB • image/png";
+      descLines.push("", "📁 example-image.png", "📏 2.34 MB • image/png");
     }
     if (showUploadDate.value) {
-      desc += "\\n📅 Uploaded " + new Date().toLocaleDateString();
-    }    // Update footer based on user stats setting
-    let finalFooter = footer;
-    if (showUserStats.value) {
-      finalFooter = "📁 127 files   💾 2.1 GB   👁️ 5,432 views";
-    } else {
-      // Apply placeholder replacements to footer if not using user stats
-      finalFooter = footer
-        .replace(/\{filename\}/g, "example-image.png")
-        .replace(/\{filesize\}/g, "2.34 MB")
-        .replace(/\{filetype\}/g, "image/png")
-        .replace(/\{uploaddate\}/g, new Date().toLocaleDateString())
-        .replace(/\{views\}/g, "42")
-        .replace(/\{username\}/g, userData.value.user.name || "User")
-        .replace(/\{totalfiles\}/g, "127")
-        .replace(/\{totalstorage\}/g, "2.1 GB")
-        .replace(/\{totalviews\}/g, "5,432");
+      descLines.push("📅 Uploaded " + values.uploaddate);
     }
 
-    previewCode.value = `{
-      "type": "rich",
-      "title": "${replacedTitle}",
-      "description": "${desc}",
-      "color": ${parseInt(color.slice(1), 16)},
-      "author": {
-        "name": "${replacedAuthor}"
-      },
-      "footer": {
-        "text": "${finalFooter}"
-      },
-      "image": {
-        "url": "https://twink.forsale/f/abc123"
-      }
-    }`;
+    const footer = showUserStats.value
+      ? "📁 127 files   💾 2.1 GB   👁️ 5,432 views"
+      : fill(footerValue.value || "twink.forsale");
+
+    return {
+      title: fill(titleValue.value || "File Upload"),
+      author: fill(authorValue.value || name),
+      description: descLines,
+      footer,
+      color: colorValue.value || "#8B5CF6",
+    };
   });
+
+  // JSON view of the same model, for people who want the literal embed payload.
+  const previewJson = useComputed$(() => {
+    const p = preview.value;
+    const payload = {
+      type: "rich",
+      title: p.title,
+      description: p.description.join("\n"),
+      color: parseInt(p.color.slice(1), 16),
+      author: { name: p.author },
+      footer: { text: p.footer },
+      image: { url: "https://twink.forsale/f/abc123" },
+    };
+    return JSON.stringify(payload, null, 2);
+  });
+
   return (
     <div>
       <PageHeader
@@ -301,7 +246,7 @@ export default component$(() => {
             <Settings class="h-5 w-5" />
             Embed Configuration~
           </h2>
-          <Form action={updateAction} onSubmit$={generatePreview}>
+          <Form action={updateAction}>
             <div class="space-y-4 sm:space-y-6">
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
@@ -310,19 +255,11 @@ export default component$(() => {
                 <input
                   type="text"
                   name="embedTitle"
-                  value={titleValue.value}
+                  bind:value={titleValue}
                   placeholder="File Upload~"
                   class={inputClasses}
-                  onInput$={(event) => {
-                    titleValue.value = (event.target as HTMLInputElement).value;
-                    generatePreview();
-                  }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Use placeholders: {"{filename}"}, {"{filesize}"},
-                  {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
-                </p>
+                <PlaceholderChips onInsert$={insertInto(titleValue)} />
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
@@ -330,22 +267,12 @@ export default component$(() => {
                 </label>
                 <textarea
                   name="embedDescription"
-                  value={descriptionValue.value}
+                  bind:value={descriptionValue}
                   placeholder="Uploaded via twink.forsale~ (◕‿◕)♡"
                   rows={3}
                   class="glass placeholder:theme-text-muted focus:ring-theme-accent-primary/50 text-theme-text-primary w-full resize-none rounded-2xl px-3 py-2 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-4 sm:py-3 sm:text-base"
-                  onInput$={(event) => {
-                    descriptionValue.value = (
-                      event.target as HTMLTextAreaElement
-                    ).value;
-                    generatePreview();
-                  }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Use placeholders: {"{filename}"}, {"{filesize}"},
-                  {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
-                </p>
+                <PlaceholderChips onInsert$={insertInto(descriptionValue)} />
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
@@ -357,53 +284,34 @@ export default component$(() => {
                   value={colorValue.value}
                   onInput$={(newColor) => {
                     colorValue.value = newColor;
-                    generatePreview();
                   }}
                 />
-              </div>              <div>
+              </div>
+              <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
                   Author Name~
                 </label>
                 <input
                   type="text"
                   name="embedAuthor"
-                  value={authorValue.value}
-                  placeholder={userData.value.user.name || "Cute User~"}
+                  bind:value={authorValue}
+                  placeholder={user.name || "Cute User~"}
                   class={inputClasses}
-                  onInput$={(event) => {
-                    authorValue.value = (
-                      event.target as HTMLInputElement
-                    ).value;
-                    generatePreview();
-                  }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Use placeholders: {"{filename}"}, {"{filesize}"},
-                  {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
-                </p>
-              </div>              <div>
+                <PlaceholderChips onInsert$={insertInto(authorValue)} />
+              </div>
+              <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
                   Header Text~
                 </label>
                 <input
                   type="text"
                   name="embedFooter"
-                  value={footerValue.value}
+                  bind:value={footerValue}
                   placeholder="twink.forsale~"
                   class={inputClasses}
-                  onInput$={(event) => {
-                    footerValue.value = (
-                      event.target as HTMLInputElement
-                    ).value;
-                    generatePreview();
-                  }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Use placeholders: {"{filename}"}, {"{filesize}"},
-                  {"{filetype}"}, {"{uploaddate}"}, {"{views}"}, {"{username}"},
-                  {"{totalfiles}"}, {"{totalstorage}"}, {"{totalviews}"}~
-                </p>
+                <PlaceholderChips onInsert$={insertInto(footerValue)} />
               </div>
               <div>
                 <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
@@ -412,7 +320,7 @@ export default component$(() => {
                 <input
                   type="text"
                   name="customDomain"
-                  value={userData.value.user.customDomain || ""}
+                  value={user.customDomain || ""}
                   placeholder="your-domain.com"
                   class={inputClasses}
                 />
@@ -429,7 +337,6 @@ export default component$(() => {
                     checked={showFileInfo.value}
                     onChange$={(e, el) => {
                       showFileInfo.value = el.checked;
-                      generatePreview();
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
@@ -444,7 +351,6 @@ export default component$(() => {
                     checked={showUploadDate.value}
                     onChange$={(e, el) => {
                       showUploadDate.value = el.checked;
-                      generatePreview();
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
@@ -459,7 +365,6 @@ export default component$(() => {
                     checked={showUserStats.value}
                     onChange$={(e, el) => {
                       showUserStats.value = el.checked;
-                      generatePreview();
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
@@ -475,7 +380,6 @@ export default component$(() => {
                     checked={useCustomWords.value}
                     onChange$={(e, el) => {
                       useCustomWords.value = el.checked;
-                      generatePreview();
                     }}
                   />
                   <span class="text-theme-text-secondary text-xs sm:text-sm">
@@ -539,18 +443,65 @@ export default component$(() => {
 
         {/* Preview */}
         <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-            <Share class="h-5 w-5" />
-            Discord Embed Preview~
-          </h2>
-          <div class="glass rounded-2xl border-l-4 p-3 sm:p-4">
-            <div class="text-theme-text-muted mb-3 flex items-center text-xs">
-              Example embed structure~
-            </div>
-            <pre class="text-theme-text-secondary bg-theme-bg-tertiary/20 overflow-x-auto rounded-lg p-3 font-mono text-xs whitespace-pre-wrap">
-              {previewCode.value}
-            </pre>
+          <div class="mb-4 flex items-center justify-between sm:mb-6">
+            <h2 class="text-gradient-cute flex items-center gap-2 text-lg font-bold sm:text-xl">
+              <Eye class="h-5 w-5" />
+              Discord Embed Preview~
+            </h2>
+            <button
+              type="button"
+              onClick$={() => (showJson.value = !showJson.value)}
+              class="glass text-theme-text-muted hover:text-theme-text-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all duration-300"
+            >
+              <Code class="h-3.5 w-3.5" />
+              {showJson.value ? "Hide JSON" : "View JSON"}
+            </button>
           </div>
+
+          {/* Discord-style embed card mock */}
+          <div class="rounded-lg bg-[#2b2d31] p-3 shadow-inner sm:p-4">
+            <div class="text-xs text-[#949ba4]">Today at 4:20 PM</div>
+            <div
+              class="mt-1.5 flex flex-col rounded border-l-4 bg-[#313338] p-3"
+              style={{ borderColor: preview.value.color }}
+            >
+              <div class="text-xs font-semibold text-white/90">
+                {preview.value.author}
+              </div>
+              <div class="mt-1 text-sm font-semibold text-[#00a8fc]">
+                {preview.value.title}
+              </div>
+              <div class="mt-1 text-sm whitespace-pre-wrap text-[#dbdee1]">
+                {preview.value.description.join("\n")}
+              </div>
+              {/* Inline image preview placeholder */}
+              <div class="mt-3 flex h-32 items-center justify-center rounded bg-black/30 text-[#949ba4]">
+                <div class="flex flex-col items-center gap-1">
+                  <ImageIcon class="h-6 w-6" />
+                  <span class="text-xs">example-image.png</span>
+                </div>
+              </div>
+              {preview.value.footer && (
+                <div class="mt-2 text-xs text-[#949ba4]">
+                  {preview.value.footer}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Optional raw JSON payload */}
+          {showJson.value && (
+            <div class="glass mt-4 rounded-2xl p-3 sm:p-4">
+              <div class="text-theme-text-muted mb-2 flex items-center gap-1.5 text-xs">
+                <Code class="h-3.5 w-3.5" />
+                Raw embed payload~
+              </div>
+              <pre class="text-theme-text-secondary bg-theme-bg-tertiary/20 overflow-x-auto rounded-lg p-3 font-mono text-xs whitespace-pre-wrap">
+                {previewJson.value}
+              </pre>
+            </div>
+          )}
+
           <div class="glass border-theme-accent-quaternary/20 mt-6 rounded-2xl border p-4">
             <h3 class="text-theme-accent-quaternary mb-3 flex items-center gap-2 text-sm font-medium">
               <Info class="h-4 w-4" />

@@ -693,7 +693,7 @@ export default component$(() => {
               </button>
 
               {!basicInfoCollapsed.value && (
-                <Form action={updateBio} class="space-y-4">
+                <div class="space-y-4">
                   <div>
                     <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
                       Username
@@ -844,7 +844,7 @@ export default component$(() => {
                       </p>
                     </div>
                   )}
-                </Form>
+                </div>
               )}
             </div>
             {/* Appearance Settings */}
@@ -868,7 +868,7 @@ export default component$(() => {
               </button>
 
               {!appearanceCollapsed.value && (
-                <Form action={updateBio} class="space-y-4">
+                <div class="space-y-4">
                   <div>
                     <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
                       Background Image URL
@@ -897,6 +897,9 @@ export default component$(() => {
                         bind:value={backgroundColor}
                         class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
                       />
+                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
+                        {backgroundColor.value}
+                      </div>
                     </div>
                     <div>
                       <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
@@ -908,6 +911,9 @@ export default component$(() => {
                         bind:value={textColor}
                         class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
                       />
+                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
+                        {textColor.value}
+                      </div>
                     </div>
                     <div>
                       <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
@@ -919,6 +925,9 @@ export default component$(() => {
                         bind:value={accentColor}
                         class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
                       />
+                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
+                        {accentColor.value}
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -979,7 +988,7 @@ export default component$(() => {
                     name="bioIsPublic"
                     value={isPublic.value ? "true" : "false"}
                   />
-                </Form>
+                </div>
               )}
             </div>
             {/* Discord Integration */}
@@ -1005,7 +1014,7 @@ export default component$(() => {
               </button>
 
               {!discordCollapsed.value && (
-                <Form action={updateBio} class="space-y-4">
+                <div class="space-y-4">
                   {bioData.value.user.bioDiscordUserId && (
                     <div class="bg-theme-accent-primary/5 border-theme-accent-primary/20 rounded-xl border p-4">
                       <div class="mb-3 flex items-center gap-2">
@@ -1335,7 +1344,7 @@ export default component$(() => {
                     name="bioIsPublic"
                     value={isPublic.value ? "true" : "false"}
                   />
-                </Form>
+                </div>
               )}
             </div>
             {/* Background Effects */}
@@ -1372,7 +1381,7 @@ export default component$(() => {
                     previewEnabled={true}
                   />
                   {/* Save Background Effects */}
-                  <Form action={updateBio}>
+                  <div>
                     {/* Copy hidden fields */}
                     <input
                       type="hidden"
@@ -1440,7 +1449,7 @@ export default component$(() => {
                       name="bioParticleConfig"
                       value={JSON.stringify(particleConfig.value)}
                     />
-                  </Form>
+                  </div>
                 </div>
               )}
             </div>
