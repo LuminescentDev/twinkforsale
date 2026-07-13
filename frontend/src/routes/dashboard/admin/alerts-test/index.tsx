@@ -49,7 +49,7 @@ export default component$(() => {
                   "Please review your settings before continuing.",
                 )
               }
-              class="btn-cute bg-gradient-to-br from-theme-[#f59e0b] to-theme-[#d97706] text-white transition-all duration-300 hover:scale-105"
+              class="btn-cute bg-gradient-to-br from-theme-warning to-theme-warning-hover text-white transition-all duration-300 hover:scale-105"
             >
               Show Warning
             </button>

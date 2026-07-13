@@ -1,11 +1,18 @@
 import { component$, useSignal } from "@builder.io/qwik";
 import { routeLoader$, Form, routeAction$, z, zod$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Search, Edit, Save, X, Settings } from "lucide-icons-qwik";
+import { Edit, Save, X, Settings } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
-import { PageContainer, PageHeader } from "~/components/ui";
+import {
+  Callout,
+  EmptyState,
+  IconButton,
+  PageContainer,
+  PageHeader,
+  SearchInput,
+} from "~/components/ui";
 
 interface AdminBioLimitUser {
   id: string;
@@ -123,11 +130,7 @@ export default component$(() => {
       />
 
       {/* Default Limits Info */}
-      <div class="mb-6 rounded-xl border border-theme-info/30 bg-theme-info/10 p-6">
-        <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-theme-info">
-          <Settings class="h-5 w-5" />
-          Global Default Limits
-        </h2>
+      <Callout tone="info" icon={Settings} title="Global Default Limits" class="mb-6">
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           <div class="text-center">
             <div class="text-2xl font-bold text-theme-info">
@@ -172,20 +175,14 @@ export default component$(() => {
             <div class="text-xs text-theme-info">Icon</div>
           </div>
         </div>
-      </div>
+      </Callout>
 
       {/* Search */}
-      <div class="mb-6">
-        <div class="relative">
-          <Search class="absolute left-3 top-3 h-5 w-5 text-theme-text-muted" />
-          <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Search users by name, email, or bio username..."
-            class="w-full rounded-xl border border-theme-card-border bg-theme-bg-secondary/40 py-3 pl-10 pr-4 text-theme-text-primary focus:border-theme-accent-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/30"
-          />
-        </div>
-      </div>
+      <SearchInput
+        value={searchQuery}
+        placeholder="Search users by name, email, or bio username…"
+        class="mb-6"
+      />
 
       {/* Users Table */}
       <div class="overflow-hidden rounded-xl border border-theme-card-border bg-theme-bg-secondary/40 shadow-lg">
@@ -253,7 +250,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxBioLinks}
                             min="1"
                             max="100"
-                            class="w-16 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -261,7 +258,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxUsernameLength}
                             min="3"
                             max="50"
-                            class="w-16 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -269,7 +266,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxDisplayNameLength}
                             min="1"
                             max="100"
-                            class="w-16 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -277,7 +274,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxDescriptionLength}
                             min="1"
                             max="5000"
-                            class="w-20 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-20 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -285,7 +282,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxUrlLength}
                             min="10"
                             max="1000"
-                            class="w-20 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-20 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -293,7 +290,7 @@ export default component$(() => {
                             value={user.effectiveLimits.maxLinkTitleLength}
                             min="1"
                             max="200"
-                            class="w-16 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                           <input
                             type="number"
@@ -301,23 +298,26 @@ export default component$(() => {
                             value={user.effectiveLimits.maxIconLength}
                             min="1"
                             max="50"
-                            class="w-16 rounded px-2 py-1 text-center text-sm"
+                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
                           />
                         </div>
-                        <div class="flex gap-2 justify-center mt-2">
-                          <button
+                        <div class="mt-2 flex justify-center gap-2">
+                          <IconButton
                             type="submit"
-                            class="rounded bg-theme-success px-2 py-1 text-xs text-white hover:bg-theme-success"
+                            size="sm"
+                            title="Save"
+                            class="bg-theme-success text-white"
                           >
                             <Save class="h-4 w-4" />
-                          </button>
-                          <button
+                          </IconButton>
+                          <IconButton
                             type="button"
+                            size="sm"
+                            title="Cancel"
                             onClick$={() => (editingUser.value = null)}
-                            class="rounded bg-theme-bg-tertiary px-2 py-1 text-xs text-white hover:bg-theme-bg-tertiary/30"
                           >
                             <X class="h-4 w-4" />
-                          </button>
+                          </IconButton>
                         </div>
                       </Form>
                     </td>
@@ -359,12 +359,13 @@ export default component$(() => {
                         </span>
                       </td>
                       <td class="px-6 py-4 text-center">
-                        <button
+                        <IconButton
+                          size="sm"
+                          title="Edit limits"
                           onClick$={() => (editingUser.value = user.id)}
-                          class="rounded bg-theme-info px-2 py-1 text-xs text-white hover:bg-theme-info"
                         >
                           <Edit class="h-4 w-4" />
-                        </button>
+                        </IconButton>
                       </td>
                     </>
                   )}
@@ -376,9 +377,11 @@ export default component$(() => {
       </div>
 
       {filteredUsers.length === 0 && (
-        <div class="py-12 text-center">
-          <p class="text-theme-text-muted">No users found matching your search.</p>
-        </div>
+        <EmptyState
+          icon={Settings}
+          title="No users found"
+          description="No users match your search."
+        />
       )}
     </PageContainer>
   );

@@ -18,6 +18,7 @@ import { ParticleBackground } from "~/components/effects/particle-background";
 import { useGlobalParticle } from "~/lib/global-particle-store";
 import {
   getServerThemePreference,
+  getServerSidebarCollapsed,
   getThemePreference,
 } from "~/lib/cookie-utils";
 import { generateThemeCSS, themes } from "~/lib/theme-store";
@@ -33,6 +34,15 @@ export const useCurrentUser = routeLoader$(async (requestEvent) => {
   return getCurrentUser({
     cookie: requestEvent.request.headers.get("cookie"),
   });
+});
+
+/**
+ * Restore the sidebar collapsed state from the request cookie so the app
+ * frame renders at the correct width on first paint (consumed by AppShell).
+ */
+export const useSidebarState = routeLoader$((requestEvent) => {
+  const cookieHeader = requestEvent.request.headers.get("cookie");
+  return { collapsed: getServerSidebarCollapsed(cookieHeader || undefined) };
 });
 
 export const useServerTheme = routeLoader$(async (requestEvent) => {
@@ -199,6 +209,27 @@ export default component$(() => {
             onClose={closePreview}
           />
         </div>
+      ) : isAppPage ? (
+        // Signed-in app frame (dashboard/upload/setup): the AppShell provides
+        // its own sidebar + top bar, so we skip the marketing nav and centered
+        // gutter. No `overflow-hidden` here so the sticky sidebar/top bar work.
+        <div
+          class="relative min-h-screen"
+          style="background: linear-gradient(135deg, var(--theme-bg-gradient-from), var(--theme-bg-gradient-via), var(--theme-bg-gradient-to))"
+        >
+          {globalParticle.isInitialized && globalParticle.config.enabled && (
+            <ParticleBackground config={globalParticle.config} />
+          )}
+          <div class="relative z-10">
+            <Slot />
+          </div>
+          <ImagePreview
+            isOpen={contextStore.state.isOpen}
+            imageUrl={contextStore.state.imageUrl}
+            imageName={contextStore.state.imageName}
+            onClose={closePreview}
+          />
+        </div>
       ) : (
         // Regular site layout with navigation and background
         <div
@@ -209,11 +240,7 @@ export default component$(() => {
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
           )}          <Navigation />
-          <div
-            class={`relative z-10 mx-auto mt-18 px-4 py-8 sm:px-6 lg:px-8 ${
-              isAppPage ? "max-w-[110rem]" : "max-w-7xl"
-            }`}
-          >
+          <div class="relative z-10 mx-auto mt-18 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <Slot />
           </div>
           <Footer />

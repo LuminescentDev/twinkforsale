@@ -24,6 +24,7 @@ import {
 import { formatBytes } from "~/lib/utils";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { EmptyState, PageHeader } from "~/components/ui";
 
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
   const user = await getCurrentUser(serverAuth(requestEvent));
@@ -156,15 +157,17 @@ export default component$(() => {
   if (healthData.value.error) {
     return (
       <div>
-        <div class="mx-auto max-w-7xl">
-          <div class="text-center">
-            <AlertTriangle class="mx-auto h-12 w-12 text-theme-error" />
-            <h1 class="mt-4 text-2xl font-bold text-theme-error">
-              Health Check Failed
-            </h1>
-            <p class="mt-2 text-theme-text-muted">{healthData.value.error}</p>
-          </div>
-        </div>
+        <PageHeader
+          align="left"
+          title="Health Dashboard"
+          icon={Activity}
+          subtitle="Real-time system monitoring and performance metrics~"
+        />
+        <EmptyState
+          icon={AlertTriangle}
+          title="Health Check Failed"
+          description={healthData.value.error}
+        />
       </div>
     );
   }
@@ -173,19 +176,15 @@ export default component$(() => {
 
   return (
     <div>
-      <div class="mx-auto max-w-7xl">
-        {" "}
+      <div>
         {/* Header */}
         <div class="mb-6">
-          <div class="mb-4">
-            <h1 class="text-gradient-cute flex items-center gap-3 text-2xl font-bold sm:text-3xl">
-              <Activity class="h-6 w-6 sm:h-8 sm:w-8" />
-              Health Dashboard
-            </h1>
-            <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-              Real-time system monitoring and performance metrics~
-            </p>
-          </div>
+          <PageHeader
+            align="left"
+            title="Health Dashboard"
+            icon={Activity}
+            subtitle="Real-time system monitoring and performance metrics~"
+          />
 
           {/* Mobile Action Buttons */}
           <div class="block space-y-3 sm:hidden">
@@ -193,7 +192,7 @@ export default component$(() => {
               onClick$={() => (autoRefresh.value = !autoRefresh.value)}
               class={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 active:scale-95 ${
                 autoRefresh.value
-                  ? "bg-gradient-to-br from-theme-confirm to-theme-confirm-hover text-white shadow-lg shadow-green-500/20"
+                  ? "bg-gradient-to-br from-theme-confirm to-theme-confirm-hover text-white shadow-lg shadow-theme-confirm/20"
                   : "card-cute hover:shadow-md"
               }`}
             >
@@ -293,7 +292,7 @@ export default component$(() => {
           <div class="card-cute rounded-2xl p-3 sm:p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2 sm:gap-3">
-                <HardDrive class="h-5 w-5 text-purple-500 sm:h-6 sm:w-6" />
+                <HardDrive class="h-5 w-5 text-theme-accent-tertiary sm:h-6 sm:w-6" />
                 <div class="min-w-0 flex-1">
                   <h3 class="text-sm font-medium sm:text-base">Storage</h3>
                   <p class="truncate text-xs text-theme-text-muted sm:text-sm">
@@ -337,7 +336,7 @@ export default component$(() => {
           <div class="card-cute rounded-2xl p-3 sm:p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2 sm:gap-3">
-                <Server class="h-5 w-5 text-indigo-500 sm:h-6 sm:w-6" />
+                <Server class="h-5 w-5 text-theme-accent-quaternary sm:h-6 sm:w-6" />
                 <div class="min-w-0 flex-1">
                   <h3 class="text-sm font-medium sm:text-base">System</h3>
                   <p class="truncate text-xs text-theme-text-muted sm:text-sm">
@@ -517,10 +516,10 @@ export default component$(() => {
                         <div
                           class={`h-full transition-all duration-500 ${
                             (data.storage.diskUsedPercentage || 0) > 80
-                              ? "bg-gradient-to-r from-red-500 to-red-600"
+                              ? "bg-theme-error"
                               : (data.storage.diskUsedPercentage || 0) > 60
-                                ? "bg-gradient-to-r from-yellow-500 to-orange-500"
-                                : "bg-gradient-to-r from-green-500 to-emerald-500"
+                                ? "bg-theme-warning"
+                                : "bg-theme-success"
                           }`}
                           style={{
                             width: `${Math.min(data.storage.diskUsedPercentage || 0, 100)}%`,
@@ -657,12 +656,7 @@ export default component$(() => {
                 </table>
               </div>
             ) : (
-              <div class="py-6 text-center sm:py-8">
-                <Users class="mx-auto h-8 w-8 text-gray-400 sm:h-12 sm:w-12" />
-                <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-                  No recent user activity
-                </p>
-              </div>
+              <EmptyState icon={Users} title="No recent user activity" />
             )}
           </div>
         </div>{" "}

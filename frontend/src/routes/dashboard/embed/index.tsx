@@ -21,7 +21,7 @@ import {
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { PageHeader } from "~/components/ui";
+import { Button, Callout, PageHeader, Panel } from "~/components/ui";
 
 export const useUserLoader = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -241,11 +241,7 @@ export default component$(() => {
       />
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
         {/* Settings Form */}
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-            <Settings class="h-5 w-5" />
-            Embed Configuration~
-          </h2>
+        <Panel title="Embed Configuration~" icon={Settings}>
           <Form action={updateAction}>
             <div class="space-y-4 sm:space-y-6">
               <div>
@@ -412,51 +408,37 @@ export default component$(() => {
                 name="useCustomWords"
                 value={useCustomWords.value ? "on" : "off"}
               />
-              <button
-                type="submit"
-                class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-              >
+              <Button type="submit" block>
                 <Save class="h-4 w-4" />
                 Save Settings~
-              </button>
+              </Button>
             </div>
           </Form>
 
           {updateAction.value?.success && (
-            <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-                <CheckCircle class="h-4 w-4 flex-shrink-0" />
-                {updateAction.value.message}~
-              </p>
-            </div>
+            <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
+              {updateAction.value.message}~
+            </Callout>
           )}
 
           {updateAction.value?.failed && (
-            <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
-                <CircleX class="h-4 w-4 flex-shrink-0" />
-                {updateAction.value.message}~
-              </p>
-            </div>
+            <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
+              {updateAction.value.message}~
+            </Callout>
           )}
-        </div>
+        </Panel>
 
         {/* Preview */}
-        <div class="card-cute rounded-2xl p-4 sm:p-6">
-          <div class="mb-4 flex items-center justify-between sm:mb-6">
-            <h2 class="text-gradient-cute flex items-center gap-2 text-lg font-bold sm:text-xl">
-              <Eye class="h-5 w-5" />
-              Discord Embed Preview~
-            </h2>
-            <button
-              type="button"
-              onClick$={() => (showJson.value = !showJson.value)}
-              class="glass text-theme-text-muted hover:text-theme-text-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all duration-300"
-            >
-              <Code class="h-3.5 w-3.5" />
-              {showJson.value ? "Hide JSON" : "View JSON"}
-            </button>
-          </div>
+        <Panel title="Discord Embed Preview~" icon={Eye}>
+          <Button
+            q:slot="actions"
+            variant="glass"
+            size="sm"
+            onClick$={() => (showJson.value = !showJson.value)}
+          >
+            <Code class="h-3.5 w-3.5" />
+            {showJson.value ? "Hide JSON" : "View JSON"}
+          </Button>
 
           {/* Discord-style embed card mock */}
           <div class="rounded-lg bg-[#2b2d31] p-3 shadow-inner sm:p-4">
@@ -502,27 +484,15 @@ export default component$(() => {
             </div>
           )}
 
-          <div class="glass border-theme-accent-quaternary/20 mt-6 rounded-2xl border p-4">
-            <h3 class="text-theme-accent-quaternary mb-3 flex items-center gap-2 text-sm font-medium">
-              <Info class="h-4 w-4" />
-              How it works~
-            </h3>
-            <ul class="text-theme-text-secondary space-y-2 text-xs">
-              <li class="flex items-center">
-                • Discord bots/crawlers see the embed metadata~
-              </li>
-              <li class="flex items-center">
-                • Regular users are redirected to the actual file~
-              </li>
-              <li class="flex items-center">
-                • Images show inline previews in Discord~
-              </li>
-              <li class="flex items-center">
-                • Custom domains override the site name~
-              </li>
+          <Callout tone="accent" icon={Info} title="How it works~" class="mt-6">
+            <ul class="space-y-1.5">
+              <li>• Discord bots/crawlers see the embed metadata~</li>
+              <li>• Regular users are redirected to the actual file~</li>
+              <li>• Images show inline previews in Discord~</li>
+              <li>• Custom domains override the site name~</li>
             </ul>
-          </div>
-        </div>
+          </Callout>
+        </Panel>
       </div>
     </div>
   );

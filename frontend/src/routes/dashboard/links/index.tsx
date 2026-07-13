@@ -2,10 +2,21 @@ import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
 import { routeLoader$, server$, type DocumentHead } from "@builder.io/qwik-city";
 import { isValidHttpUrl } from "~/lib/url-utils";
 import { useAlert } from "~/lib/use-alert";
-import { Link2 as ChainIcon, Copy, ExternalLink, Trash2 } from "lucide-icons-qwik";
+import { Link2 as ChainIcon, ExternalLink, Trash2 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Button, Callout, Input, PageHeader } from "~/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  CopyButton,
+  EmptyState,
+  FieldLabel,
+  IconButton,
+  Input,
+  PageHeader,
+  Panel,
+} from "~/components/ui";
 
 export const useLinks = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -183,15 +194,6 @@ export default component$(() => {
     }
   });
 
-  const copy = $(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alerts.success("Copied", "Short URL copied to clipboard.");
-    } catch {
-      alerts.error("Copy Failed", "Couldn't copy to clipboard. Try manually selecting the text.");
-    }
-  });
-
   return (
     <>
       <PageHeader
@@ -208,46 +210,59 @@ export default component$(() => {
       )}
 
       {data.value.user.isApproved && (
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-          <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-gradient-cute text-lg font-bold sm:text-xl">Create New Short Link</h2>
-            <span class="text-theme-text-secondary text-sm">Remaining: {remaining.value}</span>
-          </div>
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Input
-              type="url"
-              placeholder="https://example.com/very/long/url"
-              class="col-span-1 sm:col-span-2"
-              value={url.value}
-              onInput$={(e) => (url.value = (e.target as HTMLInputElement).value)}
-            />
-            <Input
-              type="text"
-              placeholder="Custom code (optional) e.g., cute-bunny-123"
-              value={code.value}
-              onInput$={(e) => (code.value = (e.target as HTMLInputElement).value)}
-            />
-            <Input
-              type="number"
-              placeholder="Expires in days (optional)"
-              value={expiresDays.value as any}
-              onInput$={(e) => {
-                const v = (e.target as HTMLInputElement).value;
-                expiresDays.value = v === '' ? '' : Number(v);
-              }}
-              min={1}
-            />
-            <Input
-              type="number"
-              placeholder="Max clicks (optional)"
-              class="sm:col-span-2"
-              value={maxClicks.value as any}
-              onInput$={(e) => {
-                const v = (e.target as HTMLInputElement).value;
-                maxClicks.value = v === '' ? '' : Number(v);
-              }}
-              min={1}
-            />
+        <Panel
+          title="Create New Short Link"
+          icon={ChainIcon}
+          class="mb-6 sm:mb-8"
+        >
+          <Badge q:slot="actions" status={remaining.value > 0 ? "accent" : "warning"}>
+            {remaining.value} remaining
+          </Badge>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <FieldLabel>Destination URL</FieldLabel>
+              <Input
+                type="url"
+                placeholder="https://example.com/very/long/url"
+                value={url.value}
+                onInput$={(e) => (url.value = (e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div>
+              <FieldLabel>Custom code (optional)</FieldLabel>
+              <Input
+                type="text"
+                placeholder="e.g. cute-bunny-123"
+                value={code.value}
+                onInput$={(e) => (code.value = (e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div>
+              <FieldLabel>Expires in days (optional)</FieldLabel>
+              <Input
+                type="number"
+                placeholder="Never"
+                value={expiresDays.value as any}
+                onInput$={(e) => {
+                  const v = (e.target as HTMLInputElement).value;
+                  expiresDays.value = v === "" ? "" : Number(v);
+                }}
+                min={1}
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <FieldLabel>Max clicks (optional)</FieldLabel>
+              <Input
+                type="number"
+                placeholder="Unlimited"
+                value={maxClicks.value as any}
+                onInput$={(e) => {
+                  const v = (e.target as HTMLInputElement).value;
+                  maxClicks.value = v === "" ? "" : Number(v);
+                }}
+                min={1}
+              />
+            </div>
           </div>
           <div class="mt-4 flex justify-end">
             <Button onClick$={submitCreate} disabled={!url.value.trim() || creating.value}>
@@ -261,65 +276,73 @@ export default component$(() => {
               )}
             </Button>
           </div>
-        </div>
+        </Panel>
       )}
 
-      <div class="card-cute rounded-2xl p-4 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 text-lg font-bold sm:text-xl">Your Short Links</h2>
-
+      <Panel title="Your Short Links" icon={ChainIcon} flush>
         {data.value.links.length === 0 ? (
-          <div class="py-10 text-center">
-            <ChainIcon class="text-theme-accent-primary mx-auto mb-2 h-10 w-10" />
-            <p class="text-theme-text-secondary">No short links yet~ Create your first one above!</p>
-          </div>
+          <EmptyState
+            icon={ChainIcon}
+            title="No short links yet~"
+            description="Create your first one above!"
+            class="px-4 sm:px-6"
+          />
         ) : (
-          <div class="space-y-3">
+          <div class="divide-theme-card-border/60 divide-y">
             {data.value.links.map((link: any) => {
               const shortUrl = `${data.value.origin}/l/${link.code}`;
               return (
-                <div key={link.id} class="glass flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  key={link.id}
+                  class="hover:bg-theme-bg-tertiary/20 flex flex-col gap-3 px-4 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                >
                   <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                      <a href={shortUrl} target="_blank" class="text-theme-accent-secondary hover:underline break-all">{shortUrl}</a>
-                      <button
-                        onClick$={() => copy(shortUrl)}
-                        class="text-theme-text-muted hover:text-theme-accent-primary shrink-0 transition-colors"
-                        title="Copy short URL"
+                    <div class="flex items-center gap-1.5">
+                      <a
+                        href={shortUrl}
+                        target="_blank"
+                        class="text-theme-accent-secondary font-medium break-all hover:underline"
                       >
-                        <Copy class="h-4 w-4" />
-                      </button>
+                        {shortUrl}
+                      </a>
+                      <CopyButton value={shortUrl} />
                     </div>
-                    <div class="text-theme-text-secondary mt-1 text-xs break-all sm:text-sm">
+                    <div class="text-theme-text-muted mt-1 truncate text-xs sm:text-sm">
                       → {link.url}
                     </div>
-                    <div class="text-theme-text-secondary mt-1 text-xs sm:text-sm">
-                      Clicks: {link.clicks} · Created: {new Date(link.createdAt).toLocaleDateString()} {link.expiresAt ? `· Expires: ${new Date(link.expiresAt).toLocaleDateString()}` : ''}
-                      {typeof link.maxClicks === 'number' ? ` · Max clicks: ${link.maxClicks}` : ''}
+                    <div class="text-theme-text-muted mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                      <Badge status="neutral">{link.clicks} clicks</Badge>
+                      <Badge status="neutral">
+                        {new Date(link.createdAt).toLocaleDateString()}
+                      </Badge>
+                      {link.expiresAt && (
+                        <Badge status="warning">
+                          Expires {new Date(link.expiresAt).toLocaleDateString()}
+                        </Badge>
+                      )}
+                      {typeof link.maxClicks === "number" && (
+                        <Badge status="info">Max {link.maxClicks}</Badge>
+                      )}
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 self-end sm:self-auto">
-                    <a
-                      href={shortUrl}
-                      target="_blank"
-                      class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors"
-                    >
+                  <div class="flex items-center gap-1 self-end sm:self-auto">
+                    <IconButton href={shortUrl} external title="Open link">
                       <ExternalLink class="h-4 w-4" />
-                      Open
-                    </a>
-                    <button
+                    </IconButton>
+                    <IconButton
+                      variant="danger"
+                      title="Delete link"
                       onClick$={() => handleDelete(link.id)}
-                      class="text-theme-error hover:bg-theme-error/15 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors"
                     >
                       <Trash2 class="h-4 w-4" />
-                      Delete
-                    </button>
+                    </IconButton>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
+      </Panel>
     </>
   );
 });

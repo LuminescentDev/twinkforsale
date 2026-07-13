@@ -32,7 +32,17 @@ import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { setThemePreference } from "~/lib/cookie-utils";
 import { ParticleConfigPanel } from "~/components/ui/particle-config-panel";
-import { PageContainer, PageHeader } from "~/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  FieldLabel,
+  Input,
+  PageContainer,
+  PageHeader,
+  Panel,
+  Select,
+} from "~/components/ui";
 import {
   useGlobalParticle,
   updateGlobalParticleConfig,
@@ -314,9 +324,6 @@ export default component$(() => {
     },
   ];
 
-  const inputClasses =
-    "w-full px-3 sm:px-4 py-2 sm:py-3 glass rounded-full placeholder:theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-sm sm:text-base text-theme-primary";
-
   const getCurrentDomainPreview = () => {
     const selectedDomain = uploadDomains.value.find(
       (d) => d.id === selectedDomainId.value,
@@ -343,22 +350,14 @@ export default component$(() => {
       />
 
       {/* Upload Domain Settings */}
-      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-          <Globe class="h-5 w-5" />
-          Upload Domain Settings~
-        </h2>
-
+      <Panel title="Upload Domain Settings~" icon={Globe} class="mb-6 sm:mb-8">
         <Form action={updateAction}>
           <div class="space-y-4 sm:space-y-6">
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Upload Domain~
-              </label>{" "}
-              <select
+              <FieldLabel>Upload Domain</FieldLabel>
+              <Select
                 name="uploadDomainId"
                 value={selectedDomainId.value}
-                class={inputClasses}
                 onChange$={(event) => {
                   selectedDomainId.value = (
                     event.target as HTMLSelectElement
@@ -373,30 +372,27 @@ export default component$(() => {
                     {`${domain.name} (${domain.domain})${domain.isDefault ? " - Default" : ""}`}
                   </option>
                 ))}
-              </select>
-              <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+              </Select>
+              <p class="text-theme-text-muted mt-1.5 text-xs">
                 Choose the base domain for your file uploads~
               </p>
             </div>
 
             {selectedDomain?.supportsSubdomains && (
               <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Custom Subdomain (Optional)~
-                </label>
-                <input
+                <FieldLabel>Custom Subdomain (Optional)</FieldLabel>
+                <Input
                   type="text"
                   name="customSubdomain"
                   value={customSubdomain.value}
                   placeholder="files, cdn, cute, etc..."
-                  class={inputClasses}
                   onInput$={(event) => {
                     customSubdomain.value = (
                       event.target as HTMLInputElement
                     ).value;
                   }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+                <p class="text-theme-text-muted mt-1.5 text-xs">
                   Add a custom subdomain to your uploads (e.g., "files" →
                   files.{selectedDomain.domain})~
                 </p>
@@ -405,24 +401,21 @@ export default component$(() => {
 
             {/* File Expiration Settings */}
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Default File Expiration (Days)~
-              </label>
-              <input
+              <FieldLabel>Default File Expiration (Days)</FieldLabel>
+              <Input
                 type="number"
                 name="defaultExpirationDays"
                 value={defaultExpirationDays.value}
                 placeholder="Never expires (leave empty)"
                 min="1"
                 max="365"
-                class={inputClasses}
                 onInput$={(event) => {
                   defaultExpirationDays.value = (
                     event.target as HTMLInputElement
                   ).value;
                 }}
               />
-              <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+              <p class="text-theme-text-muted mt-1.5 text-xs">
                 Files will automatically delete after this many days. Leave
                 empty for no expiration~
               </p>
@@ -430,78 +423,57 @@ export default component$(() => {
 
             {/* View Limits Settings */}
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                Default Max Views~
-              </label>
-              <input
+              <FieldLabel>Default Max Views</FieldLabel>
+              <Input
                 type="number"
                 name="defaultMaxViews"
                 value={defaultMaxViews.value}
                 placeholder="Unlimited views (leave empty)"
                 min="1"
-                class={inputClasses}
                 onInput$={(event) => {
                   defaultMaxViews.value = (
                     event.target as HTMLInputElement
                   ).value;
                 }}
               />
-              <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+              <p class="text-theme-text-muted mt-1.5 text-xs">
                 Files will automatically delete after this many views. Leave
                 empty for unlimited views~
               </p>
             </div>
 
             {/* Preview */}
-            <div class="glass border-theme-accent-quaternary/20 rounded-2xl border p-4">
-              <h3 class="text-theme-accent-quaternary mb-3 flex items-center gap-2 text-sm font-medium">
-                <Eye class="h-4 w-4" />
-                Upload URL Preview~
-              </h3>
-              <div class="text-theme-text-primary bg-theme-bg-tertiary/20 rounded-lg p-3 font-mono text-sm">
+            <Callout tone="accent" icon={Eye} title="Upload URL Preview~">
+              <div class="text-theme-text-primary bg-theme-bg-secondary/40 border-theme-card-border rounded-lg border p-3 font-mono text-sm break-all">
                 {getCurrentDomainPreview()}/f/cute-filename-123
               </div>
-              <p class="text-theme-text-muted mt-2 text-xs">
+              <p class="mt-2 text-xs">
                 This is how your upload URLs will look~ (◕‿◕)♡
               </p>
-            </div>
+            </Callout>
 
-            <button
-              type="submit"
-              class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-            >
+            <Button type="submit" block>
               <Save class="h-4 w-4" />
               Save Settings~
-            </button>
+            </Button>
           </div>
         </Form>
 
         {updateAction.value?.success && (
-          <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-              <CheckCircle class="h-4 w-4 flex-shrink-0" />
-              {updateAction.value.message}~
-            </p>
-          </div>
+          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
+            {updateAction.value.message}~
+          </Callout>
         )}
 
         {updateAction.value?.failed && (
-          <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
-              <CircleX class="h-4 w-4 flex-shrink-0" />
-              {updateAction.value.message}~
-            </p>
-          </div>
+          <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
+            {updateAction.value.message}~
+          </Callout>
         )}
-      </div>
+      </Panel>
 
       {/* Theme Settings */}
-      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-          <Palette class="h-5 w-5" />
-          Theme Settings~
-        </h2>
-
+      <Panel title="Theme Settings~" icon={Palette} class="mb-6 sm:mb-8">
         {/* Theme Gallery */}
         <div>
           <h3 class="text-theme-text-primary mb-4 flex items-center gap-2 text-base font-medium sm:text-lg">
@@ -563,11 +535,7 @@ export default component$(() => {
                         <h4 class="text-theme-text-primary text-sm font-medium">
                           {option.label}
                         </h4>
-                        {isActive && (
-                          <span class="from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary rounded-full bg-gradient-to-br px-2 py-1 text-xs">
-                            Active
-                          </span>
-                        )}
+                        {isActive && <Badge status="accent">Active</Badge>}
                       </div>
                       <p class="text-theme-text-secondary mb-2 text-xs">
                         {option.description}
@@ -603,43 +571,30 @@ export default component$(() => {
         </div>
 
         {/* Theme Tips */}
-        <div class="glass border-theme-accent-tertiary/30 mt-6 rounded-xl border p-4">
-          <div class="flex items-start gap-3">
-            <SettingsIcon class="text-theme-accent-tertiary mt-0.5 h-4 w-4 flex-shrink-0" />
-            <div>
-              <h4 class="text-theme-accent-tertiary mb-1 text-sm font-medium">
-                Theme Tips
-              </h4>
-              <ul class="text-theme-text-secondary space-y-1 text-xs">
-                <li>
-                  • Your theme preference is saved automatically and syncs
-                  across devices
-                </li>
-                <li>
-                  • The "Auto" theme respects your system's dark/light mode
-                  setting
-                </li>
-                <li>• Click on any theme to switch to it instantly</li>
-                <li>
-                  • All themes are designed to be accessible and easy on the
-                  eyes
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+        <Callout tone="info" icon={SettingsIcon} title="Theme Tips" class="mt-6">
+          <ul class="space-y-1">
+            <li>
+              • Your theme preference is saved automatically and syncs across
+              devices
+            </li>
+            <li>
+              • The "Auto" theme respects your system's dark/light mode setting
+            </li>
+            <li>• Click on any theme to switch to it instantly</li>
+            <li>
+              • All themes are designed to be accessible and easy on the eyes
+            </li>
+          </ul>
+        </Callout>
+      </Panel>
 
       {/* Particle Settings */}
-      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-          <Sparkles class="h-5 w-5" />
-          Background Particles~
-        </h2>
-        <p class="text-theme-text-secondary mb-6 text-sm">
-          Control the animated particles that appear in the background of the
-          site~
-        </p>
+      <Panel
+        title="Background Particles~"
+        icon={Sparkles}
+        description="Control the animated particles that appear in the background of the site~"
+        class="mb-6 sm:mb-8"
+      >
         {/* Quick Presets */}
         <div class="mb-6">
           <label class="text-theme-text-secondary mb-3 block text-sm font-medium">
@@ -705,101 +660,78 @@ export default component$(() => {
           />
 
           {/* Save advanced settings button */}
-          <div class="mt-4">
-            <button
-              type="button"
-              onClick$={async () => {
-                // Update global particle store
-                await updateGlobalParticleConfig(
-                  globalParticle,
-                  particleConfigSignal.value,
-                );
-                // Save to database
-                updateParticleAction.submit({
-                  config: particleConfigSignal.value,
-                });
-              }}
-              class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300"
-            >
-              <Save class="h-4 w-4" />
-              Save Advanced Settings~
-            </button>
-          </div>
-        </div>{" "}
-        {/* Save note */}
-        <div class="mt-4 rounded-lg border border-theme-info/20 bg-theme-info/10 p-3">
-          <p class="text-theme-info flex items-start gap-2 text-xs">
-            <Sparkles class="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-            <span>
-              Your particle preferences are saved to your account and will sync
-              across all your devices~
-            </span>
-          </p>
+          <Button
+            type="button"
+            block
+            class="mt-4"
+            onClick$={async () => {
+              await updateGlobalParticleConfig(
+                globalParticle,
+                particleConfigSignal.value,
+              );
+              updateParticleAction.submit({
+                config: particleConfigSignal.value,
+              });
+            }}
+          >
+            <Save class="h-4 w-4" />
+            Save Advanced Settings~
+          </Button>
         </div>
+
+        {/* Save note */}
+        <Callout tone="info" icon={Sparkles} class="mt-4">
+          Your particle preferences are saved to your account and will sync
+          across all your devices~
+        </Callout>
+
         {/* Particle save status */}
         {updateParticleAction.value?.success && (
-          <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-              <CheckCircle class="h-4 w-4 flex-shrink-0" />
-              {updateParticleAction.value.message}~
-            </p>
-          </div>
-        )}{" "}
-        {updateParticleAction.value?.failed && (
-          <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
-              <CircleX class="h-4 w-4 flex-shrink-0" />
-              {updateParticleAction.value.message}~
-            </p>
-          </div>
+          <Callout tone="success" icon={CheckCircle} class="mt-4">
+            {updateParticleAction.value.message}~
+          </Callout>
         )}
-      </div>
+        {updateParticleAction.value?.failed && (
+          <Callout tone="danger" icon={CircleX} class="mt-4">
+            {updateParticleAction.value.message}~
+          </Callout>
+        )}
+      </Panel>
 
       {/* Account Deletion - Danger Zone */}
-      <div class="glass rounded-2xl border border-theme-error/30 bg-gradient-to-br from-red-500/10 to-red-600/10 p-4 sm:p-6">
-        <h2 class="mb-4 flex items-center text-lg font-bold text-theme-error sm:mb-6 sm:text-xl">
-          <AlertTriangle class="mr-2 h-5 w-5" />
+      <div class="card-static border-theme-error/40 overflow-hidden rounded-2xl border p-4 sm:p-6">
+        <h2 class="text-theme-error mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
+          <AlertTriangle class="h-5 w-5" />
           Danger Zone
         </h2>
-        <p class="text-theme-error/80 mb-6 flex items-start gap-2 text-sm">
-          <AlertTriangle class="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <span>
-            This action is permanent and cannot be undone. All your files,
-            data, and account information will be permanently deleted.
-          </span>
-        </p>
+        <Callout tone="danger" icon={AlertTriangle} class="mb-6">
+          This action is permanent and cannot be undone. All your files, data,
+          and account information will be permanently deleted.
+        </Callout>
 
         <Form action={deleteAccountAction} class="space-y-4">
           <div>
-            <label class="mb-2 block text-sm font-medium text-theme-error">
+            <FieldLabel class="!text-theme-error">
               Type "DELETE MY ACCOUNT" to confirm deletion:
-            </label>
-            <input
+            </FieldLabel>
+            <Input
               type="text"
               name="confirmationText"
               placeholder="Type DELETE MY ACCOUNT here..."
-              class="w-full rounded-lg border border-theme-error/30 bg-theme-error/5 px-3 py-2 text-theme-error placeholder-red-400/60 focus:border-theme-error focus:ring-2 focus:ring-red-400/50 focus:outline-none"
               required
             />
           </div>
 
-          <button
-            type="submit"
-            class="flex w-full items-center justify-center rounded-lg bg-theme-error px-4 py-3 font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-theme-error"
-          >
-            <Trash2 class="mr-2 h-4 w-4" />
+          <Button type="submit" variant="danger" block>
+            <Trash2 class="h-4 w-4" />
             Delete My Account Forever
-          </button>
+          </Button>
         </Form>
 
-        {/* Error/Success Messages */}
         {deleteAccountAction.value?.failed && (
-          <div class="mt-4 rounded-lg border border-theme-error/50 bg-theme-error/20 p-3">
-            <p class="text-theme-error flex items-center gap-2 text-sm">
-              <CircleX class="h-4 w-4 flex-shrink-0" />
-              {deleteAccountAction.value.message}
-            </p>
-          </div>
+          <Callout tone="danger" icon={CircleX} class="mt-4">
+            {deleteAccountAction.value.message}
+          </Callout>
         )}
       </div>
     </PageContainer>

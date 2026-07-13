@@ -1,10 +1,20 @@
 import { component$, useSignal, $ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Key, Trash2, Copy, Rocket, Check, CheckCircle } from "lucide-icons-qwik";
+import { Key, Trash2, Rocket, CheckCircle } from "lucide-icons-qwik";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Button, Callout, Input, PageHeader } from "~/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  CopyButton,
+  EmptyState,
+  IconButton,
+  Input,
+  PageHeader,
+  Panel,
+} from "~/components/ui";
 
 export const useApiKeys = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -91,15 +101,6 @@ export default component$(() => {
     }
   });
 
-  const copyToClipboard = $(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert("API key copied to clipboard!");
-    } catch (error) {
-      console.error("Failed to copy:", error);
-      alert("Failed to copy API key");
-    }
-  });
   return (
     <>
       <PageHeader
@@ -108,6 +109,7 @@ export default component$(() => {
         icon={Key}
         subtitle="Create and manage API keys for ShareX integration~ Keep them safe and secure! (◕‿◕)♡"
       />
+
       {/* Account Status Check */}
       {!apiKeysData.value.user.isApproved && (
         <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
@@ -115,12 +117,10 @@ export default component$(() => {
           administrator. Please wait for approval before proceeding.
         </Callout>
       )}
+
       {/* Create New API Key */}
       {apiKeysData.value.user.isApproved && (
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
-            Create New API Key
-          </h2>
+        <Panel title="Create New API Key" icon={Key} class="mb-6 sm:mb-8">
           <div class="flex flex-col gap-3 sm:flex-row sm:gap-4">
             <Input
               type="text"
@@ -131,9 +131,7 @@ export default component$(() => {
                 newKeyName.value = (e.target as HTMLInputElement).value;
               }}
               onKeyDown$={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateApiKey();
-                }
+                if (e.key === "Enter") handleCreateApiKey();
               }}
             />
             <Button
@@ -150,129 +148,100 @@ export default component$(() => {
               )}
             </Button>
           </div>
-        </div>
+        </Panel>
       )}
-      {/* New Key Display */}
+
+      {/* New Key Display (one-time) */}
       {showNewKey.value && (
-        <div class="bg-gradient-to-br from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mb-6 rounded-2xl border p-4 sm:mb-8 sm:p-6">
-          <h3 class="text-theme-accent-secondary mb-2 flex flex-wrap items-center gap-2 text-base font-bold sm:text-lg">
-            <CheckCircle class="h-5 w-5" />
-            API Key Created!
-          </h3>
-          <p class="text-theme-text-secondary mb-4 text-sm sm:text-base">
+        <Callout
+          tone="success"
+          icon={CheckCircle}
+          title="API Key Created!"
+          class="mb-6 sm:mb-8"
+        >
+          <p class="mb-3">
             Save this API key now~ For security reasons, it won't be shown
             again! (◕‿◕)♡
           </p>
-          <div class="glass rounded-2xl p-3 sm:p-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div class="min-w-0 flex-1">
-                <p class="text-theme-text-secondary mb-1 text-xs sm:text-sm">
-                  Name: {showNewKey.value.name}
-                </p>
-                <p class="text-theme-text-primary bg-theme-bg-tertiary/20 rounded-lg p-2 font-mono text-xs break-all sm:text-sm">
-                  {showNewKey.value.key}
-                </p>
-              </div>
-              <button
-                onClick$={() => copyToClipboard(showNewKey.value!.key)}
-                class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-3 py-2 text-xs sm:w-auto sm:px-4 sm:text-sm"
-              >
-                <Copy class="h-4 w-4" />
-                Copy
-              </button>
+          <div class="bg-theme-bg-secondary/40 border-theme-card-border flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0 flex-1">
+              <p class="text-theme-text-muted mb-1 text-xs">
+                {showNewKey.value.name}
+              </p>
+              <p class="text-theme-text-primary font-mono text-xs break-all sm:text-sm">
+                {showNewKey.value.key}
+              </p>
             </div>
+            <CopyButton value={showNewKey.value.key} label="Copy" size="md" />
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            class="mt-3"
             onClick$={() => (showNewKey.value = null)}
-            class="text-theme-accent-tertiary hover:text-theme-text-primary mt-4 inline-flex items-center gap-1.5 text-sm underline"
           >
-            <Check class="h-4 w-4" />
             I've saved it safely
-          </button>
-        </div>
+          </Button>
+        </Callout>
       )}
-      {/* API Keys List */}
-      <div class="card-cute rounded-2xl p-4 sm:p-6">
-        <h2 class="text-gradient-cute mb-4 flex flex-wrap items-center text-lg font-bold sm:text-xl">
-          Your API Keys
-        </h2>
 
+      {/* API Keys List */}
+      <Panel title="Your API Keys" icon={Key} flush>
         {keys.value.length === 0 ? (
-          <div class="py-8 text-center sm:py-12">
-            <div class="glass mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
-              <Key class="text-theme-accent-primary h-6 w-6 sm:h-7 sm:w-7" />
-            </div>{" "}
-            <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-              No API Keys Yet!
-            </h3>
-            <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
-              Create your first API key to start using the API or configure
-              ShareX~ (◕‿◕)♡
-            </p>
-          </div>
+          <EmptyState
+            icon={Key}
+            title="No API Keys Yet!"
+            description="Create your first API key to start using the API or configure ShareX~ (◕‿◕)♡"
+            class="px-4 sm:px-6"
+          />
         ) : (
-          <div class="space-y-3 sm:space-y-4">
-            {" "}
+          <div class="divide-theme-card-border/60 divide-y">
             {keys.value.map((apiKey) => (
               <div
                 key={apiKey.id}
-                class="glass border-theme-card-border hover:border-theme-accent-primary rounded-2xl border p-3 transition-all duration-300 sm:p-4"
+                class="hover:bg-theme-bg-tertiary/20 flex flex-col gap-3 px-4 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-6"
               >
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                  <div class="min-w-0 flex-1">
-                    <h3 class="text-theme-text-primary mb-1 flex items-center gap-1.5 text-base font-medium sm:text-lg">
-                      <Key class="h-4 w-4 flex-shrink-0" />
-                      <span class="truncate">{apiKey.name}</span>
-                    </h3>
-                    <div class="text-theme-text-secondary flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:gap-4 sm:text-sm">
-                      <span>
-                        Created:{" "}
-                        {new Date(apiKey.createdAt).toLocaleDateString()}
-                      </span>
-                      {apiKey.lastUsed && (
-                        <span>
-                          Last used:{" "}
-                          {new Date(apiKey.lastUsed).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <span class="text-theme-text-secondary text-xs sm:text-sm">
-                        Key:
-                      </span>
-                      <code class="bg-theme-bg-tertiary/30 text-theme-accent-tertiary rounded-full px-2 py-1 font-mono text-xs break-all sm:px-3 sm:text-sm">
-                        {apiKey.key.substring(0, 8)}...
-                        {apiKey.key.substring(apiKey.key.length - 4)}
-                      </code>
-                      <button
-                        onClick$={() => copyToClipboard(apiKey.key)}
-                        class="text-theme-accent-tertiary hover:text-theme-accent-tertiary hover:bg-theme-accent-primary/20 inline-flex w-full items-center justify-center gap-1.5 rounded-full px-2 py-1 text-center text-xs transition-all duration-300 sm:w-auto sm:px-3 sm:text-sm"
-                      >
-                        <Copy class="h-3.5 w-3.5" />
-                        Copy Full Key
-                      </button>
-                    </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-theme-text-primary mb-1 flex items-center gap-1.5 font-medium">
+                    <Key class="h-4 w-4 flex-shrink-0" />
+                    <span class="truncate">{apiKey.name}</span>
+                  </h3>
+                  <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                    <Badge status="neutral">
+                      Created {new Date(apiKey.createdAt).toLocaleDateString()}
+                    </Badge>
+                    {apiKey.lastUsed && (
+                      <Badge status="neutral">
+                        Used {new Date(apiKey.lastUsed).toLocaleDateString()}
+                      </Badge>
+                    )}
                   </div>
-                  <button
-                    onClick$={() => handleDeleteApiKey(apiKey.id, apiKey.name)}
-                    class="text-theme-error hover:bg-theme-error/15 self-end rounded-full p-2 transition-all duration-300 sm:self-auto sm:p-3"
-                    title="Delete API Key"
-                  >
-                    <Trash2 class="h-5 w-5" />
-                  </button>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <code class="bg-theme-bg-tertiary/30 text-theme-accent-tertiary rounded-lg px-2 py-1 font-mono text-xs break-all">
+                      {apiKey.key.substring(0, 8)}...
+                      {apiKey.key.substring(apiKey.key.length - 4)}
+                    </code>
+                    <CopyButton value={apiKey.key} label="Copy full key" />
+                  </div>
                 </div>
+                <IconButton
+                  variant="danger"
+                  title="Delete API Key"
+                  class="self-end sm:self-auto"
+                  onClick$={() => handleDeleteApiKey(apiKey.id, apiKey.name)}
+                >
+                  <Trash2 class="h-5 w-5" />
+                </IconButton>
               </div>
             ))}
           </div>
         )}
-      </div>{" "}
+      </Panel>
+
       {/* ShareX Integration Info */}
       {apiKeysData.value.user.isApproved && (
-        <div class="bg-gradient-to-br from-theme-accent-tertiary/20 to-theme-accent-quaternary/20 border-theme-accent-tertiary/30 glass mt-6 rounded-2xl border p-4 sm:mt-8 sm:p-6">
-          <h3 class="text-theme-accent-tertiary mb-2 flex flex-wrap items-center text-base font-bold sm:text-lg">
-            ShareX Integration
-          </h3>
-          <p class="text-theme-text-secondary mb-4 text-sm sm:text-base">
+        <Callout tone="accent" title="ShareX Integration" class="mt-6 sm:mt-8">
+          <p class="mb-3">
             Use your API key to configure ShareX for automatic uploads~ Visit
             the{" "}
             <a
@@ -283,15 +252,16 @@ export default component$(() => {
             </a>{" "}
             to download ShareX configuration files! (◕‿◕)♡
           </p>
-          <div class="glass border-theme-accent-quaternary/20 rounded-2xl border p-3 sm:p-4">
-            <p class="text-theme-text-secondary mb-2 text-xs sm:text-sm">
-              API Endpoint:
-            </p>
-            <code class="text-theme-accent-quaternary font-mono text-xs break-all sm:text-sm">
-              {apiKeysData.value.origin}/upload
-            </code>
+          <div class="bg-theme-bg-secondary/40 border-theme-card-border flex items-center justify-between gap-2 rounded-xl border p-3">
+            <div class="min-w-0">
+              <p class="text-theme-text-muted text-xs">API Endpoint</p>
+              <code class="text-theme-accent-quaternary font-mono text-xs break-all sm:text-sm">
+                {apiKeysData.value.origin}/upload
+              </code>
+            </div>
+            <CopyButton value={`${apiKeysData.value.origin}/upload`} />
           </div>
-        </div>
+        </Callout>
       )}
     </>
   );

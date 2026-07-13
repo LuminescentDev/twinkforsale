@@ -11,7 +11,6 @@ import {
   routeAction$,
   z,
   zod$,
-  Link,
 } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
@@ -29,8 +28,6 @@ import {
   Edit,
   Save,
   X,
-  ChevronDown,
-  ChevronUp,
   CheckCircle,
   CircleX,
   AlertTriangle,
@@ -57,7 +54,22 @@ import {
 } from "~/components/ui/gradient-config-panel";
 import { getLanyardData } from "~/lib/discord";
 import { sanitizeCSS, hasDangerousCSS } from "~/lib/css-sanitizer";
-import { PageHeader } from "~/components/ui";
+import {
+  Button,
+  Callout,
+  CollapsibleSection,
+  PageHeader,
+  Panel,
+} from "~/components/ui";
+
+/** Discord logo glyph, wrapped so it can be passed as a CollapsibleSection `icon`. */
+const DiscordGlyph = component$<{ class?: string }>(
+  ({ class: className }) => (
+    <svg class={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+    </svg>
+  ),
+);
 
 export const useBioData = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -642,30 +654,21 @@ export default component$(() => {
           align="left"
           subtitle="Create your custom bio link page for sharing all your important links"
         />
-        <div class="mb-8">
+        <div class="mb-8 space-y-4 empty:hidden">
           {updateBio.value?.success && (
-            <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 glass mt-4 rounded-2xl border border-theme-accent-secondary/30 bg-gradient-to-br p-3">
-              <p class="text-theme-accent-secondary flex items-center gap-2 text-sm">
-                <CheckCircle class="h-4 w-4 flex-shrink-0" />
-                {updateBio.value.message}
-              </p>
-            </div>
+            <Callout tone="success" icon={CheckCircle}>
+              {updateBio.value.message}
+            </Callout>
           )}
           {updateBio.value?.failed && (
-            <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 glass mt-4 rounded-2xl border border-theme-accent-primary/30 bg-gradient-to-br p-3">
-              <p class="text-theme-accent-primary flex items-center gap-2 text-sm">
-                <CircleX class="h-4 w-4 flex-shrink-0" />
-                {updateBio.value.message}
-              </p>
-            </div>
+            <Callout tone="danger" icon={CircleX}>
+              {updateBio.value.message}
+            </Callout>
           )}
           {!bioData.value.user.isApproved && (
-            <div class="glass mt-4 rounded-2xl border border-theme-warning/20 p-4">
-              <p class="text-theme-warning flex items-center gap-2">
-                <AlertTriangle class="h-4 w-4 flex-shrink-0" />
-                Your account needs to be approved to use the bio service.
-              </p>
-            </div>
+            <Callout tone="warning" icon={AlertTriangle}>
+              Your account needs to be approved to use the bio service.
+            </Callout>
           )}
         </div>
 
@@ -673,26 +676,11 @@ export default component$(() => {
           {/* Settings Panel */}
           <div class="space-y-6">
             {/* Basic Settings */}
-            <div class="glass rounded-2xl p-6">
-              <button
-                type="button"
-                onClick$={() =>
-                  (basicInfoCollapsed.value = !basicInfoCollapsed.value)
-                }
-                class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-              >
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <User class="h-5 w-5" />
-                  Basic Information
-                </h2>
-                {basicInfoCollapsed.value ? (
-                  <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                ) : (
-                  <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                )}
-              </button>
-
-              {!basicInfoCollapsed.value && (
+            <CollapsibleSection
+              title="Basic Information"
+              icon={User}
+              collapsed={basicInfoCollapsed}
+            >
                 <div class="space-y-4">
                   <div>
                     <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
@@ -838,36 +826,18 @@ export default component$(() => {
                     />
                   </div>
                   {isPublic.value && !username.value && (
-                    <div class="mt-2 rounded-xl border border-theme-warning/20 bg-theme-warning/10 p-2">
-                      <p class="text-xs text-theme-warning">
-                        Set a username above to publish your bio.
-                      </p>
-                    </div>
+                    <Callout tone="warning" class="mt-2">
+                      Set a username above to publish your bio.
+                    </Callout>
                   )}
                 </div>
-              )}
-            </div>
+            </CollapsibleSection>
             {/* Appearance Settings */}
-            <div class="glass rounded-2xl p-6">
-              <button
-                type="button"
-                onClick$={() =>
-                  (appearanceCollapsed.value = !appearanceCollapsed.value)
-                }
-                class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-              >
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <Palette class="h-5 w-5" />
-                  Appearance
-                </h2>
-                {appearanceCollapsed.value ? (
-                  <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                ) : (
-                  <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                )}
-              </button>
-
-              {!appearanceCollapsed.value && (
+            <CollapsibleSection
+              title="Appearance"
+              icon={Palette}
+              collapsed={appearanceCollapsed}
+            >
                 <div class="space-y-4">
                   <div>
                     <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
@@ -989,31 +959,13 @@ export default component$(() => {
                     value={isPublic.value ? "true" : "false"}
                   />
                 </div>
-              )}
-            </div>
+            </CollapsibleSection>
             {/* Discord Integration */}
-            <div class="glass rounded-2xl p-6">
-              <button
-                type="button"
-                onClick$={() =>
-                  (discordCollapsed.value = !discordCollapsed.value)
-                }
-                class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-              >
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                  </svg>
-                  Discord Profile
-                </h2>
-                {discordCollapsed.value ? (
-                  <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                ) : (
-                  <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                )}
-              </button>
-
-              {!discordCollapsed.value && (
+            <CollapsibleSection
+              title="Discord Profile"
+              icon={DiscordGlyph}
+              collapsed={discordCollapsed}
+            >
                 <div class="space-y-4">
                   {bioData.value.user.bioDiscordUserId && (
                     <div class="bg-theme-accent-primary/5 border-theme-accent-primary/20 rounded-xl border p-4">
@@ -1345,30 +1297,13 @@ export default component$(() => {
                     value={isPublic.value ? "true" : "false"}
                   />
                 </div>
-              )}
-            </div>
+            </CollapsibleSection>
             {/* Background Effects */}
-            <div class="glass rounded-2xl p-6">
-              <button
-                type="button"
-                onClick$={() =>
-                (backgroundEffectsCollapsed.value =
-                  !backgroundEffectsCollapsed.value)
-                }
-                class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-              >
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <Palette class="h-5 w-5" />
-                  Background Effects
-                </h2>
-                {backgroundEffectsCollapsed.value ? (
-                  <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                ) : (
-                  <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                )}
-              </button>
-
-              {!backgroundEffectsCollapsed.value && (
+            <CollapsibleSection
+              title="Background Effects"
+              icon={Palette}
+              collapsed={backgroundEffectsCollapsed}
+            >
                 <div class="space-y-6">
                   {/* Gradient Configuration */}
                   <GradientConfigPanel
@@ -1451,31 +1386,14 @@ export default component$(() => {
                     />
                   </div>
                 </div>
-              )}
-            </div>
+            </CollapsibleSection>
             {/* Links Management */}
-            <div class="glass rounded-2xl p-6">
-              <button
-                type="button"
-                onClick$={() => (linksCollapsed.value = !linksCollapsed.value)}
-                class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-              >
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <LinkIcon class="h-5 w-5" />
-                  Bio Links
-                  <span class="text-theme-text-muted ml-2 text-sm">
-                    ({bioData.value.bioLinks.length}/
-                    {bioData.value.bioLimits.maxBioLinks})
-                  </span>
-                </h2>
-                {linksCollapsed.value ? (
-                  <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                ) : (
-                  <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                )}
-              </button>
-
-              {!linksCollapsed.value && (
+            <CollapsibleSection
+              title="Bio Links"
+              icon={LinkIcon}
+              collapsed={linksCollapsed}
+              meta={`${bioData.value.bioLinks.length}/${bioData.value.bioLimits.maxBioLinks}`}
+            >
                 <div>
                   <div class="mb-4 flex items-center justify-end">
                     <button
@@ -1568,14 +1486,12 @@ export default component$(() => {
                   {/* Max links reached message */}
                   {bioData.value.bioLinks.length >=
                     bioData.value.bioLimits.maxBioLinks && (
-                      <div class="mb-6 rounded-2xl border border-theme-warning/20 bg-theme-warning/10 p-4">
-                        <p class="text-sm text-theme-warning">
-                          You've reached your maximum bio links limit (
-                          {bioData.value.bioLimits.maxBioLinks}).
-                          {bioData.value.bioLinks.length > 0 &&
-                            " Delete some links to add new ones."}
-                        </p>
-                      </div>
+                      <Callout tone="warning" class="mb-6">
+                        You've reached your maximum bio links limit (
+                        {bioData.value.bioLimits.maxBioLinks}).
+                        {bioData.value.bioLinks.length > 0 &&
+                          " Delete some links to add new ones."}
+                      </Callout>
                     )}
                   {/* Existing Links */}
                   <div class="space-y-3">
@@ -1704,29 +1620,13 @@ export default component$(() => {
                     )}
                   </div>
                 </div>
-              )}
-            </div>
+            </CollapsibleSection>
             {bioData.value.analytics && (
-              <div class="glass rounded-2xl p-6">
-                <button
-                  type="button"
-                  onClick$={() =>
-                    (analyticsCollapsed.value = !analyticsCollapsed.value)
-                  }
-                  class="hover:bg-theme-bg-secondary/50 -m-2 mb-4 flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors"
-                >
-                  <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                    <BarChart3 class="h-5 w-5" />
-                    Analytics (Last 7 Days)
-                  </h2>
-                  {analyticsCollapsed.value ? (
-                    <ChevronDown class="text-theme-text-muted h-5 w-5" />
-                  ) : (
-                    <ChevronUp class="text-theme-text-muted h-5 w-5" />
-                  )}
-                </button>
-
-                {!analyticsCollapsed.value && (
+              <CollapsibleSection
+                title="Analytics (Last 7 Days)"
+                icon={BarChart3}
+                collapsed={analyticsCollapsed}
+              >
                   <div>
                     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
                       <div class="text-center">
@@ -1780,30 +1680,26 @@ export default component$(() => {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+              </CollapsibleSection>
             )}
           </div>
 
           {/* Preview Panel */}
           <div class="sticky top-8">
-            <div class="glass rounded-2xl p-6">
-              <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-theme-text-primary flex items-center gap-2 text-xl font-semibold">
-                  <Eye class="h-5 w-5" />
-                  Preview
-                </h2>
-                {bioData.value.user.bioUsername &&
-                  bioData.value.user.bioIsPublic && (
-                    <Link
-                      href={`/${bioData.value.user.bioUsername}`}
-                      class="text-theme-accent-primary hover:text-theme-accent-primary/80 flex items-center gap-2 transition-colors"
-                    >
-                      <ExternalLink class="h-4 w-4" />
-                      View Live
-                    </Link>
-                  )}
-              </div>
+            <Panel title="Preview" icon={Eye}>
+              {bioData.value.user.bioUsername &&
+                bioData.value.user.bioIsPublic && (
+                  <Button
+                    q:slot="actions"
+                    href={`/${bioData.value.user.bioUsername}`}
+                    external
+                    variant="glass"
+                    size="sm"
+                  >
+                    <ExternalLink class="h-4 w-4" />
+                    View Live
+                  </Button>
+                )}
               {/* Bio Preview */}
               <div class="border-theme-card-border relative overflow-hidden rounded-2xl border">
                 <BioPageDisplay
@@ -1813,13 +1709,11 @@ export default component$(() => {
                 />
               </div>
               {!bioData.value.user.bioUsername && (
-                <div class="mt-4 rounded-2xl border border-theme-warning/20 bg-theme-warning/10 p-4">
-                  <p class="text-sm text-theme-warning">
-                    Set a username to make your bio page accessible to others
-                  </p>
-                </div>
+                <Callout tone="warning" class="mt-4">
+                  Set a username to make your bio page accessible to others
+                </Callout>
               )}
-            </div>
+            </Panel>
           </div>
         </div>
 

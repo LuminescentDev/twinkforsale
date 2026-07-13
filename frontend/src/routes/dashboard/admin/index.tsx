@@ -32,7 +32,14 @@ import { UserAnalytics } from "~/components/charts/user-analytics";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
-import { PageHeader, StatCard } from "~/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  Input,
+  PageHeader,
+  StatCard,
+} from "~/components/ui";
 
 const DEFAULT_STORAGE_LIMIT = 10737418240;
 
@@ -208,30 +215,21 @@ export default component$(() => {
   return (
     <>
       <PageHeader
+        align="left"
         title="Admin Dashboard"
         icon={Users}
         subtitle="Manage your twink community~ Approve users and keep everything safe! (◕‿◕)♡"
       />
       {/* Status Messages */}
       {updateUser.value?.success && (
-        <div class="glass mb-6 rounded-2xl border border-theme-success/30 bg-theme-success/10 p-4 sm:mb-8 sm:p-6">
-          <div class="flex items-center justify-center text-center">
-            <CheckCircle class="mr-2 h-5 w-5 text-theme-success" />
-            <span class="font-medium text-theme-success">
-              User updated successfully!
-            </span>
-          </div>
-        </div>
+        <Callout tone="success" icon={CheckCircle} class="mb-6 sm:mb-8">
+          User updated successfully!
+        </Callout>
       )}
       {updateUser.value?.error && (
-        <div class="glass mb-6 rounded-2xl border border-theme-error/30 bg-theme-error/10 p-4 sm:mb-8 sm:p-6">
-          <div class="flex items-center justify-center text-center">
-            <Ban class="mr-2 h-5 w-5 text-theme-error" />
-            <span class="font-medium text-theme-error">
-              Error: {updateUser.value.error}
-            </span>
-          </div>
-        </div>
+        <Callout tone="danger" icon={Ban} class="mb-6 sm:mb-8">
+          Error: {updateUser.value.error}
+        </Callout>
       )}
       {/* Stats Cards */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
@@ -641,30 +639,19 @@ export default component$(() => {
                                 {user.name || "Anonymous Cutie"}
                               </h3>
                               {/* Badges */}
-                              <span
-                                class={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  user.isApproved
-                                    ? "bg-theme-success/20 text-theme-success border border-theme-success/30"
-                                    : "bg-theme-warning/20 text-theme-warning border border-theme-warning/30"
-                                }`}
-                              >
-                                {user.isApproved ? (
-                                  <>
-                                    <CheckCircle class="h-3 w-3" />
-                                    Approved
-                                  </>
-                                ) : (
-                                  <>
-                                    <Clock class="h-3 w-3" />
-                                    Pending
-                                  </>
-                                )}
-                              </span>
+                              {user.isApproved ? (
+                                <Badge status="success" icon={CheckCircle}>
+                                  Approved
+                                </Badge>
+                              ) : (
+                                <Badge status="warning" icon={Clock}>
+                                  Pending
+                                </Badge>
+                              )}
                               {user.isAdmin && (
-                                <span class="bg-purple-500/20 text-purple-400 border-purple-500/30 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                                  <Crown class="h-3 w-3" />
+                                <Badge status="accent" icon={Crown}>
                                   Admin
-                                </span>
+                                </Badge>
                               )}
                             </div>
                             
@@ -752,48 +739,51 @@ export default component$(() => {
                           {/* Action Buttons */}
                           <div class="flex flex-wrap gap-2 lg:justify-end">
                             {!user.isApproved ? (
-                              <button
+                              <Button
+                                variant="confirm"
+                                size="sm"
+                                pill={false}
                                 onClick$={() => {
                                   updateUser.submit({
                                     userId: user.id,
                                     isApproved: true,
                                   });
                                 }}
-                                class="from-green-500 to-emerald-500 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
                               >
                                 <CheckCircle class="h-4 w-4" />
                                 Approve User
-                              </button>
+                              </Button>
                             ) : (
-                              <button
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                pill={false}
                                 onClick$={() => {
                                   updateUser.submit({
                                     userId: user.id,
                                     isApproved: false,
                                   });
                                 }}
-                                class="from-orange-500 to-red-500 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial"
                               >
                                 <Ban class="h-4 w-4" />
                                 Revoke Access
-                              </button>
+                              </Button>
                             )}
-                            
-                            <button
+
+                            <Button
+                              variant={user.isAdmin ? "primary" : "glass"}
+                              size="sm"
+                              pill={false}
                               onClick$={() => {
                                 updateUser.submit({
                                   userId: user.id,
                                   isAdmin: !user.isAdmin,
                                 });
                               }}
-                              class={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl lg:flex-initial ${
-                                user.isAdmin
-                                  ? "from-purple-500 to-pink-500 bg-gradient-to-br text-white"
-                                  : "glass border-theme-accent-primary/40 text-theme-text-primary border"
-                              }`}
                             >
+                              <Crown class="h-4 w-4" />
                               {user.isAdmin ? "Remove Admin" : "Make Admin"}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -830,11 +820,10 @@ export default component$(() => {
                                 <Folder class="h-4 w-4" />
                                 Max Uploads
                               </label>
-                              <input
+                              <Input
                                 type="number"
                                 name="maxUploads"
                                 value={user.settings?.maxUploads || 100}
-                                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
                                 min="1"
                               />
                               <p class="text-theme-text-secondary text-xs">
@@ -848,11 +837,10 @@ export default component$(() => {
                                 <Package class="h-4 w-4" />
                                 Max File Size
                               </label>
-                              <input
+                              <Input
                                 type="number"
                                 name="maxFileSize"
                                 value={user.settings?.maxFileSize || 10485760}
-                                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
                                 min="1"
                               />
                               <p class="text-theme-text-secondary text-xs">
@@ -866,12 +854,11 @@ export default component$(() => {
                                 <HardDrive class="h-4 w-4" />
                                 Storage Limit
                               </label>
-                              <input
+                              <Input
                                 type="number"
                                 name="maxStorageLimit"
                                 value={user.settings?.maxStorageLimit || ""}
                                 placeholder="Leave empty for default"
-                                class="glass border-theme-card-border text-theme-text-primary placeholder:text-theme-text-secondary/50 focus:border-theme-accent-primary focus:ring-theme-accent-primary/20 w-full rounded-xl border px-4 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none"
                                 min="1"
                               />
                               <p class="text-theme-text-secondary text-xs">
@@ -883,26 +870,26 @@ export default component$(() => {
 
                             {/* Buttons */}
                             <div class="flex flex-col gap-2 sm:col-span-2 lg:col-span-1 lg:justify-center">
-                              <button
-                                type="submit"
-                                class="from-theme-accent-primary to-theme-accent-secondary flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                              >
+                              <Button type="submit" size="sm" pill={false} block>
                                 <Save class="h-4 w-4" />
                                 Save Changes
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type="button"
+                                variant="glass"
+                                size="sm"
+                                pill={false}
+                                block
                                 onClick$={() => {
                                   updateUser.submit({
                                     userId: user.id,
                                     maxStorageLimit: "",
                                   });
                                 }}
-                                class="glass border-theme-card-border text-theme-text-secondary hover:text-theme-text-primary inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-300"
                               >
                                 <RotateCcw class="h-4 w-4" />
                                 Reset to Default
-                              </button>
+                              </Button>
                             </div>
                           </form>
                         </div>

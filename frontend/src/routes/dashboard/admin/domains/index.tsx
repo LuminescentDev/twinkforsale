@@ -19,7 +19,17 @@ import {
 import { Toggle } from "@luminescent/ui-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Button, Card, PageContainer, PageHeader } from "~/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  FieldLabel,
+  IconButton,
+  Input,
+  PageContainer,
+  PageHeader,
+  Panel,
+} from "~/components/ui";
 
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
   const user = await getCurrentUser(serverAuth(requestEvent));
@@ -150,12 +160,10 @@ export default component$(() => {
   const editIsDefault = useSignal(false);
   const editSupportsSubdomains = useSignal(false);
 
-  const inputClasses =
-    "glass w-full rounded-full px-3 py-2 text-sm text-theme-text-primary placeholder:text-theme-text-muted transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 sm:px-4 sm:py-3 sm:text-base";
-
   return (
     <PageContainer>
       <PageHeader
+        align="left"
         title="Upload Domains Management~"
         icon={Globe}
         subtitle="Manage available upload domains for users."
@@ -180,42 +188,31 @@ export default component$(() => {
 
       {/* Create Form */}
       {showCreateForm.value && (
-        <Card class="mb-6">
-          <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-            <Globe class="h-5 w-5" />
-            Create New Upload Domain~
-          </h2>
-
+        <Panel title="Create New Upload Domain~" icon={Globe} class="mb-6">
           <Form action={createAction}>
             <div class="space-y-4 sm:space-y-6">
               <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Domain~
-                </label>
-                <input
+                <FieldLabel>Domain</FieldLabel>
+                <Input
                   type="text"
                   name="domain"
                   placeholder="example.com"
-                  class={inputClasses}
                   required
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+                <p class="text-theme-text-muted mt-1.5 text-xs">
                   The top-level domain (e.g., "twink.forsale", "example.com")~
                 </p>
               </div>
 
               <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Display Name~
-                </label>
-                <input
+                <FieldLabel>Display Name</FieldLabel>
+                <Input
                   type="text"
                   name="name"
                   placeholder="Example Domain"
-                  class={inputClasses}
                   required
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
+                <p class="text-theme-text-muted mt-1.5 text-xs">
                   Friendly name shown to users~
                 </p>
               </div>
@@ -243,57 +240,43 @@ export default component$(() => {
               <input type="hidden" name="supportsSubdomains" value="off" />
 
               <div class="flex gap-3">
-                <button
-                  type="submit"
-                  class="btn-cute text-theme-text-primary inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-                >
+                <Button type="submit" block>
                   <Save class="h-4 w-4" />
                   Create Domain~
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  block
                   onClick$={() => {
                     showCreateForm.value = false;
-                    // Reset edit form signals
                     editIsActive.value = false;
                     editIsDefault.value = false;
                     editSupportsSubdomains.value = false;
                   }}
-                  class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           </Form>
 
           {createAction.value?.success && (
-            <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-                <CheckCircle class="h-4 w-4 flex-shrink-0" />
-                {createAction.value.message}~
-              </p>
-            </div>
+            <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
+              {createAction.value.message}~
+            </Callout>
           )}
 
           {createAction.value?.failed && (
-            <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-              <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
-                <CircleX class="h-4 w-4 flex-shrink-0" />
-                {createAction.value.message}~
-              </p>
-            </div>
+            <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
+              {createAction.value.message}~
+            </Callout>
           )}
-        </Card>
+        </Panel>
       )}
 
       {/* Domains List */}
-      <Card>
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-lg font-bold sm:mb-6 sm:text-xl">
-          <List class="h-5 w-5" />
-          Existing Domains~
-        </h2>
-
+      <Panel title="Existing Domains~" icon={List}>
         <div class="space-y-4">
           {domains.value.map((domain) => (
             <div key={domain.id} class="glass rounded-2xl p-4 sm:p-5">
@@ -303,26 +286,20 @@ export default component$(() => {
                   <div class="space-y-4">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
-                        <label class="text-theme-text-secondary mb-2 block text-xs font-medium">
-                          Domain
-                        </label>
-                        <input
+                        <FieldLabel>Domain</FieldLabel>
+                        <Input
                           type="text"
                           name="domain"
                           value={domain.domain}
-                          class={inputClasses}
                           required
                         />
                       </div>
                       <div>
-                        <label class="text-theme-text-secondary mb-2 block text-xs font-medium">
-                          Display Name
-                        </label>
-                        <input
+                        <FieldLabel>Display Name</FieldLabel>
+                        <Input
                           type="text"
                           name="name"
                           value={domain.name}
-                          class={inputClasses}
                           required
                         />
                       </div>
@@ -383,25 +360,23 @@ export default component$(() => {
                     />
 
                     <div class="flex gap-2">
-                      <button
-                        type="submit"
-                        class="btn-cute text-theme-text-primary rounded-full px-4 py-2 text-xs font-medium"
-                      >
+                      <Button type="submit" size="sm">
+                        <Save class="h-4 w-4" />
                         Save
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick$={() => {
                           editingDomain.value = null;
-                          // Reset edit form signals
                           editIsActive.value = false;
                           editIsDefault.value = false;
                           editSupportsSubdomains.value = false;
                         }}
-                        class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 rounded-full px-4 py-2 text-xs font-medium transition-all duration-300"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </Form>
@@ -416,19 +391,13 @@ export default component$(() => {
                             {domain.name}
                           </h3>
                           {domain.isDefault && (
-                            <span class="from-theme-accent-secondary to-theme-accent-tertiary rounded-full bg-gradient-to-br px-2 py-1 text-xs font-medium text-white">
-                              Default
-                            </span>
+                            <Badge status="accent">Default</Badge>
                           )}
                           {domain.supportsSubdomains && (
-                            <span class="from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br px-2 py-1 text-xs font-medium text-white">
-                              Subdomains
-                            </span>
+                            <Badge status="info">Subdomains</Badge>
                           )}
                           {!domain.isActive && (
-                            <span class="from-theme-deny to-theme-deny-hover rounded-full bg-gradient-to-br px-2 py-1 text-xs font-medium text-white">
-                              Inactive
-                            </span>
+                            <Badge status="error">Inactive</Badge>
                           )}
                         </div>
                         <p class="text-theme-text-secondary text-sm font-medium break-all">
@@ -441,29 +410,26 @@ export default component$(() => {
                     </div>
                   </div>
                   <div class="flex flex-shrink-0 gap-1">
-                    <button
+                    <IconButton
                       type="button"
-                      aria-label={`Edit ${domain.name}`}
                       title={`Edit ${domain.name}`}
                       onClick$={() => {
                         editingDomain.value = domain.id;
-                        // Initialize edit form signals with current domain values
                         editIsActive.value = domain.isActive;
                         editIsDefault.value = domain.isDefault;
                         editSupportsSubdomains.value =
                           domain.supportsSubdomains;
                       }}
-                      class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 hover:text-theme-accent-primary rounded-full p-2 transition-all duration-300"
                     >
                       <Edit class="h-4 w-4" />
-                    </button>
+                    </IconButton>
                     <Form action={deleteAction}>
                       <input type="hidden" name="id" value={domain.id} />
                       <button
                         type="submit"
                         aria-label={`Delete ${domain.name}`}
                         title={`Delete ${domain.name}`}
-                        class="text-theme-error hover:bg-theme-error/20 hover:text-theme-error rounded-full p-2 transition-all duration-300"
+                        class="text-theme-error hover:bg-theme-error/10 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200"
                         onClick$={(e) => {
                           if (
                             !confirm(
@@ -485,32 +451,23 @@ export default component$(() => {
         </div>
 
         {updateAction.value?.success && (
-          <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-              <CheckCircle class="h-4 w-4 flex-shrink-0" />
-              {updateAction.value.message}~
-            </p>
-          </div>
+          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
+            {updateAction.value.message}~
+          </Callout>
         )}
 
         {(updateAction.value?.failed || deleteAction.value?.failed) && (
-          <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-accent-primary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-primary flex items-center gap-2 text-xs sm:text-sm">
-              <CircleX class="h-4 w-4 flex-shrink-0" />
-              {updateAction.value?.message || deleteAction.value?.message}~
-            </p>
-          </div>
+          <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
+            {updateAction.value?.message || deleteAction.value?.message}~
+          </Callout>
         )}
 
         {deleteAction.value?.success && (
-          <div class="from-theme-accent-secondary/20 to-theme-accent-tertiary/20 border-theme-accent-secondary/30 glass mt-4 rounded-2xl border bg-gradient-to-br p-3 sm:mt-6 sm:p-4">
-            <p class="text-theme-accent-secondary flex items-center gap-2 text-xs sm:text-sm">
-              <CheckCircle class="h-4 w-4 flex-shrink-0" />
-              {deleteAction.value.message}~
-            </p>
-          </div>
+          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
+            {deleteAction.value.message}~
+          </Callout>
         )}
-      </Card>
+      </Panel>
     </PageContainer>
   );
 });

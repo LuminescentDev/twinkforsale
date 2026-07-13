@@ -269,3 +269,11 @@ export function getServerUploadsViewMode(cookieHeader: string | undefined): 'gri
   const value = getServerCookie(cookieHeader, COOKIE_KEYS.UPLOADS_VIEW_MODE);
   return value as 'grid' | 'list' | null;
 }
+
+/**
+ * Read the sidebar collapsed state from the request cookie header so the
+ * app shell renders at the correct width on first paint (no layout flash).
+ */
+export function getServerSidebarCollapsed(cookieHeader: string | undefined): boolean {
+  return getServerCookie(cookieHeader, COOKIE_KEYS.SIDEBAR_COLLAPSED) === 'true';
+}

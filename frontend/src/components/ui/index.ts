@@ -1,14 +1,28 @@
 // Shared, theme-aware UI primitives. Import from "~/components/ui".
 export { Card } from "./card";
 export type { CardProps } from "./card";
+export { Panel } from "./panel";
+export type { PanelProps } from "./panel";
+export { CollapsibleSection } from "./collapsible-section";
+export type { CollapsibleSectionProps } from "./collapsible-section";
 export { PageContainer } from "./page-container";
 export { PageHeader } from "./page-header";
 export { Section } from "./section";
 export { Button } from "./button";
 export type { ButtonProps } from "./button";
+export { IconButton } from "./icon-button";
+export type { IconButtonProps } from "./icon-button";
+export { CopyButton } from "./copy-button";
 export { StatCard } from "./stat-card";
 export { Badge } from "./badge";
 export { Callout } from "./callout";
 export { EmptyState } from "./empty-state";
 export { Input, Textarea, Select, FieldLabel } from "./input";
+export { SearchInput } from "./search-input";
+export { SegmentedControl } from "./segmented-control";
+export type { SegmentedOption } from "./segmented-control";
+export { Breadcrumbs } from "./breadcrumbs";
+export { ProgressBar } from "./progress-bar";
+export { DropdownMenu, MenuItem } from "./dropdown-menu";
+export { Table, Thead, Th, SortHeader, Tr, Td } from "./table";
 export { ThemeToggle } from "./theme-toggle";

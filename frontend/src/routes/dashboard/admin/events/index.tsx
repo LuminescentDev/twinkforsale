@@ -20,6 +20,7 @@ import { formatDate } from "~/lib/utils";
 import { useAlert } from "~/lib/use-alert";
 import { api, serverAuth, type EventDto } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { Callout, EmptyState, PageHeader } from "~/components/ui";
 
 export const useAdminCheck = routeLoader$(async (requestEvent) => {
   const user = await getCurrentUser(serverAuth(requestEvent));
@@ -335,15 +336,15 @@ export default component$(() => {
   if (eventsData.value.error) {
     return (
       <div>
-        <div class="mx-auto max-w-7xl">
-          <div class="text-center">
-            <AlertTriangle class="mx-auto h-12 w-12 text-theme-error" />
-            <h1 class="mt-4 text-2xl font-bold text-theme-error">
-              Failed to Load System Events
-            </h1>
-            <p class="mt-2 text-theme-text-muted">{eventsData.value.error}</p>
-          </div>
-        </div>
+        <PageHeader
+          align="left"
+          title="System Events Management"
+          icon={Clock}
+          subtitle="Monitor and manage system events and alerts~"
+        />
+        <Callout tone="danger" icon={AlertTriangle} title="Failed to Load System Events">
+          {eventsData.value.error}
+        </Callout>
       </div>
     );
   }
@@ -352,19 +353,15 @@ export default component$(() => {
 
   return (
     <div>
-      <div class="mx-auto max-w-7xl">
-        {" "}
+      <div>
         {/* Header */}
         <div class="mb-6">
-          <div class="mb-4">
-            <h1 class="text-gradient-cute flex items-center gap-3 text-2xl font-bold sm:text-3xl">
-              <Clock class="h-6 w-6 sm:h-8 sm:w-8" />
-              System Events Management
-            </h1>
-            <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-              Monitor and manage system events and alerts~
-            </p>
-          </div>
+          <PageHeader
+            align="left"
+            title="System Events Management"
+            icon={Clock}
+            subtitle="Monitor and manage system events and alerts~"
+          />
 
           {/* Mobile Action Buttons */}
           <div class="block space-y-3 sm:hidden">
@@ -398,7 +395,7 @@ export default component$(() => {
             <div class="grid grid-cols-2 gap-2">
               <button
                 onClick$={clearAllEvents}
-                class="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-3 py-3 text-xs font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:from-red-600 hover:to-red-700 hover:shadow-lg active:scale-95"
+                class="flex items-center justify-center gap-2 rounded-2xl bg-theme-error px-3 py-3 text-xs font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-lg active:scale-95"
                 title="Clear ALL events (including critical)"
               >
                 <Trash class="h-4 w-4" />
@@ -442,7 +439,7 @@ export default component$(() => {
               </button>
               <button
                 onClick$={clearAllEvents}
-                class="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-5 py-3 text-sm font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:from-red-600 hover:to-red-700 hover:shadow-lg active:scale-95"
+                class="flex items-center gap-2 rounded-2xl bg-theme-error px-5 py-3 text-sm font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-lg active:scale-95"
                 title="Clear ALL events (including critical)"
               >
                 <Trash class="h-4 w-4" />
@@ -626,7 +623,7 @@ export default component$(() => {
                         </div>
                         <button
                           onClick$={() => deleteEvent(event.id)}
-                          class="flex-shrink-0 rounded p-2 text-theme-error transition-colors hover:bg-red-50 hover:text-theme-error"
+                          class="flex-shrink-0 rounded p-2 text-theme-error transition-colors hover:bg-theme-error/10"
                           title="Delete this event"
                         >
                           <Trash2 class="h-4 w-4" />
@@ -637,15 +634,11 @@ export default component$(() => {
                 ))}
               </div>
             ) : (
-              <div class="py-8 text-center sm:py-12">
-                <CheckCircle class="mx-auto h-8 w-8 text-theme-success sm:h-12 sm:w-12" />
-                <h3 class="text-theme-text-primary mt-4 text-base font-medium sm:text-lg">
-                  No Events Found
-                </h3>
-                <p class="text-theme-text-secondary mt-2 text-sm sm:text-base">
-                  System is running smoothly with no events to report!
-                </p>
-              </div>
+              <EmptyState
+                icon={CheckCircle}
+                title="No Events Found"
+                description="System is running smoothly with no events to report!"
+              />
             )}
           </div>
         </div>{" "}

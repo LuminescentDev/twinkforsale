@@ -1,4 +1,4 @@
-import { component$, $, useContext } from "@builder.io/qwik";
+import { component$, useContext } from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
@@ -6,26 +6,25 @@ import {
   Eye,
   HardDrive,
   Key,
-  File,
-  FileText,
-  Video,
-  Music,
-  FileArchive,
   Flower2,
   Rocket,
   TrendingUp,
+  ExternalLink,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
 import { AnalyticsChart } from "~/components/charts/analytics-chart";
+import { FileTypeIcon } from "~/components/file-type-icon";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
 import {
   Button,
   Callout,
-  Card,
+  CopyButton,
   EmptyState,
+  IconButton,
   PageHeader,
+  Panel,
   Section,
   StatCard,
 } from "~/components/ui";
@@ -72,13 +71,7 @@ export const useUserData = routeLoader$(async (requestEvent) => {
 export default component$(() => {
   const userData = useUserData();
   const imagePreviewStore = useContext(ImagePreviewContext);
-  const copyToClipboard = $((shortCode: string) => {
-    const url = `${userData.value.origin}/f/${shortCode}`;
-    navigator.clipboard.writeText(url);
-  });
-  const handleImageClick = $((shortCode: string, fileName: string) => {
-    imagePreviewStore.openPreview(`/f/${shortCode}`, fileName);
-  });
+  const uploads = userData.value.user.uploads;
 
   return (
     <>
@@ -86,7 +79,14 @@ export default component$(() => {
         align="left"
         title={`Welcome back, ${userData.value.user.name || "cutie"}!`}
         subtitle="Your cute dashboard is ready~ Manage uploads, API keys, and more! (◕‿◕)♡"
-      />
+      >
+        <div q:slot="actions" class="flex flex-wrap gap-2">
+          <Button href="/upload">
+            <Rocket class="h-4 w-4" />
+            Upload a file
+          </Button>
+        </div>
+      </PageHeader>
 
       {!userData.value.user.isApproved && (
         <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
@@ -151,77 +151,51 @@ export default component$(() => {
       </Section>
 
       {/* Recent Uploads */}
-      <Card padding="md">
-        <h2 class="text-gradient-cute mb-4 text-lg font-bold sm:text-xl">
-          Recent Uploads
-        </h2>
-        {userData.value.user.uploads.length > 0 ? (
-          <div class="space-y-3">
-            {userData.value.user.uploads.map((upload) => (
+      <Panel title="Recent Uploads" icon={Folder} flush>
+        <Button q:slot="actions" href="/dashboard/uploads" variant="glass" size="sm">
+          View all files
+        </Button>
+        {uploads.length > 0 ? (
+          <div class="divide-theme-card-border/60 divide-y">
+            {uploads.map((upload) => (
               <div
                 key={upload.id}
-                class="glass flex flex-col space-y-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+                class="hover:bg-theme-bg-tertiary/20 flex items-center gap-3 px-4 py-3 transition-colors sm:px-6"
               >
-                <div class="flex items-center space-x-3">
-                  <div class="flex-shrink-0">
-                    {upload.mimeType.startsWith("image/") ? (
-                      <div
-                        class="border-theme-card-border hover:border-theme-accent-primary h-12 w-12 cursor-pointer overflow-hidden rounded-xl border transition-all duration-300"
-                        onClick$={() =>
-                          handleImageClick(upload.shortCode, upload.originalName)
-                        }
-                      >
-                        <img
-                          src={`/f/${upload.shortCode}`}
-                          alt={upload.originalName}
-                          class="h-full w-full object-cover transition-transform duration-300 hover:scale-110"
-                          width="48"
-                          height="48"
-                        />
-                      </div>
-                    ) : (
-                      <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br">
-                        {(() => {
-                          const Icon = upload.mimeType.startsWith("video/")
-                            ? Video
-                            : upload.mimeType.startsWith("audio/")
-                              ? Music
-                              : upload.mimeType.includes("zip") ||
-                                  upload.mimeType.includes("rar") ||
-                                  upload.mimeType.includes("archive")
-                                ? FileArchive
-                                : upload.mimeType.includes("text")
-                                  ? FileText
-                                  : File;
-                          return <Icon class="h-6 w-6 text-white" />;
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p class="text-theme-text-primary font-medium">
-                      {upload.originalName}
-                    </p>
-                    <p class="text-theme-text-secondary text-sm">
-                      {upload.views} views •{" "}
-                      {new Date(upload.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
+                <FileTypeIcon
+                  upload={upload}
+                  size="sm"
+                  onClick$={() => {
+                    if (upload.mimeType.startsWith("image/")) {
+                      imagePreviewStore.openPreview(
+                        `/f/${upload.shortCode}`,
+                        upload.originalName,
+                      );
+                    }
+                  }}
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-theme-text-primary truncate text-sm font-medium">
+                    {upload.originalName}
+                  </p>
+                  <p class="text-theme-text-muted text-xs">
+                    {upload.views} views •{" "}
+                    {new Date(upload.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
-                <div class="flex space-x-2">
-                  <a
+                <div class="flex items-center gap-1">
+                  <CopyButton
+                    value={`${userData.value.origin}/f/${upload.shortCode}`}
+                    label="Copy"
+                  />
+                  <IconButton
                     href={`/f/${upload.shortCode}`}
-                    target="_blank"
-                    class="text-theme-accent-secondary hover:bg-theme-bg-tertiary/20 rounded-full px-3 py-1 text-center text-sm transition-all duration-300"
+                    external
+                    size="sm"
+                    title="Open file"
                   >
-                    View <Eye class="inline h-4 w-4" />
-                  </a>
-                  <button
-                    onClick$={() => copyToClipboard(upload.shortCode)}
-                    class="text-theme-accent-tertiary hover:bg-theme-bg-tertiary/20 hover:text-theme-text-primary rounded-full px-3 py-1 text-sm transition-all duration-300"
-                  >
-                    Copy URL <File class="inline h-4 w-4" />
-                  </button>
+                    <ExternalLink class="h-4 w-4" />
+                  </IconButton>
                 </div>
               </div>
             ))}
@@ -231,6 +205,7 @@ export default component$(() => {
             icon={Flower2}
             title="No files yet~"
             description="Upload via ShareX or API to see your files here!"
+            class="px-4 sm:px-6"
           >
             <Button href="/setup/sharex">
               <Rocket class="h-4 w-4" />
@@ -238,7 +213,7 @@ export default component$(() => {
             </Button>
           </EmptyState>
         )}
-      </Card>
+      </Panel>
     </>
   );
 });

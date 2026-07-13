@@ -5,41 +5,50 @@ import {
   useSignal,
   useComputed$,
 } from "@builder.io/qwik";
-import { routeLoader$, routeAction$, Link } from "@builder.io/qwik-city";
+import { routeLoader$, routeAction$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { setUploadsViewMode } from "~/lib/cookie-utils";
+import {
+  setUploadsViewMode,
+  getServerUploadsViewMode,
+} from "~/lib/cookie-utils";
 import {
   Folder,
   Eye,
   HardDrive,
   Clock,
-  Copy,
   Trash2,
-  Sparkle,
-  FileText,
-  Ruler,
-  Calendar,
-  Zap,
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Grid,
-  List,
   TrendingUp,
+  List,
+  Grid,
   BarChart3,
+  Rocket,
   CheckSquare,
   Square,
-  Rocket,
-  X,
+  ExternalLink,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
 import { FileTypeIcon } from "~/components/file-type-icon";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { getServerUploadsViewMode } from "~/lib/cookie-utils";
 import { formatBytes } from "~/lib/utils";
-import { PageHeader, StatCard } from "~/components/ui";
+import {
+  PageHeader,
+  StatCard,
+  Panel,
+  SegmentedControl,
+  SearchInput,
+  Table,
+  Thead,
+  Th,
+  SortHeader,
+  Tr,
+  Td,
+  CopyButton,
+  IconButton,
+  Button,
+  Badge,
+  EmptyState,
+} from "~/components/ui";
 
 export const useDeleteUpload = routeAction$(async (data, requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -122,62 +131,66 @@ export const useUserUploads = routeLoader$(async (requestEvent) => {
   };
 });
 
+type SortKey = "name" | "size" | "views" | "downloads" | "date" | "weeklyViews";
+
+/** Compact sparkline used in the grid cards. */
+const MiniChart = component$(({ data }: { data: { totalViews: number }[] }) => {
+  if (!data || data.length === 0)
+    return <div class="text-theme-text-muted text-xs">No data</div>;
+
+  const maxViews = Math.max(...data.map((d) => d.totalViews), 1);
+  const points = data
+    .map((d, i) => {
+      const x = (i / (data.length - 1)) * 60;
+      const y = 20 - (d.totalViews / maxViews) * 20;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg class="h-6 w-16" viewBox="0 0 60 20">
+      <polyline
+        fill="none"
+        stroke-width="1.5"
+        points={points}
+        class="stroke-theme-accent-primary"
+      />
+    </svg>
+  );
+});
+
 export default component$(() => {
   const userData = useUserUploads();
   const deleteUploadAction = useDeleteUpload();
   const imagePreview = useContext(ImagePreviewContext);
 
   const searchQuery = useSignal("");
-  const sortBy = useSignal<
-    "name" | "size" | "views" | "downloads" | "date" | "weeklyViews"
-  >("date");
+  const sortBy = useSignal<SortKey>("date");
   const sortOrder = useSignal<"asc" | "desc">("desc");
-  // Initialize viewMode from server-side data
-  const viewMode = useSignal<"grid" | "list">(
-    userData.value.savedViewMode as "grid" | "list",
-  );
-  // Bulk selection state
+  const viewMode = useSignal<string>(userData.value.savedViewMode);
   const selectedFiles = useSignal<Set<string>>(new Set());
 
-  const copyToClipboard = $((text: string) => {
-    navigator.clipboard.writeText(text);
-    // Could add a toast notification here
-  });
   const deleteUpload = $(async (deletionKey: string) => {
-    if (!confirm("Are you sure you want to delete this file?")) {
-      return;
-    }
-
-    const result = await deleteUploadAction.submit({
-      deletionKeys: deletionKey,
-    });
-
-    if (result.value.success) {
-      // Reload the page to refresh the upload list
-      window.location.reload();
-    } else {
-      alert(result.value.error || "Failed to delete file");
-    }
+    if (!confirm("Are you sure you want to delete this file?")) return;
+    const result = await deleteUploadAction.submit({ deletionKeys: deletionKey });
+    if (result.value.success) window.location.reload();
+    else alert(result.value.error || "Failed to delete file");
   });
 
-  // Filter and sort uploads
   const filteredAndSortedUploads = useComputed$(() => {
     let uploads = userData.value.user.uploads || [];
 
-    // Filter by search query
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.toLowerCase().trim();
       uploads = uploads.filter(
-        (upload: any) =>
-          upload.originalName.toLowerCase().includes(query) ||
-          upload.mimeType.toLowerCase().includes(query),
+        (u) =>
+          u.originalName.toLowerCase().includes(query) ||
+          u.mimeType.toLowerCase().includes(query),
       );
     }
 
-    // Sort uploads
-    uploads = [...uploads].sort((a: any, b: any) => {
+    uploads = [...uploads].sort((a, b) => {
       let comparison = 0;
-
       switch (sortBy.value) {
         case "name":
           comparison = a.originalName.localeCompare(b.originalName);
@@ -200,135 +213,77 @@ export default component$(() => {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
       }
-
       return sortOrder.value === "asc" ? comparison : -comparison;
     });
 
     return uploads;
   });
 
-  // Bulk action functions
   const toggleFileSelection = $((deletionKey: string) => {
-    const newSelection = new Set(selectedFiles.value);
-    if (newSelection.has(deletionKey)) {
-      newSelection.delete(deletionKey);
+    const next = new Set(selectedFiles.value);
+    if (next.has(deletionKey)) next.delete(deletionKey);
+    else next.add(deletionKey);
+    selectedFiles.value = next;
+  });
+
+  const toggleSelectAll = $(() => {
+    if (selectedFiles.value.size === filteredAndSortedUploads.value.length) {
+      selectedFiles.value = new Set();
     } else {
-      newSelection.add(deletionKey);
+      selectedFiles.value = new Set(
+        filteredAndSortedUploads.value.map((u) => u.deletionKey),
+      );
     }
-    selectedFiles.value = newSelection;
   });
 
-  const selectAllVisibleFiles = $(() => {
-    const allKeys = filteredAndSortedUploads.value.map(
-      (upload) => upload.deletionKey,
-    );
-    selectedFiles.value = new Set(allKeys);
-  });
-
-  const deselectAllFiles = $(() => {
-    selectedFiles.value = new Set();
-  });
   const bulkDelete = $(async () => {
-    const selectedCount = selectedFiles.value.size;
-    if (selectedCount === 0) return;
-
+    const count = selectedFiles.value.size;
+    if (count === 0) return;
     if (
       !confirm(
-        `Are you sure you want to delete ${selectedCount} selected file${selectedCount !== 1 ? "s" : ""}?`,
+        `Are you sure you want to delete ${count} selected file${count !== 1 ? "s" : ""}?`,
       )
-    ) {
+    )
       return;
-    }
-
     const result = await deleteUploadAction.submit({
       deletionKeys: Array.from(selectedFiles.value),
     });
-
     if (result.value.success) {
       selectedFiles.value = new Set();
-      // Reload the page to refresh the upload list
       window.location.reload();
     } else {
       alert(result.value.error || "Failed to delete files");
     }
   });
+
   const bulkCopyUrls = $(() => {
-    const selectedUploads = filteredAndSortedUploads.value.filter((upload) =>
-      selectedFiles.value.has(upload.deletionKey),
-    );
-
-    const urls = selectedUploads
-      .map((upload) => `${userData.value.origin}/f/${upload.shortCode}`)
+    const urls = filteredAndSortedUploads.value
+      .filter((u) => selectedFiles.value.has(u.deletionKey))
+      .map((u) => `${userData.value.origin}/f/${u.shortCode}`)
       .join("\n");
-
     navigator.clipboard.writeText(urls);
-    // Could show a toast notification here
   });
+
   const formatFileSize = (bytes: number | bigint) => {
-    // Convert BigInt to number for calculations
-    const numBytes = typeof bytes === 'bigint' ? Number(bytes) : bytes;
-    
+    const numBytes = typeof bytes === "bigint" ? Number(bytes) : bytes;
     if (numBytes === 0) return "0 Bytes";
-
-    // Handle negative numbers (over quota)
     const isNegative = numBytes < 0;
-    const absoluteBytes = Math.abs(numBytes);
-
-    const formattedSize = formatBytes(absoluteBytes);
-    return isNegative ? `-${formattedSize}` : formattedSize;
+    const formatted = formatBytes(Math.abs(numBytes));
+    return isNegative ? `-${formatted}` : formatted;
   };
-  const handleSort = $(
-    (
-      column: "name" | "size" | "views" | "downloads" | "date" | "weeklyViews",
-    ) => {
-      if (sortBy.value === column) {
-        // Toggle sort order if clicking the same column
-        sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
-      } else {
-        // Set new column and default to descending
-        sortBy.value = column;
-        sortOrder.value = "desc";
-      }
-    },
-  );
-  const getSortIcon = (
-    column: "name" | "size" | "views" | "downloads" | "date" | "weeklyViews",
-  ) => {
-    if (sortBy.value !== column) {
-      return (
-        <ArrowUpDown class="text-theme-text-muted ml-1 inline h-3 w-3 opacity-50" />
-      );
+
+  const handleSort = $((column: SortKey) => {
+    if (sortBy.value === column) {
+      sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
+    } else {
+      sortBy.value = column;
+      sortOrder.value = "desc";
     }
-    return sortOrder.value === "asc" ? (
-      <ArrowUp class="text-theme-text-muted ml-1 inline h-3 w-3" />
-    ) : (
-      <ArrowDown class="text-theme-text-muted ml-1 inline h-3 w-3" />
-    );
-  }; // Mini analytics chart component for grid view
-  const MiniChart = component$(({ data }: { data: any[] }) => {
-    if (!data || data.length === 0)
-      return <div class="text-theme-text-muted text-xs">No data</div>;
-
-    const maxViews = Math.max(...data.map((d) => d.totalViews), 1);
-    const points = data
-      .map((d, i) => {
-        const x = (i / (data.length - 1)) * 60;
-        const y = 20 - (d.totalViews / maxViews) * 20;
-        return `${x},${y}`;
-      })
-      .join(" ");
-
-    return (
-      <svg class="h-6 w-16" viewBox="0 0 60 20">
-        <polyline
-          fill="none"
-          stroke-width="1.5"
-          points={points}
-          class="stroke-theme-accent-primary"
-        />
-      </svg>
-    );
   });
+
+  const totalUploads = userData.value.user.uploads.length;
+  const availableSpace =
+    userData.value.effectiveStorageLimit - userData.value.user.storageUsed;
 
   return (
     <div>
@@ -337,7 +292,12 @@ export default component$(() => {
         title="My Files~"
         icon={Folder}
         subtitle="Manage your files with expiration dates and view limits! (◕‿◕)♡"
-      />
+      >
+        <Button q:slot="actions" href="/upload">
+          <Rocket class="h-4 w-4" />
+          Upload
+        </Button>
+      </PageHeader>
 
       {/* Stats Summary */}
       <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-3 xl:grid-cols-5">
@@ -349,7 +309,7 @@ export default component$(() => {
           value={
             searchQuery.value.trim()
               ? filteredAndSortedUploads.value.length
-              : userData.value.user.uploads.length
+              : totalUploads
           }
         />
         <StatCard
@@ -360,7 +320,7 @@ export default component$(() => {
           value={(searchQuery.value.trim()
             ? filteredAndSortedUploads.value
             : userData.value.user.uploads
-          ).reduce((sum, upload) => sum + upload.views, 0)}
+          ).reduce((sum, u) => sum + u.views, 0)}
         />
         <StatCard
           icon={TrendingUp}
@@ -372,7 +332,7 @@ export default component$(() => {
           value={(searchQuery.value.trim()
             ? filteredAndSortedUploads.value
             : userData.value.user.uploads
-          ).reduce((sum, upload) => sum + upload.downloads, 0)}
+          ).reduce((sum, u) => sum + u.downloads, 0)}
         />
         <StatCard
           icon={HardDrive}
@@ -386,375 +346,144 @@ export default component$(() => {
           accent={3}
           pulse
           label="Available Space"
-          value={formatFileSize(
-            userData.value.effectiveStorageLimit -
-              userData.value.user.storageUsed,
-          )}
+          value={formatFileSize(availableSpace)}
         />
       </div>
 
-      {/* Uploads Section */}
-      <div class="card-cute overflow-hidden rounded-2xl">
-        <div class="border-theme-card-border border-b px-4 py-4 sm:px-6">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 class="text-gradient-cute flex flex-wrap items-center gap-2 text-lg font-bold sm:text-xl">
-              <Folder class="h-5 w-5" />
-              All Files~
-              {searchQuery.value.trim() && (
-                <span class="text-theme-text-muted ml-2 text-sm font-normal">
-                  ({filteredAndSortedUploads.value.length} of{" "}
-                  {userData.value.user.uploads.length} files)
-                </span>
-              )}
-            </h2>
-            <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-              {/* View Mode Toggle */}
-              <div class="bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 border-theme-card-border flex rounded-full border p-1">
-                <button
-                  onClick$={() => {
-                    viewMode.value = "list";
-                    setUploadsViewMode("list");
-                  }}
-                  class={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 ${
-                    viewMode.value === "list"
-                      ? "text-theme-text-primary from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-br shadow-lg"
-                      : "text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/10"
-                  }`}
-                >
-                  <List class="h-4 w-4" />
-                  List
-                </button>
-                <button
-                  onClick$={() => {
-                    viewMode.value = "grid";
-                    setUploadsViewMode("grid");
-                  }}
-                  class={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 ${
-                    viewMode.value === "grid"
-                      ? "text-theme-text-primary from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-br shadow-lg"
-                      : "text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/10"
-                  }`}
-                >
-                  <Grid class="h-4 w-4" />
-                  Grid
-                </button>
-              </div>
-              {/* Search Input */}
-              <div class="group relative w-full max-w-md sm:w-auto">
-                <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
-                  <div class="text-theme-accent-primary drop-shadow-md drop-shadow-theme-accent-primary">
-                    <Search class="h-4 w-4 transition-colors duration-300" />
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search files by name or type..."
-                  value={searchQuery.value}
-                  onInput$={(e) => {
-                    searchQuery.value = (e.target as HTMLInputElement).value;
-                  }}
-                  class="border-theme-card-border text-theme-text-primary from-theme-accent-tertiary/10 via-theme-accent-primary/10 to-theme-accent-secondary/10 w-full rounded-full border bg-gradient-to-br py-2 pr-4 pl-10 text-sm backdrop-blur-sm transition-all duration-500"
-                />
-                <div class="from-theme-accent-quaternary/5 via-theme-accent-tertiary/5 to-theme-accent-secondary/5 pointer-events-none absolute inset-0 rounded-full bg-linear-20 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-              </div>
-            </div>
-          </div>
-          {/* Bulk Selection Controls */}
-          <div class="border-theme-card-border border-t px-4 pt-3 sm:px-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div class="flex items-center gap-3">
-                <div
-                  class={`transition-all duration-300 ${selectedFiles.value.size > 0 ? "opacity-100" : "opacity-50"}`}
-                >
-                  <div class="bg-theme-bg-secondary/40 text-theme-accent-primary flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-sm">
-                    <Sparkle class="h-3 w-3" />
-                    <span class="text-sm font-medium">
-                      {selectedFiles.value.size} file
-                      {selectedFiles.value.size !== 1 ? "s" : ""} selected
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                class={`flex items-center gap-2 transition-all duration-300 ${selectedFiles.value.size > 0 ? "opacity-100" : "pointer-events-none opacity-30"}`}
-              >
-                <button
-                  onClick$={bulkCopyUrls}
-                  class="text-theme-accent-tertiary flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
-                >
-                  <Copy class="h-4 w-4" />
-                  Copy URLs ({selectedFiles.value.size})
-                </button>
-                <button
-                  onClick$={bulkDelete}
-                  class="text-theme-accent-primary flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
-                >
-                  <Trash2 class="h-4 w-4" />
-                  Delete ({selectedFiles.value.size})
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Uploads panel */}
+      <Panel
+        title="All Files~"
+        icon={Folder}
+        description={
+          searchQuery.value.trim()
+            ? `${filteredAndSortedUploads.value.length} of ${totalUploads} files`
+            : undefined
+        }
+        flush
+      >
+        <div q:slot="actions" class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <SearchInput
+            value={searchQuery}
+            placeholder="Search files by name or type…"
+            class="sm:w-72"
+          />
+          <SegmentedControl
+            value={viewMode}
+            onChange$={(v) => setUploadsViewMode(v as "grid" | "list")}
+            options={[
+              { value: "list", label: "List", icon: List },
+              { value: "grid", label: "Grid", icon: Grid },
+            ]}
+          />
         </div>
-        {userData.value.user.uploads.length > 0 ? (
-          viewMode.value === "list" ? (
-            /* LIST VIEW */
-            <div class="overflow-x-auto">
-              <table class="w-full min-w-[600px]">
-                <thead class="glass">
-                  <tr>
-                    <th class="text-theme-text-muted px-3 py-3 text-left text-xs font-medium tracking-wider uppercase sm:px-6">
-                      <button
-                        onClick$={() => {
-                          if (
-                            selectedFiles.value.size ===
-                            filteredAndSortedUploads.value.length
-                          ) {
-                            deselectAllFiles();
-                          } else {
-                            selectAllVisibleFiles();
-                          }
-                        }}
-                        class="text-theme-accent-primary hover:text-theme-accent-secondary transition-colors"
-                      >
-                        {selectedFiles.value.size ===
-                        filteredAndSortedUploads.value.length ? (
-                          <CheckSquare class="h-4 w-4" />
-                        ) : (
-                          <Square class="h-4 w-4" />
-                        )}
-                      </button>
-                    </th>
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("name")}
-                    >
-                      File~ <FileText class="inline h-4 w-4" />
-                      {getSortIcon("name")}
-                    </th>
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("size")}
-                    >
-                      Size~ <Ruler class="inline h-4 w-4" />
-                      {getSortIcon("size")}
-                    </th>
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("views")}
-                    >
-                      Views~ <Eye class="inline h-4 w-4" />
-                      {getSortIcon("views")}
-                    </th>{" "}
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("downloads")}
-                    >
-                      Downloads~ <TrendingUp class="inline h-4 w-4" />
-                      {getSortIcon("downloads")}
-                    </th>
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("weeklyViews")}
-                    >
-                      7d Views~ <BarChart3 class="inline h-4 w-4" />
-                      {getSortIcon("weeklyViews")}
-                    </th>
-                    <th
-                      class="text-theme-text-muted hover:text-theme-text-secondary cursor-pointer px-3 py-3 text-left text-xs font-medium tracking-wider uppercase transition-colors sm:px-6"
-                      onClick$={() => handleSort("date")}
-                    >
-                      Uploaded~ <Calendar class="inline h-4 w-4" />
-                      {getSortIcon("date")}
-                    </th>
-                    <th class="text-theme-text-muted px-3 py-3 text-left text-xs font-medium tracking-wider uppercase sm:px-6">
-                      Limits~ <Clock class="inline h-4 w-4" />
-                    </th>
-                    <th class="text-theme-text-muted px-3 py-3 text-left text-xs font-medium tracking-wider uppercase sm:px-6">
-                      Actions~ <Zap class="inline h-4 w-4" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="border-theme-card">
-                  {filteredAndSortedUploads.value.map((upload) => (
-                    <tr
-                      key={upload.id}
-                      class={`border-theme-card-border transition-all duration-300 hover:bg-white/5 ${
-                        selectedFiles.value.has(upload.deletionKey)
-                          ? "from-theme-accent-quaternary/10 to-theme-accent-primary/10 border-theme-accent-primary/20 bg-gradient-to-br"
-                          : ""
-                      }`}
-                    >
-                      <td class="px-3 py-4 sm:px-6">
-                        <button
-                          onClick$={() =>
-                            toggleFileSelection(upload.deletionKey)
-                          }
-                          class="text-theme-accent-primary hover:text-theme-accent-secondary transition-colors"
-                        >
-                          {selectedFiles.value.has(upload.deletionKey) ? (
-                            <CheckSquare class="h-4 w-4" />
-                          ) : (
-                            <Square class="h-4 w-4" />
-                          )}
-                        </button>
-                      </td>{" "}
-                      <td class="px-3 py-4 sm:px-6">
-                        <div class="flex items-center space-x-2 sm:space-x-3">
-                          <div class="flex-shrink-0">
-                            <FileTypeIcon
-                              upload={upload}
-                              size="sm"
-                              onClick$={() => {
-                                if (upload.mimeType.startsWith("image/")) {
-                                  imagePreview.openPreview(
-                                    `/f/${upload.shortCode}`,
-                                    upload.originalName,
-                                  );
-                                }
-                              }}
-                            />
-                          </div>
-                          <div class="min-w-0 flex-1">
-                            <p class="text-theme-text-primary truncate text-sm font-medium sm:text-base">
-                              {upload.originalName}
-                            </p>
-                            <p class="text-theme-text-secondary truncate text-xs sm:text-sm">
-                              {upload.mimeType}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        {formatFileSize(upload.size)}
-                      </td>
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        <div class="flex items-center gap-2">
-                          <span>{upload.views}</span>
-                          <div class="text-theme-accent-primary">
-                            <TrendingUp class="h-4 w-4" />
-                          </div>
-                        </div>
-                      </td>{" "}
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        <div class="flex items-center gap-2">
-                          <span>{upload.downloads}</span>
-                          <div class="text-theme-accent-primary">
-                            <TrendingUp class="h-4 w-4" />
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        <div class="flex items-center gap-2">
-                          <span class="text-theme-accent-primary font-bold">
-                            {upload.weeklyViews || 0}
-                          </span>
-                          <div class="text-theme-accent-primary">
-                            <BarChart3 class="h-4 w-4" />
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        {new Date(upload.createdAt).toLocaleDateString()}
-                      </td>
-                      <td class="text-theme-text-secondary px-3 py-4 text-sm sm:px-6">
-                        <div class="space-y-1">
-                          {upload.expiresAt && (
-                            <div class="flex items-center gap-1 text-xs">
-                              <Clock class="h-3 w-3" />
-                              <span>
-                                Expires:{" "}
-                                {new Date(
-                                  upload.expiresAt,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-                          {upload.maxViews && (
-                            <div class="flex items-center gap-1 text-xs">
-                              <Eye class="h-3 w-3" />
-                              <span>
-                                {upload.views}/{upload.maxViews} views
-                              </span>
-                            </div>
-                          )}
-                          {!upload.expiresAt && !upload.maxViews && (
-                            <span class="text-theme-text-muted text-xs">
-                              No limits
-                            </span>
-                          )}
-                        </div>
-                      </td>{" "}
-                      <td class="px-3 py-4 sm:px-6">
-                        <div class="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-1">
-                          <button
-                            onClick$={() =>
-                              copyToClipboard(
-                                `${userData.value.origin}/f/${upload.shortCode}`,
-                              )
-                            }
-                            class="text-theme-accent-tertiary rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 hover:bg-white/10 sm:px-2"
-                          >
-                            Copy <Copy class="inline h-3 w-3" />
-                          </button>
-                          <a
-                            href={`/f/${upload.shortCode}`}
-                            target="_blank"
-                            class="text-theme-accent-secondary rounded-full px-2 py-1 text-center text-xs font-medium whitespace-nowrap transition-all duration-300 hover:bg-white/10 sm:px-2"
-                          >
-                            View <Eye class="inline h-3 w-3" />
-                          </a>
-                          <a
-                            href={`/dashboard/analytics/${upload.shortCode}`}
-                            class="text-theme-accent-secondary rounded-full px-2 py-1 text-center text-xs font-medium whitespace-nowrap transition-all duration-300 hover:bg-white/10 sm:px-2"
-                          >
-                            Analytics <BarChart3 class="inline h-3 w-3" />
-                          </a>
-                          <button
-                            onClick$={() => deleteUpload(upload.deletionKey)}
-                            class="text-theme-accent-primary rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 hover:bg-white/10 sm:px-2"
-                          >
-                            Delete <Trash2 class="inline h-3 w-3" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* GRID VIEW */
-            <div class="p-4 sm:p-6">
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredAndSortedUploads.value.map((upload) => (
-                  <div
-                    key={upload.id}
-                    class={`card-cute group rounded-2xl p-4 transition-all duration-300 hover:scale-105 ${
-                      selectedFiles.value.has(upload.deletionKey)
-                        ? "ring-theme-accent-primary from-theme-accent-quaternary/10 to-theme-accent-primary/10 bg-gradient-to-br ring-2"
-                        : ""
-                    }`}
+
+        {totalUploads === 0 ? (
+          <EmptyState
+            icon={Folder}
+            title="No files yet~"
+            description="Your files will appear here once uploaded via ShareX or API! (◕‿◕)♡"
+            class="px-4 sm:px-6"
+          >
+            <Button href="/setup/sharex">
+              <Rocket class="h-4 w-4" />
+              Setup ShareX to get started~
+            </Button>
+          </EmptyState>
+        ) : filteredAndSortedUploads.value.length === 0 ? (
+          <EmptyState
+            emoji="🔍"
+            title="No files found~"
+            description="Try searching with a different term! (◕‿◕)♡"
+            class="px-4 sm:px-6"
+          >
+            <Button variant="glass" onClick$={() => (searchQuery.value = "")}>
+              Clear search
+            </Button>
+          </EmptyState>
+        ) : viewMode.value === "list" ? (
+          /* LIST VIEW */
+          <Table minWidth="720px">
+            <Thead>
+              <tr>
+                <Th class="w-10">
+                  <button
+                    type="button"
+                    onClick$={toggleSelectAll}
+                    class="text-theme-accent-primary hover:text-theme-accent-secondary transition-colors"
+                    aria-label="Select all"
                   >
-                    {/* Selection Checkbox */}
-                    <div class="relative mb-2">
-                      <button
-                        onClick$={() => toggleFileSelection(upload.deletionKey)}
-                        class="text-theme-accent-primary hover:text-theme-accent-secondary absolute top-0 right-0 z-10 rounded-full bg-white/20 p-1 backdrop-blur-sm transition-all duration-300"
-                      >
-                        {selectedFiles.value.has(upload.deletionKey) ? (
-                          <CheckSquare class="h-5 w-5" />
-                        ) : (
-                          <Square class="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>{" "}
-                    {/* File Preview */}
-                    <div class="bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl">
+                    {selectedFiles.value.size ===
+                    filteredAndSortedUploads.value.length ? (
+                      <CheckSquare class="h-4 w-4" />
+                    ) : (
+                      <Square class="h-4 w-4" />
+                    )}
+                  </button>
+                </Th>
+                <SortHeader
+                  active={sortBy.value === "name"}
+                  direction={sortOrder.value}
+                  onClick$={() => handleSort("name")}
+                >
+                  File
+                </SortHeader>
+                <SortHeader
+                  active={sortBy.value === "size"}
+                  direction={sortOrder.value}
+                  onClick$={() => handleSort("size")}
+                >
+                  Size
+                </SortHeader>
+                <SortHeader
+                  active={sortBy.value === "views"}
+                  direction={sortOrder.value}
+                  onClick$={() => handleSort("views")}
+                >
+                  Views
+                </SortHeader>
+                <SortHeader
+                  active={sortBy.value === "downloads"}
+                  direction={sortOrder.value}
+                  onClick$={() => handleSort("downloads")}
+                >
+                  Downloads
+                </SortHeader>
+                <SortHeader
+                  active={sortBy.value === "date"}
+                  direction={sortOrder.value}
+                  onClick$={() => handleSort("date")}
+                >
+                  Uploaded
+                </SortHeader>
+                <Th>Limits</Th>
+                <Th class="text-right">Actions</Th>
+              </tr>
+            </Thead>
+            <tbody>
+              {filteredAndSortedUploads.value.map((upload) => (
+                <Tr
+                  key={upload.id}
+                  selected={selectedFiles.value.has(upload.deletionKey)}
+                >
+                  <Td>
+                    <button
+                      type="button"
+                      onClick$={() => toggleFileSelection(upload.deletionKey)}
+                      class="text-theme-accent-primary hover:text-theme-accent-secondary transition-colors"
+                      aria-label="Select file"
+                    >
+                      {selectedFiles.value.has(upload.deletionKey) ? (
+                        <CheckSquare class="h-4 w-4" />
+                      ) : (
+                        <Square class="h-4 w-4" />
+                      )}
+                    </button>
+                  </Td>
+                  <Td>
+                    <div class="flex items-center gap-3">
                       <FileTypeIcon
                         upload={upload}
-                        size="lg"
+                        size="sm"
                         onClick$={() => {
                           if (upload.mimeType.startsWith("image/")) {
                             imagePreview.openPreview(
@@ -764,205 +493,195 @@ export default component$(() => {
                           }
                         }}
                       />
+                      <div class="min-w-0">
+                        <p class="text-theme-text-primary truncate text-sm font-medium">
+                          {upload.originalName}
+                        </p>
+                        <p class="text-theme-text-muted truncate text-xs">
+                          {upload.mimeType}
+                        </p>
+                      </div>
                     </div>
-                    {/* File Info */}
-                    <div class="space-y-2">
-                      <h3
-                        class="text-theme-text-primary truncate text-sm font-medium"
-                        title={upload.originalName}
+                  </Td>
+                  <Td>{formatFileSize(upload.size)}</Td>
+                  <Td>{upload.views}</Td>
+                  <Td>{upload.downloads}</Td>
+                  <Td>{new Date(upload.createdAt).toLocaleDateString()}</Td>
+                  <Td>
+                    {upload.expiresAt || upload.maxViews ? (
+                      <div class="flex flex-col gap-1">
+                        {upload.expiresAt && (
+                          <Badge status="warning">
+                            <Clock class="h-3 w-3" />
+                            {new Date(upload.expiresAt).toLocaleDateString()}
+                          </Badge>
+                        )}
+                        {upload.maxViews && (
+                          <Badge status="info">
+                            <Eye class="h-3 w-3" />
+                            {upload.views}/{upload.maxViews}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span class="text-theme-text-muted text-xs">No limits</span>
+                    )}
+                  </Td>
+                  <Td>
+                    <div class="flex items-center justify-end gap-1">
+                      <CopyButton
+                        value={`${userData.value.origin}/f/${upload.shortCode}`}
+                      />
+                      <IconButton
+                        href={`/f/${upload.shortCode}`}
+                        external
+                        size="sm"
+                        title="Open file"
                       >
-                        {upload.originalName}
-                      </h3>
-                      <div class="text-theme-text-secondary flex items-center justify-between text-xs">
-                        <span>{formatFileSize(upload.size)}</span>
-                        <span>
-                          {new Date(upload.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {/* Analytics */}{" "}
-                      <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-1">
-                            <div class="text-theme-accent-primary">
-                              <Eye class="h-3 w-3" />
-                            </div>
-                            <span class="text-theme-text-secondary text-xs">
-                              {upload.views} views
-                            </span>
-                          </div>
-                          <div class="flex items-center gap-1">
-                            <div class="text-theme-accent-secondary">
-                              <TrendingUp class="h-3 w-3" />
-                            </div>
-                            <span class="text-theme-text-secondary text-xs">
-                              {upload.downloads} downloads
-                            </span>
-                          </div>
-                        </div>
-                        <div class="flex items-center justify-between">
-                          <span class="text-theme-text-muted text-xs">
-                            7 days: {upload.weeklyViews || 0} views
-                          </span>
-                          <span class="text-theme-text-muted text-xs">
-                            {upload.weeklyDownloads || 0} downloads
-                          </span>
-                        </div>
-                        {/* Mini chart */}
-                        <div class="flex items-center gap-2">
-                          <span class="text-theme-text-muted text-xs">
-                            7 days:
-                          </span>
-                          <MiniChart data={upload.analytics || []} />
-                        </div>
-                      </div>
-                      {/* Expiration and View Limits */}
-                      {(upload.expiresAt || upload.maxViews) && (
-                        <div class="border-theme-card-border mt-2 border-t pt-2">
-                          <div class="text-theme-text-muted mb-1 text-xs font-medium">
-                            Limits:
-                          </div>
-                          <div class="space-y-1">
-                            {upload.expiresAt && (
-                              <div class="flex items-center gap-1 text-xs">
-                                <Clock class="text-theme-accent-tertiary h-3 w-3" />
-                                <span class="text-theme-text-secondary">
-                                  Expires:{" "}
-                                  {new Date(
-                                    upload.expiresAt,
-                                  ).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            {upload.maxViews && (
-                              <div class="flex items-center gap-1 text-xs">
-                                <Eye class="text-theme-accent-quaternary h-3 w-3" />
-                                <span class="text-theme-text-secondary">
-                                  {upload.views}/{upload.maxViews} views
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {/* Actions */}
-                      <div class="flex gap-1 pt-2">
-                        <button
-                          onClick$={() =>
-                            copyToClipboard(
-                              `${userData.value.origin}/f/${upload.shortCode}`,
-                            )
-                          }
-                          class="text-theme-accent-tertiary flex-1 rounded-lg px-2 py-1 text-xs font-medium transition-all duration-300 hover:bg-white/10"
-                        >
-                          <Copy class="mr-1 inline h-3 w-3" />
-                          Copy
-                        </button>{" "}
-                        <a
-                          href={`/f/${upload.shortCode}`}
-                          target="_blank"
-                          class="text-theme-accent-secondary flex-1 rounded-lg px-2 py-1 text-center text-xs font-medium transition-all duration-300 hover:bg-white/10"
-                        >
-                          <Eye class="mr-1 inline h-3 w-3" />
-                          View
-                        </a>
-                        <a
-                          href={`/dashboard/analytics/${upload.shortCode}`}
-                          class="text-theme-accent-secondary flex-1 rounded-lg px-2 py-1 text-center text-xs font-medium transition-all duration-300 hover:bg-white/10"
-                        >
-                          <BarChart3 class="mr-1 inline h-3 w-3" />
-                          Analytics
-                        </a>
-                        <button
-                          onClick$={() => deleteUpload(upload.deletionKey)}
-                          class="text-theme-accent-primary flex-1 rounded-lg px-2 py-1 text-xs font-medium transition-all duration-300 hover:bg-white/10"
-                        >
-                          <Trash2 class="mr-1 inline h-3 w-3" />
-                          Delete
-                        </button>
-                      </div>
+                        <ExternalLink class="h-4 w-4" />
+                      </IconButton>
+                      <IconButton
+                        href={`/dashboard/analytics/${upload.shortCode}`}
+                        size="sm"
+                        title="Analytics"
+                      >
+                        <BarChart3 class="h-4 w-4" />
+                      </IconButton>
+                      <IconButton
+                        variant="danger"
+                        size="sm"
+                        title="Delete"
+                        onClick$={() => deleteUpload(upload.deletionKey)}
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </IconButton>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        ) : userData.value.user.uploads.length === 0 ? (
-          <div class="py-12 text-center">
-            <div class="glass mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-              <Folder class="text-theme-accent-primary h-8 w-8" />
-            </div>
-            <h3 class="text-theme-text-primary mb-2 text-lg font-medium">
-              No files yet~
-            </h3>
-            <p class="text-theme-text-secondary mb-4">
-              Your files will appear here once uploaded via ShareX or API!
-              (◕‿◕)♡
-            </p>
-            <Link
-              href="/setup/sharex"
-              class="btn-cute text-theme-text-primary inline-flex items-center gap-2 rounded-full px-6 py-3 font-medium"
-            >
-              <Rocket class="h-4 w-4" />
-              Setup ShareX to get started~
-            </Link>
-          </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         ) : (
-          <div class="py-12 text-center">
-            <div class="glass mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-              <div class="text-theme-accent-primary">
-                <Search class="h-8 w-8" />
+          /* GRID VIEW */
+          <div class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredAndSortedUploads.value.map((upload) => (
+              <div
+                key={upload.id}
+                class={`card-cute group rounded-2xl p-4 transition-colors ${
+                  selectedFiles.value.has(upload.deletionKey)
+                    ? "ring-theme-accent-primary ring-2"
+                    : ""
+                }`}
+              >
+                <div class="relative mb-3">
+                  <button
+                    type="button"
+                    onClick$={() => toggleFileSelection(upload.deletionKey)}
+                    class="text-theme-accent-primary hover:text-theme-accent-secondary bg-theme-bg-primary/60 absolute top-2 right-2 z-10 rounded-full p-1 backdrop-blur-sm transition-colors"
+                    aria-label="Select file"
+                  >
+                    {selectedFiles.value.has(upload.deletionKey) ? (
+                      <CheckSquare class="h-5 w-5" />
+                    ) : (
+                      <Square class="h-5 w-5" />
+                    )}
+                  </button>
+                  <div class="from-theme-accent-primary/15 to-theme-accent-secondary/15 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br">
+                    <FileTypeIcon
+                      upload={upload}
+                      size="lg"
+                      onClick$={() => {
+                        if (upload.mimeType.startsWith("image/")) {
+                          imagePreview.openPreview(
+                            `/f/${upload.shortCode}`,
+                            upload.originalName,
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <h3
+                  class="text-theme-text-primary truncate text-sm font-medium"
+                  title={upload.originalName}
+                >
+                  {upload.originalName}
+                </h3>
+                <div class="text-theme-text-muted mt-1 flex items-center justify-between text-xs">
+                  <span>{formatFileSize(upload.size)}</span>
+                  <span>{new Date(upload.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div class="text-theme-text-secondary mt-2 flex items-center justify-between text-xs">
+                  <span class="inline-flex items-center gap-1">
+                    <Eye class="text-theme-accent-primary h-3 w-3" />
+                    {upload.views}
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    <TrendingUp class="text-theme-accent-secondary h-3 w-3" />
+                    {upload.downloads}
+                  </span>
+                  <MiniChart data={upload.analytics || []} />
+                </div>
+                <div class="border-theme-card-border/60 mt-3 flex items-center justify-between border-t pt-2">
+                  <CopyButton
+                    value={`${userData.value.origin}/f/${upload.shortCode}`}
+                    label="Copy"
+                  />
+                  <div class="flex items-center gap-1">
+                    <IconButton
+                      href={`/f/${upload.shortCode}`}
+                      external
+                      size="sm"
+                      title="Open file"
+                    >
+                      <ExternalLink class="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      href={`/dashboard/analytics/${upload.shortCode}`}
+                      size="sm"
+                      title="Analytics"
+                    >
+                      <BarChart3 class="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      variant="danger"
+                      size="sm"
+                      title="Delete"
+                      onClick$={() => deleteUpload(upload.deletionKey)}
+                    >
+                      <Trash2 class="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
               </div>
-            </div>
-            <h3 class="text-theme-text-primary mb-2 text-lg font-medium">
-              No files found~
-            </h3>
-            <p class="text-theme-text-secondary mb-4">
-              Try searching with a different term! (◕‿◕)♡
-            </p>
-            <button
-              onClick$={() => {
-                searchQuery.value = "";
-              }}
-              class="btn-cute text-theme-text-primary inline-flex items-center gap-2 rounded-full px-6 py-3 font-medium"
-            >
-              <X class="h-4 w-4" />
-              Clear Search~
-            </button>
+            ))}
           </div>
         )}
-      </div>
-      {/* Floating Action Bar */}
+      </Panel>
+
+      {/* Floating bulk-action bar */}
       {selectedFiles.value.size > 0 && (
-        <div class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transform">
-          <div class="card-cute flex items-center gap-3 rounded-full px-6 py-3 shadow-xl backdrop-blur-sm">
-            <span class="text-theme-text-primary text-sm font-medium">
-              {selectedFiles.value.size} file
-              {selectedFiles.value.size !== 1 ? "s" : ""} selected
+        <div class="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
+          <div class="glass border-theme-card-border flex items-center gap-2 rounded-full border px-4 py-2 shadow-xl">
+            <span class="text-theme-text-primary px-2 text-sm font-medium">
+              {selectedFiles.value.size} selected
             </span>
-            <div class="h-4 w-px bg-white/20"></div>
-            <button
-              onClick$={bulkCopyUrls}
-              class="text-theme-accent-tertiary flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
-            >
-              <Copy class="h-4 w-4" />
+            <div class="bg-theme-card-border h-5 w-px" />
+            <Button variant="glass" size="sm" onClick$={bulkCopyUrls}>
+              <ExternalLink class="h-4 w-4" />
               Copy URLs
-            </button>
-            <button
-              onClick$={bulkDelete}
-              class="text-theme-accent-primary flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
-            >
+            </Button>
+            <Button variant="danger" size="sm" onClick$={bulkDelete}>
               <Trash2 class="h-4 w-4" />
               Delete
-            </button>
-            <button
-              onClick$={() => {
-                selectedFiles.value = new Set();
-              }}
-              class="text-theme-text-muted hover:text-theme-text-secondary flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium transition-all duration-300 hover:bg-white/10"
+            </Button>
+            <IconButton
+              size="sm"
+              title="Clear selection"
+              onClick$={() => (selectedFiles.value = new Set())}
             >
-              <X class="h-4 w-4" />
-              Clear
-            </button>
+              <span class="text-lg leading-none">×</span>
+            </IconButton>
           </div>
         </div>
       )}

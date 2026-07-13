@@ -100,3 +100,62 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return path === href;
   return path === href || path.startsWith(href + "/");
 }
+
+/**
+ * Human labels for individual path segments, used to build the top-bar
+ * breadcrumb trail. Segments not listed here (e.g. a dynamic short code)
+ * fall back to their raw value.
+ */
+const SEGMENT_LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
+  uploads: "Files",
+  links: "Short Links",
+  bio: "Bio Page",
+  embed: "Discord Embeds",
+  analytics: "Analytics",
+  "api-keys": "API Keys",
+  settings: "Settings",
+  admin: "Admin",
+  domains: "Domains",
+  events: "Events",
+  health: "Health",
+  "bio-limits": "Bio Limits",
+  "alerts-test": "Alerts Test",
+  upload: "Upload",
+  setup: "Setup",
+  sharex: "ShareX Setup",
+};
+
+export interface Crumb {
+  label: string;
+  /** Omitted for the final (current) crumb. */
+  href?: string;
+}
+
+/**
+ * Turn a pathname into an ordered breadcrumb trail for the app top bar.
+ * The last crumb is the current page (no href). A dynamic trailing segment
+ * (short code / id) is shortened so it never blows out the bar.
+ */
+export function resolveBreadcrumbs(pathname: string): Crumb[] {
+  const segments = pathname.replace(/^\/|\/$/g, "").split("/").filter(Boolean);
+  const crumbs: Crumb[] = [];
+  let acc = "";
+  segments.forEach((seg, i) => {
+    acc += `/${seg}`;
+    const isLast = i === segments.length - 1;
+    let label = SEGMENT_LABELS[seg];
+    if (!label) {
+      // Dynamic segment (e.g. a short code) — trim so it stays compact.
+      label = seg.length > 16 ? `${seg.slice(0, 16)}…` : seg;
+    }
+    crumbs.push({ label, href: isLast ? undefined : acc });
+  });
+  return crumbs;
+}
+
+/** The current page's title = the label of the last breadcrumb. */
+export function resolvePageTitle(pathname: string): string {
+  const crumbs = resolveBreadcrumbs(pathname);
+  return crumbs.length ? crumbs[crumbs.length - 1].label : "Dashboard";
+}
