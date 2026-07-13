@@ -1,6 +1,7 @@
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
 using System.Security.Claims;
 using TwinkForSale.Api.Domain.Entities;
 using TwinkForSale.Api.Infrastructure.Auth;
@@ -108,18 +109,23 @@ public sealed class CreateUploadEndpoint(
             var uploadBaseUrl = GetUploadBaseUrl(settings, baseUrl);
             var fileUrl = $"{uploadBaseUrl}/f/{shortCode}";
 
+            var mimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+            var (width, height) = await TryGetImageDimensionsAsync(file, mimeType, ct);
+
             var upload = new Upload
             {
                 Filename = uploadResult.Key,
                 OriginalName = file.FileName,
-                MimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                MimeType = mimeType,
                 Size = file.Length,
                 Url = fileUrl,
                 ShortCode = shortCode,
                 DeletionKey = deletionKey,
                 UserId = user.Id,
                 ExpiresAt = expiresAt,
-                MaxViews = maxViews ?? settings.DefaultMaxViews
+                MaxViews = maxViews ?? settings.DefaultMaxViews,
+                Width = width,
+                Height = height
             };
 
             dbContext.Uploads.Add(upload);
@@ -176,6 +182,26 @@ public sealed class CreateUploadEndpoint(
         }
 
         return fallbackBaseUrl.TrimEnd('/');
+    }
+
+    private async Task<(int? Width, int? Height)> TryGetImageDimensionsAsync(IFormFile file, string mimeType, CancellationToken ct)
+    {
+        if (!mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var info = await Image.IdentifyAsync(stream, ct);
+            return (info.Width, info.Height);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to read image dimensions for {FileName}.", file.FileName);
+            return (null, null);
+        }
     }
 
     private static int? ParseNullableInt(string? value)
