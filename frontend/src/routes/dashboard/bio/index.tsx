@@ -1685,7 +1685,7 @@ export default component$(() => {
           </div>
 
           {/* Preview Panel */}
-          <div class="sticky top-8">
+          <div class="sticky top-8 self-start">
             <Panel title="Preview" icon={Eye}>
               {bioData.value.user.bioUsername &&
                 bioData.value.user.bioIsPublic && (
