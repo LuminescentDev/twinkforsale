@@ -19,6 +19,8 @@ export { Callout } from "./callout";
 export { EmptyState } from "./empty-state";
 export { Input, Textarea, Select, FieldLabel } from "./input";
 export { SearchInput } from "./search-input";
+export { IconSelector } from "./icon-selector";
+export type { IconSelectorProps } from "./icon-selector";
 export { SegmentedControl } from "./segmented-control";
 export type { SegmentedOption } from "./segmented-control";
 export { Breadcrumbs } from "./breadcrumbs";

@@ -20,7 +20,8 @@ import {
   Eye,
   Palette,
   ExternalLink,
-  GripVertical,
+  ArrowUp,
+  ArrowDown,
   Trash2,
   Globe,
   Lock,
@@ -32,6 +33,7 @@ import {
   CircleX,
   AlertTriangle,
   Search,
+  EyeOff,
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -40,8 +42,8 @@ import {
   BioPageDisplay,
   type BioPageData,
 } from "~/components/bio/bio-page-display";
-import { IconSelector } from "~/components/ui/icon-selector";
 import { BioLinkIcon } from "~/components/bio/bio-link-icon";
+import { getIconDef, suggestIconForUrl } from "~/lib/bio-icons";
 import {
   defaultParticleConfigs,
   type ParticleConfig,
@@ -58,6 +60,8 @@ import {
   Button,
   Callout,
   CollapsibleSection,
+  EmptyState,
+  IconSelector,
   PageHeader,
   Panel,
 } from "~/components/ui";
@@ -242,6 +246,9 @@ export const useUpdateBioLink = routeAction$(
           title: values.title,
           url: values.url,
           icon: values.icon || null,
+          // The backend overwrites order on every update, so it has to be
+          // round-tripped or the link jumps to the top of the list.
+          order: values.order,
           isActive: values.isActive,
         },
         serverAuth(requestEvent),
@@ -265,10 +272,59 @@ export const useUpdateBioLink = routeAction$(
     title: z.string().min(1),
     url: z.string().url(),
     icon: z.string().optional(),
+    order: z.coerce.number().int().min(0),
     isActive: z.preprocess(
       (val) => val === "true" || val === true,
       z.boolean(),
     ),
+  }),
+);
+
+/** Swaps a link with its neighbour and renumbers the list so the saved order
+ *  stays a contiguous 0..n-1 sequence. */
+export const useReorderBioLink = routeAction$(
+  async (values, requestEvent) => {
+    const auth = serverAuth(requestEvent);
+    const bio = await api.bio.me(auth).catch(() => null);
+    const links = [...(bio?.links ?? [])].sort((a, b) => a.order - b.order);
+
+    const index = links.findIndex((link) => link.id === values.id);
+    const target = values.direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || target < 0 || target >= links.length) {
+      return requestEvent.fail(400, { message: "Cannot move that link." });
+    }
+    [links[index], links[target]] = [links[target], links[index]];
+
+    try {
+      await Promise.all(
+        links.map((link, order) =>
+          link.order === order
+            ? null
+            : api.bio.updateLink(
+                link.id,
+                {
+                  title: link.title,
+                  url: link.url,
+                  icon: link.icon,
+                  order,
+                  isActive: link.isActive,
+                },
+                auth,
+              ),
+        ),
+      );
+      return { success: true, message: "Link order updated" };
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : 500;
+      return requestEvent.fail(status, {
+        message:
+          error instanceof Error ? error.message : "Failed to reorder links",
+      });
+    }
+  },
+  zod$({
+    id: z.string(),
+    direction: z.enum(["up", "down"]),
   }),
 );
 
@@ -296,10 +352,34 @@ export default component$(() => {
   const createBioLink = useCreateBioLink();
   const updateBioLink = useUpdateBioLink();
   const deleteBioLink = useDeleteBioLink();
+  const reorderBioLink = useReorderBioLink();
   const editingLink = useSignal<string | null>(null);
+  const deletingLink = useSignal<string | null>(null);
   const showNewLinkForm = useSignal(false);
+  const newLinkTitle = useSignal("");
+  const newLinkUrl = useSignal("");
   const newLinkIcon = useSignal("");
+  /** Set once the user picks an icon/title by hand so URL matching stops
+   *  overwriting their choice. */
+  const newLinkIconTouched = useSignal(false);
+  const newLinkTitleTouched = useSignal(false);
   const editingLinkIcons = useSignal<Record<string, string>>({});
+
+  const newLinkSuggestion = useComputed$(() =>
+    newLinkUrl.value ? suggestIconForUrl(newLinkUrl.value) : null,
+  );
+
+  // Fill in the icon (and title) from the URL until the user overrides them.
+  useTask$(({ track }) => {
+    const suggestion = track(() => newLinkSuggestion.value);
+    if (!suggestion) return;
+    if (!newLinkIconTouched.value) {
+      newLinkIcon.value = suggestion;
+    }
+    if (!newLinkTitleTouched.value) {
+      newLinkTitle.value = getIconDef(suggestion)?.label ?? newLinkTitle.value;
+    }
+  });
   // Collapsible section states
   const basicInfoCollapsed = useSignal(false);
   const appearanceCollapsed = useSignal(false);
@@ -310,7 +390,11 @@ export default component$(() => {
 
   // Function to reset new link form
   const resetNewLinkForm = $(() => {
+    newLinkTitle.value = "";
+    newLinkUrl.value = "";
     newLinkIcon.value = "";
+    newLinkIconTouched.value = false;
+    newLinkTitleTouched.value = false;
     showNewLinkForm.value = false;
   });
 
@@ -319,6 +403,22 @@ export default component$(() => {
     track(() => createBioLink.value);
     if (createBioLink.value?.success) {
       resetNewLinkForm();
+    }
+  });
+
+  // Close the inline editor once a link save goes through.
+  useTask$(({ track }) => {
+    track(() => updateBioLink.value);
+    if (updateBioLink.value?.success) {
+      editingLink.value = null;
+      editingLinkIcons.value = {};
+    }
+  });
+
+  useTask$(({ track }) => {
+    track(() => deleteBioLink.value);
+    if (deleteBioLink.value?.success) {
+      deletingLink.value = null;
     }
   });
 
@@ -817,13 +917,6 @@ export default component$(() => {
                           : "Your bio page is hidden from public"}
                       </div>
                     </div>
-
-                    {/* Hidden input to submit with this form if used */}
-                    <input
-                      type="hidden"
-                      name="bioIsPublic"
-                      value={isPublic.value ? "true" : "false"}
-                    />
                   </div>
                   {isPublic.value && !username.value && (
                     <Callout tone="warning" class="mt-2">
@@ -917,47 +1010,6 @@ export default component$(() => {
                       class={inputClasses}
                     />
                   </div>
-                  {/* Copy hidden fields */}
-                  <input
-                    type="hidden"
-                    name="bioUsername"
-                    value={username.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDisplayName"
-                    value={displayName.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDescription"
-                    value={description.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioProfileImage"
-                    value={profileImage.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioBackgroundColor"
-                    value={backgroundColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioTextColor"
-                    value={textColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioAccentColor"
-                    value={accentColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioIsPublic"
-                    value={isPublic.value ? "true" : "false"}
-                  />
                 </div>
             </CollapsibleSection>
             {/* Discord Integration */}
@@ -1230,72 +1282,6 @@ export default component$(() => {
                       </p>
                     </div>
                   )}
-                  {/* Hidden fields */}
-                  <input
-                    type="hidden"
-                    name="bioShowDiscord"
-                    value={showDiscord.value ? "true" : "false"}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDiscordConfig"
-                    value={JSON.stringify(discordConfig.value)}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioUsername"
-                    value={username.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDisplayName"
-                    value={displayName.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDescription"
-                    value={description.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioProfileImage"
-                    value={profileImage.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioBackgroundImage"
-                    value={backgroundImage.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioBackgroundColor"
-                    value={backgroundColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioTextColor"
-                    value={textColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioAccentColor"
-                    value={accentColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioCustomCss"
-                    value={customCss.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioSpotifyTrack"
-                    value={spotifyTrack.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioIsPublic"
-                    value={isPublic.value ? "true" : "false"}
-                  />
                 </div>
             </CollapsibleSection>
             {/* Background Effects */}
@@ -1315,76 +1301,6 @@ export default component$(() => {
                     config={particleConfig}
                     previewEnabled={true}
                   />
-                  {/* Save Background Effects */}
-                  <div>
-                    {/* Copy hidden fields */}
-                    <input
-                      type="hidden"
-                      name="bioUsername"
-                      value={username.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioDisplayName"
-                      value={displayName.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioDescription"
-                      value={description.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioProfileImage"
-                      value={profileImage.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioBackgroundImage"
-                      value={backgroundImage.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioBackgroundColor"
-                      value={backgroundColor.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioTextColor"
-                      value={textColor.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioAccentColor"
-                      value={accentColor.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioCustomCss"
-                      value={customCss.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioSpotifyTrack"
-                      value={spotifyTrack.value}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioIsPublic"
-                      value={isPublic.value ? "true" : "false"}
-                    />
-                    {/* Background effect configurations */}
-                    <input
-                      type="hidden"
-                      name="bioGradientConfig"
-                      value={JSON.stringify(gradientConfig.value)}
-                    />
-                    <input
-                      type="hidden"
-                      name="bioParticleConfig"
-                      value={JSON.stringify(particleConfig.value)}
-                    />
-                  </div>
                 </div>
             </CollapsibleSection>
             {/* Links Management */}
@@ -1395,66 +1311,90 @@ export default component$(() => {
               meta={`${bioData.value.bioLinks.length}/${bioData.value.bioLimits.maxBioLinks}`}
             >
                 <div>
-                  <div class="mb-4 flex items-center justify-end">
-                    <button
-                      onClick$={() =>
-                        (showNewLinkForm.value = !showNewLinkForm.value)
-                      }
-                      class={`btn-cute ${buttonClasses}`}
-                      disabled={
-                        bioData.value.bioLinks.length >=
-                        bioData.value.bioLimits.maxBioLinks
-                      }
-                    >
-                      <Plus class="h-4 w-4" />
-                      Add Link
-                    </button>
+                  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-theme-text-muted text-sm">
+                      Links appear as circular buttons on your page, in the
+                      order shown here.
+                    </p>
+                    {!showNewLinkForm.value && (
+                      <button
+                        onClick$={() => (showNewLinkForm.value = true)}
+                        class={`btn-cute ${buttonClasses}`}
+                        disabled={
+                          bioData.value.bioLinks.length >=
+                          bioData.value.bioLimits.maxBioLinks
+                        }
+                      >
+                        <Plus class="h-4 w-4" />
+                        Add Link
+                      </button>
+                    )}
                   </div>
                   {/* Add New Link Form */}
                   {showNewLinkForm.value &&
                     bioData.value.bioLinks.length <
                     bioData.value.bioLimits.maxBioLinks && (
-                      <div class="bg-theme-accent-primary/5 border-theme-accent-primary/20 mb-6 rounded-2xl border p-4">
-                        <Form action={createBioLink}>
-                          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                              <label class="text-theme-text-secondary mb-1 block text-xs">
-                                Title (max
-                                {bioData.value.bioLimits.maxLinkTitleLength})
-                              </label>
-                              <input
-                                type="text"
-                                name="title"
-                                placeholder="Link Title"
-                                maxLength={
-                                  bioData.value.bioLimits.maxLinkTitleLength
-                                }
-                                required
-                                class={inputClasses}
-                              />
-                            </div>
-                            <div>
-                              <label class="text-theme-text-secondary mb-1 block text-xs">
-                                URL (max {bioData.value.bioLimits.maxUrlLength})
-                              </label>
-                              <input
-                                type="url"
-                                name="url"
-                                placeholder="https://example.com"
-                                maxLength={bioData.value.bioLimits.maxUrlLength}
-                                required
-                                class={inputClasses}
-                              />
-                            </div>
-                          </div>
-                          <div class="mb-4">
+                      <div class="border-theme-card-border bg-theme-bg-secondary/30 mb-6 space-y-4 rounded-2xl border p-4">
+                        <Form action={createBioLink} class="space-y-4">
+                          <div>
                             <label class="text-theme-text-secondary mb-1 block text-xs">
-                              Icon (max {bioData.value.bioLimits.maxIconLength})
+                              URL
+                            </label>
+                            <input
+                              type="url"
+                              name="url"
+                              value={newLinkUrl.value}
+                              onInput$={(e) =>
+                                (newLinkUrl.value = (
+                                  e.target as HTMLInputElement
+                                ).value)
+                              }
+                              placeholder="https://twitch.tv/yourname"
+                              maxLength={bioData.value.bioLimits.maxUrlLength}
+                              required
+                              class={inputClasses}
+                            />
+                            <p class="text-theme-text-muted mt-1 text-xs">
+                              Paste a link — the icon and title are filled in
+                              automatically for known sites.
+                            </p>
+                          </div>
+                          <div>
+                            <label class="text-theme-text-secondary mb-1 block text-xs">
+                              Title
+                              <span class="text-theme-text-muted ml-2">
+                                ({newLinkTitle.value.length}/
+                                {bioData.value.bioLimits.maxLinkTitleLength})
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              name="title"
+                              value={newLinkTitle.value}
+                              onInput$={(e) => {
+                                newLinkTitle.value = (
+                                  e.target as HTMLInputElement
+                                ).value;
+                                newLinkTitleTouched.value = true;
+                              }}
+                              placeholder="Twitch"
+                              maxLength={
+                                bioData.value.bioLimits.maxLinkTitleLength
+                              }
+                              required
+                              class={inputClasses}
+                            />
+                          </div>
+                          <div>
+                            <label class="text-theme-text-secondary mb-1 block text-xs">
+                              Icon
                             </label>
                             <IconSelector
                               selectedIcon={newLinkIcon.value}
+                              suggestedIcon={newLinkSuggestion.value}
                               onIconSelect={$((icon) => {
                                 newLinkIcon.value = icon;
+                                newLinkIconTouched.value = true;
                               })}
                             />
                             <input
@@ -1463,6 +1403,34 @@ export default component$(() => {
                               value={newLinkIcon.value}
                             />
                           </div>
+                          <div class="border-theme-card-border bg-theme-bg-primary/30 flex items-center gap-3 rounded-xl border p-3">
+                            <span
+                              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2"
+                              style={{
+                                borderColor: accentColor.value,
+                                backgroundColor: `${accentColor.value}20`,
+                              }}
+                            >
+                              <BioLinkIcon
+                                icon={newLinkIcon.value}
+                                size={22}
+                                class="text-theme-text-primary"
+                              />
+                            </span>
+                            <div class="min-w-0">
+                              <div class="text-theme-text-primary truncate text-sm font-medium">
+                                {newLinkTitle.value || "Untitled link"}
+                              </div>
+                              <div class="text-theme-text-muted truncate text-xs">
+                                {newLinkUrl.value || "No URL yet"}
+                              </div>
+                            </div>
+                          </div>
+                          {createBioLink.value?.failed && (
+                            <Callout tone="danger" icon={CircleX}>
+                              {createBioLink.value.message}
+                            </Callout>
+                          )}
                           <div class="flex gap-2">
                             <button
                               type="submit"
@@ -1494,40 +1462,66 @@ export default component$(() => {
                       </Callout>
                     )}
                   {/* Existing Links */}
-                  <div class="space-y-3">
-                    {bioData.value.bioLinks.map((link) => (
+                  <div class="space-y-2">
+                    {bioData.value.bioLinks.map((link, index) => (
                       <div
                         key={link.id}
-                        class="glass flex items-center gap-3 rounded-2xl p-3"
+                        class="border-theme-card-border bg-theme-bg-secondary/30 rounded-2xl border p-3"
                       >
-                        <div class="cursor-move">
-                          <GripVertical class="text-theme-text-muted h-4 w-4" />
-                        </div>
-
                         {editingLink.value === link.id ? (
-                          <Form action={updateBioLink} class="flex-1">
+                          <Form action={updateBioLink} class="space-y-3">
                             <input type="hidden" name="id" value={link.id} />
+                            <input
+                              type="hidden"
+                              name="order"
+                              value={link.order}
+                            />
+                            <input
+                              type="hidden"
+                              name="isActive"
+                              value={link.isActive ? "true" : "false"}
+                            />
                             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                              <input
-                                type="text"
-                                name="title"
-                                value={link.title}
-                                class={`${inputClasses} text-sm`}
-                              />
-                              <input
-                                type="url"
-                                name="url"
-                                value={link.url}
-                                class={`${inputClasses} text-sm`}
-                              />
+                              <div>
+                                <label class="text-theme-text-secondary mb-1 block text-xs">
+                                  Title
+                                </label>
+                                <input
+                                  type="text"
+                                  name="title"
+                                  value={link.title}
+                                  maxLength={
+                                    bioData.value.bioLimits.maxLinkTitleLength
+                                  }
+                                  required
+                                  class={`${inputClasses} text-sm`}
+                                />
+                              </div>
+                              <div>
+                                <label class="text-theme-text-secondary mb-1 block text-xs">
+                                  URL
+                                </label>
+                                <input
+                                  type="url"
+                                  name="url"
+                                  value={link.url}
+                                  maxLength={bioData.value.bioLimits.maxUrlLength}
+                                  required
+                                  class={`${inputClasses} text-sm`}
+                                />
+                              </div>
                             </div>
-                            <div class="mt-2">
+                            <div>
+                              <label class="text-theme-text-secondary mb-1 block text-xs">
+                                Icon
+                              </label>
                               <IconSelector
                                 selectedIcon={
                                   editingLinkIcons.value[link.id] ??
                                   link.icon ??
                                   ""
                                 }
+                                suggestedIcon={suggestIconForUrl(link.url)}
                                 onIconSelect={$((icon) => {
                                   editingLinkIcons.value = {
                                     ...editingLinkIcons.value,
@@ -1545,78 +1539,233 @@ export default component$(() => {
                                 }
                               />
                             </div>
-                            <input
-                              type="hidden"
-                              name="isActive"
-                              value={link.isActive ? "true" : "false"}
-                            />
-                            <div class="mt-2 flex gap-2">
+                            <div class="flex gap-2">
                               <button
                                 type="submit"
-                                class="btn-cute rounded-lg px-3 py-1 text-sm"
+                                class="btn-cute flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm"
                               >
+                                <Save class="h-4 w-4" />
                                 Save
                               </button>
                               <button
                                 type="button"
                                 onClick$={() => (editingLink.value = null)}
-                                class="btn-secondary rounded-lg px-3 py-1 text-sm"
+                                class="btn-secondary px-3 py-1.5 text-sm"
                               >
                                 Cancel
                               </button>
                             </div>
                           </Form>
                         ) : (
-                          <>
-                            <div class="max-w-4/5 flex-1">
-                              <div class="flex items-center gap-2">
-                                <BioLinkIcon
-                                  icon={link.icon}
-                                  size={16}
-                                  class="flex-shrink-0"
-                                />
-                                <span class="text-theme-text-primary font-medium">
-                                  {link.title}
-                                </span>
-                              </div>
-                              <div class="text-theme-text-secondary truncate text-sm">
-                                {link.url}
-                              </div>
-                              <div class="text-theme-text-muted text-xs">
-                                {link.clicks} clicks
-                              </div>
-                            </div>
-                            <div class="flex gap-2">
-                              <button
-                                onClick$={() => (editingLink.value = link.id)}
-                                class="hover:bg-theme-accent-primary/10 rounded-lg p-2 transition-all"
-                              >
-                                <Edit class="text-theme-text-muted h-4 w-4" />
-                              </button>
-                              <Form action={deleteBioLink}>
+                          <div class="flex items-center gap-3">
+                            <div class="flex flex-col">
+                              <Form action={reorderBioLink}>
                                 <input
                                   type="hidden"
                                   name="id"
                                   value={link.id}
                                 />
+                                <input
+                                  type="hidden"
+                                  name="direction"
+                                  value="up"
+                                />
                                 <button
                                   type="submit"
-                                  class="rounded-lg p-2 transition-all hover:bg-theme-error/10"
+                                  disabled={index === 0}
+                                  aria-label={`Move ${link.title} up`}
+                                  title="Move up"
+                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                                 >
-                                  <Trash2 class="h-4 w-4 text-theme-error" />
+                                  <ArrowUp class="h-4 w-4" />
+                                </button>
+                              </Form>
+                              <Form action={reorderBioLink}>
+                                <input
+                                  type="hidden"
+                                  name="id"
+                                  value={link.id}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="direction"
+                                  value="down"
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={
+                                    index ===
+                                    bioData.value.bioLinks.length - 1
+                                  }
+                                  aria-label={`Move ${link.title} down`}
+                                  title="Move down"
+                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                                >
+                                  <ArrowDown class="h-4 w-4" />
                                 </button>
                               </Form>
                             </div>
-                          </>
+
+                            <span
+                              class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 ${link.isActive ? "" : "opacity-40"}`}
+                              style={{
+                                borderColor: accentColor.value,
+                                backgroundColor: `${accentColor.value}20`,
+                              }}
+                            >
+                              <BioLinkIcon
+                                icon={link.icon}
+                                size={18}
+                                class="text-theme-text-primary"
+                              />
+                            </span>
+
+                            <div class="min-w-0 flex-1">
+                              <div class="flex items-center gap-2">
+                                <span class="text-theme-text-primary truncate font-medium">
+                                  {link.title}
+                                </span>
+                                {!link.isActive && (
+                                  <span class="text-theme-text-muted border-theme-card-border shrink-0 rounded-full border px-2 py-0.5 text-[10px]">
+                                    Hidden
+                                  </span>
+                                )}
+                              </div>
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-theme-text-secondary hover:text-theme-accent-primary block truncate text-sm transition-colors"
+                              >
+                                {link.url}
+                              </a>
+                              <div class="text-theme-text-muted text-xs">
+                                {link.clicks} clicks
+                              </div>
+                            </div>
+
+                            {deletingLink.value === link.id ? (
+                              <div class="flex shrink-0 items-center gap-2">
+                                <span class="text-theme-text-secondary hidden text-sm sm:inline">
+                                  Delete?
+                                </span>
+                                <Form action={deleteBioLink}>
+                                  <input
+                                    type="hidden"
+                                    name="id"
+                                    value={link.id}
+                                  />
+                                  <button
+                                    type="submit"
+                                    class="bg-theme-error/15 text-theme-error hover:bg-theme-error/25 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </Form>
+                                <button
+                                  type="button"
+                                  onClick$={() => (deletingLink.value = null)}
+                                  class="btn-secondary px-3 py-1.5 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div class="flex shrink-0 items-center gap-1">
+                                <Form action={updateBioLink}>
+                                  <input
+                                    type="hidden"
+                                    name="id"
+                                    value={link.id}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="title"
+                                    value={link.title}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="url"
+                                    value={link.url}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="icon"
+                                    value={link.icon ?? ""}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="order"
+                                    value={link.order}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="isActive"
+                                    value={link.isActive ? "false" : "true"}
+                                  />
+                                  <button
+                                    type="submit"
+                                    aria-label={
+                                      link.isActive
+                                        ? `Hide ${link.title}`
+                                        : `Show ${link.title}`
+                                    }
+                                    title={
+                                      link.isActive
+                                        ? "Hide from bio page"
+                                        : "Show on bio page"
+                                    }
+                                    class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
+                                  >
+                                    {link.isActive ? (
+                                      <Eye class="h-4 w-4" />
+                                    ) : (
+                                      <EyeOff class="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </Form>
+                                <button
+                                  type="button"
+                                  onClick$={() => (editingLink.value = link.id)}
+                                  aria-label={`Edit ${link.title}`}
+                                  title="Edit link"
+                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
+                                >
+                                  <Edit class="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick$={() =>
+                                    (deletingLink.value = link.id)
+                                  }
+                                  aria-label={`Delete ${link.title}`}
+                                  title="Delete link"
+                                  class="text-theme-error hover:bg-theme-error/10 rounded-lg p-2 transition-colors"
+                                >
+                                  <Trash2 class="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}
                     {bioData.value.bioLinks.length === 0 && (
-                      <div class="text-theme-text-muted py-8 text-center">
-                        <LinkIcon class="mx-auto mb-3 h-12 w-12 opacity-50" />
-                        <p>No links added yet</p>
-                        <p class="text-sm">Click "Add Link" to get started</p>
-                      </div>
+                      <EmptyState
+                        icon={LinkIcon}
+                        title="No links yet"
+                        description="Add your socials, streams, shops or anything else you want to share."
+                      >
+                        {!showNewLinkForm.value && (
+                          <button
+                            onClick$={() => (showNewLinkForm.value = true)}
+                            class={`btn-cute ${buttonClasses}`}
+                          >
+                            <Plus class="h-4 w-4" />
+                            Add your first link
+                          </button>
+                        )}
+                      </EmptyState>
                     )}
                   </div>
                 </div>

@@ -1,157 +1,286 @@
-import { component$, useSignal, $, type QRL } from "@builder.io/qwik";
-import { PREDEFINED_ICONS, COMMON_EMOJIS } from "~/lib/bio-icons";
+import {
+  component$,
+  useSignal,
+  useComputed$,
+  $,
+  type QRL,
+} from "@builder.io/qwik";
+import { Check, ChevronDown, ChevronUp, Smile, X } from "lucide-icons-qwik";
+import {
+  BIO_ICON_CATEGORIES,
+  COMMON_EMOJIS,
+  getIconDef,
+  getIconTint,
+  isEmojiIcon,
+  searchIcons,
+  type BioIconCategory,
+} from "~/lib/bio-icons";
 import { BioLinkIcon } from "~/components/bio/bio-link-icon";
+import { cn } from "~/lib/utils";
 
 export interface IconSelectorProps {
   selectedIcon?: string;
   onIconSelect: QRL<(icon: string) => void>;
+  /** Icon guessed from the link URL, offered as a one-click suggestion. */
+  suggestedIcon?: string | null;
   class?: string;
 }
 
-export const IconSelector = component$<IconSelectorProps>(
-  ({ selectedIcon = "", onIconSelect, class: className = "" }) => {
-    const isOpen = useSignal(false);
-    const customIconValue = useSignal("");
+type Tab = BioIconCategory | "all" | "emoji";
 
-    const handleIconSelect = $((icon: string) => {
+const TABS: { id: Tab; label: string }[] = [
+  { id: "all", label: "All" },
+  ...BIO_ICON_CATEGORIES,
+  { id: "emoji", label: "Emoji" },
+];
+
+/**
+ * Icon picker for bio links: searchable brand/glyph catalogue, emoji tab and a
+ * free-text escape hatch. Expands in flow rather than as an overlay so it is
+ * never clipped by the surrounding card and works the same on mobile.
+ */
+export const IconSelector = component$<IconSelectorProps>(
+  ({ selectedIcon = "", onIconSelect, suggestedIcon, class: className }) => {
+    const isOpen = useSignal(false);
+    const query = useSignal("");
+    const tab = useSignal<Tab>("all");
+    const customValue = useSignal("");
+
+    const selectedDef = useComputed$(() =>
+      selectedIcon ? getIconDef(selectedIcon) : null,
+    );
+    const suggestedDef = useComputed$(() =>
+      suggestedIcon && suggestedIcon !== selectedIcon
+        ? getIconDef(suggestedIcon)
+        : null,
+    );
+    const results = useComputed$(() =>
+      tab.value === "emoji" ? [] : searchIcons(query.value, tab.value),
+    );
+    const customIsUsable = useComputed$(() => {
+      const value = customValue.value.trim();
+      return !!value && (!!getIconDef(value) || isEmojiIcon(value));
+    });
+
+    const select = $((icon: string) => {
       onIconSelect(icon);
+      isOpen.value = false;
+      query.value = "";
+    });
+
+    const applyCustom = $(() => {
+      const value = customValue.value.trim();
+      if (!value || !(getIconDef(value) || isEmojiIcon(value))) return;
+      onIconSelect(getIconDef(value)?.id ?? value);
+      customValue.value = "";
       isOpen.value = false;
     });
 
-    const handleCustomIconSubmit = $(() => {
-      if (customIconValue.value.trim()) {
-        onIconSelect(customIconValue.value.trim());
-        customIconValue.value = "";
-        isOpen.value = false;
-      }
-    });
     return (
-      <div class={`relative ${className}`}>
-        {/* Trigger Button */}
-        <button
-          type="button"
-          onClick$={() => (isOpen.value = !isOpen.value)}
-          class="border-theme-card-border bg-theme-bg-secondary hover:bg-theme-bg-tertiary focus:ring-theme-accent-primary/50 flex h-10 w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all focus:ring-2 focus:outline-none"
-        >
-          <div class="flex h-6 w-6 items-center justify-center">
+      <div class={cn("space-y-2", className)}>
+        <div class="border-theme-card-border bg-theme-bg-secondary/50 flex items-center gap-2 rounded-xl border p-2">
+          <div class="bg-theme-bg-tertiary/40 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
             {selectedIcon ? (
-              <BioLinkIcon icon={selectedIcon} size={16} />
+              <BioLinkIcon icon={selectedIcon} size={20} />
             ) : (
-              <span class="text-theme-text-muted text-xs">No icon</span>
+              <Smile class="text-theme-text-muted h-5 w-5" />
             )}
           </div>
-          <span class="text-theme-text-primary flex-1 text-sm">
-            {selectedIcon || "Select icon..."}
-          </span>
-          <span class="text-theme-text-muted text-xs">
-            {isOpen.value ? "▲" : "▼"}
-          </span>
-        </button>
-
-        {/* Dropdown */}
-        {isOpen.value && (
-          <>
-            {/* Backdrop */}
-            <div
-              class="fixed inset-0 z-[9999]"
-              onClick$={() => (isOpen.value = false)}
-            />
-            {/* Dropdown Content */}
-            <div class="border-theme-card-border bg-theme-bg-primary absolute right-0 bottom-full left-0 z-[10000] mb-2 max-h-96 overflow-y-auto rounded-xl border p-4 shadow-2xl">
-              <div class="space-y-4">
-                {/* Platform Icons */}
-                <div>
-                  <h4 class="text-theme-text-primary mb-2 text-sm font-medium">
-                    Platform Icons
-                  </h4>
-                  <div class="grid grid-cols-4 gap-2">
-                    {Object.keys(PREDEFINED_ICONS).map((iconName) => (
-                      <button
-                        key={iconName}
-                        type="button"
-                        onClick$={() => handleIconSelect(iconName)}
-                        class={`hover:bg-theme-accent-primary/10 flex h-10 w-10 items-center justify-center rounded-lg border transition-all ${
-                          selectedIcon === iconName
-                            ? "border-theme-accent-primary bg-theme-accent-primary/20"
-                            : "border-theme-card-border"
-                        }`}
-                        title={iconName}
-                      >
-                        <BioLinkIcon icon={iconName} size={16} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Emojis */}
-                <div>
-                  <h4 class="text-theme-text-primary mb-2 text-sm font-medium">
-                    Emojis
-                  </h4>
-                  <div class="grid grid-cols-8 gap-1">
-                    {COMMON_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick$={() => handleIconSelect(emoji)}
-                        class={`hover:bg-theme-accent-primary/10 flex h-8 w-8 items-center justify-center rounded border transition-all ${
-                          selectedIcon === emoji
-                            ? "border-theme-accent-primary bg-theme-accent-primary/20"
-                            : "border-theme-card-border"
-                        }`}
-                        title={emoji}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom Icon Input */}
-                <div>
-                  <h4 class="text-theme-text-primary mb-2 text-sm font-medium">
-                    Custom Icon
-                  </h4>
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter emoji or icon name..."
-                      value={customIconValue.value}
-                      onInput$={(e) =>
-                        (customIconValue.value = (
-                          e.target as HTMLInputElement
-                        ).value)
-                      }
-                      onKeyDown$={(e) => {
-                        if (e.key === "Enter") {
-                          handleCustomIconSubmit();
-                        }
-                      }}
-                      class="border-theme-card-border bg-theme-bg-secondary focus:ring-theme-accent-primary/50 flex-1 rounded border px-2 py-1 text-sm focus:ring-2 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick$={handleCustomIconSubmit}
-                      class="bg-theme-accent-primary hover:bg-theme-accent-primary/80 rounded px-3 py-1 text-sm text-white transition-all"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-
-                {/* Clear Selection */}
-                <div class="border-theme-card-border border-t pt-3">
-                  <button
-                    type="button"
-                    onClick$={() => handleIconSelect("")}
-                    class="border-theme-card-border text-theme-text-secondary hover:bg-theme-bg-secondary w-full rounded border py-2 text-sm transition-all"
-                  >
-                    No Icon
-                  </button>
-                </div>
-              </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-theme-text-primary truncate text-sm font-medium">
+              {selectedIcon ? (
+                (selectedDef.value?.label ?? selectedIcon)
+              ) : (
+                <span class="text-theme-text-muted font-normal">No icon</span>
+              )}
             </div>
-          </>
+            <div class="text-theme-text-muted truncate text-xs">
+              {selectedIcon
+                ? "Shown on your bio page"
+                : "Pick a brand, glyph or emoji"}
+            </div>
+          </div>
+          {selectedIcon && (
+            <button
+              type="button"
+              onClick$={() => select("")}
+              aria-label="Remove icon"
+              class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
+            >
+              <X class="h-4 w-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick$={() => (isOpen.value = !isOpen.value)}
+            aria-expanded={isOpen.value}
+            class="btn-secondary shrink-0 px-3 py-1.5 text-sm"
+          >
+            {selectedIcon ? "Change" : "Choose"}
+            {isOpen.value ? (
+              <ChevronUp class="h-4 w-4" />
+            ) : (
+              <ChevronDown class="h-4 w-4" />
+            )}
+          </button>
+        </div>
+
+        {suggestedDef.value && (
+          <button
+            type="button"
+            onClick$={() => select(suggestedDef.value!.id)}
+            class="border-theme-accent-primary/30 bg-theme-accent-primary/10 text-theme-text-secondary hover:bg-theme-accent-primary/20 flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors"
+          >
+            <BioLinkIcon
+              icon={suggestedDef.value.id}
+              size={16}
+              color={getIconTint(suggestedDef.value)}
+            />
+            <span>
+              Use <strong>{suggestedDef.value.label}</strong> — matched from the
+              link URL
+            </span>
+          </button>
+        )}
+
+        {isOpen.value && (
+          <div
+            class="border-theme-card-border bg-theme-bg-secondary/40 space-y-3 rounded-xl border p-3"
+            onKeyDown$={(e) => {
+              if (e.key === "Escape") isOpen.value = false;
+            }}
+          >
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                value={query.value}
+                placeholder="Search icons…"
+                onInput$={(e) =>
+                  (query.value = (e.target as HTMLInputElement).value)
+                }
+                class="border-theme-card-border bg-theme-bg-primary/60 text-theme-text-primary placeholder:text-theme-text-muted focus:border-theme-accent-primary focus:ring-theme-accent-primary/30 w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:ring-2 focus:outline-none"
+              />
+              {query.value && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick$={() => (query.value = "")}
+                  class="text-theme-text-muted hover:text-theme-text-primary p-1"
+                >
+                  <X class="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div class="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick$={() => (tab.value = t.id)}
+                  class={cn(
+                    "shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+                    tab.value === t.id
+                      ? "from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-br text-white"
+                      : "text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40",
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {tab.value === "emoji" ? (
+              <div class="grid max-h-56 grid-cols-8 gap-1 overflow-y-auto sm:grid-cols-10">
+                {COMMON_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick$={() => select(emoji)}
+                    aria-label={`Emoji ${emoji}`}
+                    class={cn(
+                      "flex aspect-square items-center justify-center rounded-lg text-lg transition-colors",
+                      selectedIcon === emoji
+                        ? "bg-theme-accent-primary/20 ring-theme-accent-primary ring-2"
+                        : "hover:bg-theme-bg-tertiary/50",
+                    )}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            ) : results.value.length > 0 ? (
+              <div class="grid max-h-56 grid-cols-3 gap-1.5 overflow-y-auto sm:grid-cols-4 lg:grid-cols-5">
+                {results.value.map((def) => {
+                  const active = selectedDef.value?.id === def.id;
+                  return (
+                    <button
+                      key={def.id}
+                      type="button"
+                      onClick$={() => select(def.id)}
+                      title={def.label}
+                      aria-pressed={active}
+                      class={cn(
+                        "relative flex flex-col items-center gap-1.5 rounded-lg px-1 py-2.5 transition-colors",
+                        active
+                          ? "bg-theme-accent-primary/15 ring-theme-accent-primary ring-2"
+                          : "hover:bg-theme-bg-tertiary/50",
+                      )}
+                    >
+                      <BioLinkIcon
+                        icon={def.id}
+                        size={22}
+                        color={getIconTint(def)}
+                      />
+                      <span class="text-theme-text-secondary w-full truncate text-center text-[11px] leading-tight">
+                        {def.label}
+                      </span>
+                      {active && (
+                        <Check class="text-theme-accent-primary absolute top-1 right-1 h-3 w-3" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p class="text-theme-text-muted py-6 text-center text-sm">
+                No icons match “{query.value}”. Try the Emoji tab or paste one
+                below.
+              </p>
+            )}
+
+            <div class="border-theme-card-border border-t pt-3">
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={customValue.value}
+                  placeholder="Or paste your own emoji…"
+                  maxLength={20}
+                  onInput$={(e) =>
+                    (customValue.value = (e.target as HTMLInputElement).value)
+                  }
+                  onKeyDown$={(e) => {
+                    if (e.key === "Enter") applyCustom();
+                  }}
+                  class="border-theme-card-border bg-theme-bg-primary/60 text-theme-text-primary placeholder:text-theme-text-muted focus:border-theme-accent-primary focus:ring-theme-accent-primary/30 min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm transition-colors focus:ring-2 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick$={applyCustom}
+                  disabled={!customIsUsable.value}
+                  class="btn-secondary shrink-0 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Use
+                </button>
+              </div>
+              {customValue.value.trim() && !customIsUsable.value && (
+                <p class="text-theme-text-muted mt-1.5 text-xs">
+                  That isn't an emoji — plain text would show up as-is on your
+                  page.
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </div>
     );

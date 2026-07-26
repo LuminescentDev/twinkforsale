@@ -1,57 +1,125 @@
 import { component$ } from "@builder.io/qwik";
-import { isEmojiIcon, getPredefinedIconPath } from "~/lib/bio-icons";
+import {
+  BookOpen,
+  Briefcase,
+  Calendar,
+  Camera,
+  Code,
+  DollarSign,
+  Download,
+  FileText,
+  Gamepad2,
+  Gift,
+  Globe,
+  Heart,
+  Link as LinkGlyph,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Music,
+  Phone,
+  Rss,
+  ShoppingBag,
+  Star,
+  Video,
+} from "lucide-icons-qwik";
+import { getBrandIconUrl, getIconDef } from "~/lib/bio-icons";
+import { cn } from "~/lib/utils";
+
+const GLYPHS: Record<string, typeof Globe> = {
+  website: Globe,
+  email: Mail,
+  link: LinkGlyph,
+  rss: Rss,
+  shop: ShoppingBag,
+  money: DollarSign,
+  gift: Gift,
+  heart: Heart,
+  star: Star,
+  chat: MessageCircle,
+  phone: Phone,
+  location: MapPin,
+  calendar: Calendar,
+  document: FileText,
+  photo: Camera,
+  video: Video,
+  music: Music,
+  game: Gamepad2,
+  code: Code,
+  work: Briefcase,
+  book: BookOpen,
+  download: Download,
+};
 
 export interface BioLinkIconProps {
   icon?: string | null;
   class?: string;
   size?: number;
+  /** Overrides the inherited colour — used by the picker for brand tints. */
+  color?: string;
 }
 
+/**
+ * Renders a bio link icon: a brand mark (masked SVG so it takes the current
+ * text colour), a Lucide glyph, or the raw emoji the user picked.
+ */
 export const BioLinkIcon = component$<BioLinkIconProps>(
-  ({ icon, class: className = "", size = 20 }) => {
+  ({ icon, class: className, size = 20, color }) => {
     if (!icon) {
       return null;
     }
 
-    // Check if it's an emoji
-    if (isEmojiIcon(icon)) {
-      return (
-        <span 
-          class={`bio-link-emoji ${className}`}
-          style={{ fontSize: `${size}px` }}
-        >
-          {icon}
-        </span>
-      );
-    }
+    const def = getIconDef(icon);
 
-    // Check if it's a predefined icon
-    const iconPath = getPredefinedIconPath(icon);
-    if (iconPath) {
+    if (def?.kind === "brand") {
       return (
-        <img
-          src={iconPath}
-          alt={`${icon} icon`}
-          class={`bio-link-icon ${className}`}
-          width={size}
-          height={size}
-          style={{ 
-            filter: 'brightness(0) invert(1)', // Make SVGs white by default
+        <span
+          role="img"
+          aria-label={def.label}
+          class={cn("bio-link-icon bio-brand-icon", className)}
+          style={{
+            "--bio-icon-url": `url("${getBrandIconUrl(def.id)}")`,
             width: `${size}px`,
-            height: `${size}px`
+            height: `${size}px`,
+            ...(color ? { color } : {}),
           }}
         />
       );
     }
 
-    // Fallback: treat as emoji even if detection failed
+    if (def?.kind === "glyph") {
+      const Glyph = GLYPHS[def.id];
+      if (Glyph) {
+        return (
+          <span
+            role="img"
+            aria-label={def.label}
+            class={cn(
+              "bio-link-icon inline-flex items-center justify-center",
+              className,
+            )}
+            style={color ? { color } : undefined}
+          >
+            <Glyph size={size} />
+          </span>
+        );
+      }
+    }
+
     return (
-      <span 
-        class={`bio-link-fallback ${className}`}
-        style={{ fontSize: `${size}px` }}
+      <span
+        class={cn(
+          "bio-link-emoji inline-flex items-center justify-center leading-none",
+          className,
+        )}
+        style={{
+          fontSize: `${size}px`,
+          width: `${size}px`,
+          height: `${size}px`,
+        }}
       >
         {icon}
       </span>
     );
-  }
+  },
 );

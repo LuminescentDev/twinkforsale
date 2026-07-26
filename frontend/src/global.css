@@ -263,6 +263,17 @@
   mask-position: center;
 }
 
+/* Bio link brand marks. The SVG is used as a mask so a single-colour brand
+   file can take the surrounding text colour (or a brand tint in the picker)
+   instead of being forced white with a filter. */
+.bio-brand-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: var(--bio-icon-url) center / contain no-repeat;
+  mask: var(--bio-icon-url) center / contain no-repeat;
+}
+
 /* Heart icon specific gradient */
 .heart-gradient {
   display: inline-block;
