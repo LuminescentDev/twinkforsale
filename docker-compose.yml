@@ -41,7 +41,7 @@ services:
       Discord__ClientId: ${DISCORD_CLIENT_ID:-}
       Discord__ClientSecret: ${DISCORD_CLIENT_SECRET:-}
       Discord__BotToken: ${DISCORD_BOT_TOKEN:-}
-      Discord__GuildId: ${DISCORD_GUILD_ID:-1384474657603850271}
+      Discord__GuildId: ${DISCORD_GUILD_ID:-1526631771850936491}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
       USE_R2_STORAGE: ${USE_R2_STORAGE:-false}
       Storage__LocalPath: /app/uploads

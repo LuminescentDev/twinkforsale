@@ -116,7 +116,7 @@ export async function getLanyardData(discordId: string): Promise<LanyardData> {
     if (response.status === 404) {
       return {
         success: false,
-        error: "Discord user not found. You need to either join our Discord server (https://discord.gg/TDsQpa9tdT) or invite the bot to your Discord server to use this feature."
+        error: "Discord user not found. You need to either join our Discord server (https://discord.gg/RJ9Cedxvqe) or invite the bot to your Discord server to use this feature."
       };
     }
 
@@ -133,7 +133,7 @@ export async function getLanyardData(discordId: string): Promise<LanyardData> {
     if (!data.data?.discord_user) {
       return {
         success: false,
-        error: "Discord user data not available. You need to either join our Discord server (https://discord.gg/TDsQpa9tdT) or invite the bot to your Discord server to use this feature."
+        error: "Discord user data not available. You need to either join our Discord server (https://discord.gg/RJ9Cedxvqe) or invite the bot to your Discord server to use this feature."
       };
     }
 
@@ -237,7 +237,7 @@ export function connectLanyardSocket(
                 if (!message.d?.discord_user) {
                   onData({
                     success: false,
-                    error: "Discord user data not available. You need to either join the Lanyard Discord server (https://discord.gg/lanyard) or invite the Lanyard bot to your Discord server to use this feature."
+                    error: "Discord user data not available. You need to either join our Discord server (https://discord.gg/RJ9Cedxvqe) or invite the bot to your Discord server to use this feature."
                   });
                   return;
                 }

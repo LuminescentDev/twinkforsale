@@ -385,7 +385,7 @@ export default component$(() => {
       if (!result.success) {
         discordError.value =
           result.error ||
-          "Failed to connect to Discord. Please check if you've joined our Discord server (https://discord.gg/TDsQpa9tdT) or invited the bot to your server.";
+          "Failed to connect to Discord. Please check if you've joined our Discord server (https://discord.gg/RJ9Cedxvqe) or invited the bot to your server.";
       } else {
         discordError.value = null;
       }

@@ -59,7 +59,7 @@ export const Footer = component$(() => {
             <ul class="space-y-2">
               <li>
                 <a
-                  href="https://discord.gg/hNVkv4M674"
+                  href="https://discord.gg/RJ9Cedxvqe"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-theme-text-secondary hover:text-theme-accent-primary text-sm transition-colors"
