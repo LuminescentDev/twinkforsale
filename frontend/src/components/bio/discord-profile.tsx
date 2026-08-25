@@ -1,4 +1,10 @@
-import { component$, useSignal, useResource$, useVisibleTask$, Resource } from "@builder.io/qwik";
+import {
+  component$,
+  useSignal,
+  useResource$,
+  useVisibleTask$,
+  Resource,
+} from "@builder.io/qwik";
 import {
   getLanyardData,
   connectLanyardSocket,
@@ -29,7 +35,7 @@ export interface DiscordProfileProps {
 export const DiscordProfile = component$<DiscordProfileProps>(
   ({ discordId, config = {}, class: className = "" }) => {
     const currentTime = useSignal(Date.now());
-    
+
     const {
       showAvatar = true,
       showStatus = true,
@@ -38,15 +44,16 @@ export const DiscordProfile = component$<DiscordProfileProps>(
       showBadges = true,
       showGuild = true,
       useFallbackPolling = false,
-    } = config;// Use useResource$ for non-blocking data fetching
+    } = config; // Use useResource$ for non-blocking data fetching
     const lanyardResource = useResource$(async ({ cleanup }) => {
       try {
         console.log("Fetching Lanyard data for:", discordId);
-        
+
         // Initial data fetch
         const data = await getLanyardData(discordId);
-        
-        if (data?.success) {          // Set up WebSocket for real-time updates if not using fallback polling
+
+        if (data?.success) {
+          // Set up WebSocket for real-time updates if not using fallback polling
           if (!useFallbackPolling) {
             try {
               const wsCleanup = connectLanyardSocket(
@@ -57,7 +64,7 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                 },
                 (error) => {
                   console.warn("WebSocket error:", error);
-                }
+                },
               );
 
               // Set up cleanup for WebSocket connection
@@ -66,10 +73,13 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                 wsCleanup();
               });
             } catch (wsError) {
-              console.warn("Failed to establish WebSocket connection:", wsError);
+              console.warn(
+                "Failed to establish WebSocket connection:",
+                wsError,
+              );
             }
           }
-          
+
           return data;
         } else {
           throw new Error(data?.error || "Failed to fetch Discord data");
@@ -90,7 +100,8 @@ export const DiscordProfile = component$<DiscordProfileProps>(
       return () => {
         clearInterval(timeInterval);
       };
-    });    return (
+    });
+    return (
       <Resource
         value={lanyardResource}
         onPending={() => (
@@ -107,19 +118,28 @@ export const DiscordProfile = component$<DiscordProfileProps>(
           </div>
         )}
         onRejected={() => (
-          <div class={`rounded-lg bg-theme-error/10 p-4 text-theme-error ${className}`}>
+          <div
+            class={`bg-theme-error/10 text-theme-error rounded-lg p-4 ${className}`}
+          >
             <p class="mb-2 text-sm font-medium">Discord Profile Unavailable</p>
-            <p class="text-xs text-theme-error">
-              Failed to load Discord data. The user might be offline or have privacy settings enabled.
+            <p class="text-theme-error text-xs">
+              Failed to load Discord data. The user might be offline or have
+              privacy settings enabled.
             </p>
           </div>
         )}
         onResolved={(lanyardData) => {
           if (!lanyardData?.success || !lanyardData.data) {
             return (
-              <div class={`rounded-lg bg-theme-error/10 p-4 text-theme-error ${className}`}>
-                <p class="mb-2 text-sm font-medium">Discord Profile Unavailable</p>
-                <p class="text-xs text-theme-error">No Discord data available.</p>
+              <div
+                class={`bg-theme-error/10 text-theme-error rounded-lg p-4 ${className}`}
+              >
+                <p class="mb-2 text-sm font-medium">
+                  Discord Profile Unavailable
+                </p>
+                <p class="text-theme-error text-xs">
+                  No Discord data available.
+                </p>
               </div>
             );
           }
@@ -129,7 +149,7 @@ export const DiscordProfile = component$<DiscordProfileProps>(
           const avatarUrl = getDiscordAvatarUrl(user.id, user.avatar, 128);
           const statusColor = getStatusColor(data.discord_status);
           const statusText = getStatusText(data.discord_status);
-          
+
           // Get all activities excluding Spotify and custom status
           const activities = data.activities.filter(
             (activity: any) => activity.type !== 2 && activity.type !== 4,
@@ -139,7 +159,7 @@ export const DiscordProfile = component$<DiscordProfileProps>(
           const customStatus = data.activities.find(
             (activity: any) => activity.type === 4,
           );
-          
+
           // Get user badges
           const allBadges = getUserBadges(user.public_flags);
 
@@ -339,7 +359,9 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                                     ? `https://media.discordapp.net/${activity.assets.large_image.slice(3)}`
                                     : `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png`
                                 }
-                                alt={activity.assets.large_text || activity.name}
+                                alt={
+                                  activity.assets.large_text || activity.name
+                                }
                                 class="h-12 w-12 rounded-lg"
                                 width={48}
                                 height={48}
@@ -347,7 +369,9 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                               {activity.assets?.small_image && (
                                 <img
                                   src={
-                                    activity.assets.small_image.startsWith("mp:")
+                                    activity.assets.small_image.startsWith(
+                                      "mp:",
+                                    )
                                       ? `https://media.discordapp.net/${activity.assets.small_image.slice(3)}`
                                       : `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.small_image}.png`
                                   }
@@ -364,16 +388,16 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                           <div class="min-w-0 flex-1">
                             <div class="mb-1 flex items-center gap-2">
                               {activity.type === 0 && (
-                                <Gamepad2 class="h-4 w-4 text-theme-success" />
+                                <Gamepad2 class="text-theme-success h-4 w-4" />
                               )}
                               {activity.type === 1 && (
                                 <Zap class="h-4 w-4 text-purple-400" />
                               )}
                               {activity.type === 3 && (
-                                <Eye class="h-4 w-4 text-theme-info" />
+                                <Eye class="text-theme-info h-4 w-4" />
                               )}
                               {activity.type === 5 && (
-                                <Trophy class="h-4 w-4 text-theme-warning" />
+                                <Trophy class="text-theme-warning h-4 w-4" />
                               )}
                               <span class="text-xs font-medium tracking-wider text-gray-400 uppercase">
                                 {formatActivityType(activity.type)}
@@ -391,7 +415,9 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                             )}
 
                             {activity.state && (
-                              <p class="text-xs text-gray-400">{activity.state}</p>
+                              <p class="text-xs text-gray-400">
+                                {activity.state}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -441,7 +467,8 @@ export const DiscordProfile = component$<DiscordProfileProps>(
                               <span>
                                 {Math.floor(
                                   Math.min(
-                                    currentTime.value - data.spotify.timestamps.start,
+                                    currentTime.value -
+                                      data.spotify.timestamps.start,
                                     data.spotify.timestamps.end -
                                       data.spotify.timestamps.start,
                                   ) /

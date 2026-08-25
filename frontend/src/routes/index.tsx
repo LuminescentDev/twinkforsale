@@ -1,35 +1,23 @@
 import { component$ } from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { useCurrentUser } from "~/routes/layout";
-import { api } from "~/lib/api-client";
 import {
-  Home,
-  Settings,
-  User,
-  Rocket,
-  Heart,
+  ArrowRight,
   BarChart3,
-  Sparkle,
-  Wrench,
-  FileText,
-  Eye,
-  Upload,
-  Users,
+  Check,
+  FileSearch,
+  Gauge,
+  Heart,
+  IdCard,
+  Link2,
   Palette,
-  Image as ImageIcon,
-  Video,
-  Music,
-  File as FileIcon,
+  Settings2,
+  Upload,
 } from "lucide-icons-qwik";
 import { LoginButton } from "~/components/auth/login-button";
-import {
-  Button,
-  Card,
-  Section,
-  StatCard,
-  ThemeToggle,
-} from "~/components/ui";
+import { Button, Surface, ThemeToggle } from "~/components/ui";
+import { api } from "~/lib/api-client";
+import { useCurrentUser } from "~/routes/layout";
 
 export const usePublicStats = routeLoader$(async (requestEvent) => {
   const empty = {
@@ -37,18 +25,8 @@ export const usePublicStats = routeLoader$(async (requestEvent) => {
     totalViews: 0,
     totalUsers: 0,
     weeklyStats: { views: 0, uploads: 0, users: 0 },
-    analyticsData: [] as {
-      date: string;
-      totalViews: number;
-      uploadsCount: number;
-      usersRegistered: number;
-    }[],
-    recentUploads: [] as {
-      id: string;
-      createdAt: string;
-      mimeType: string;
-      views: number;
-    }[],
+    analyticsData: [],
+    recentUploads: [],
   };
   const stats = await api.stats
     .public({ cookie: requestEvent.request.headers.get("cookie") })
@@ -56,51 +34,36 @@ export const usePublicStats = routeLoader$(async (requestEvent) => {
   return stats ?? empty;
 });
 
-const features = [
+const capabilities = [
   {
-    icon: Rocket,
-    accent: "from-theme-accent-primary to-theme-accent-secondary",
-    title: "Femboy Certified ✓",
-    body: "Gay femboy approved file sharing with a focus on simplicity, speed, and maximum cuteness! (◕‿◕)♡",
+    icon: FileSearch,
+    title: "Find files quickly",
+    body: "Search, sort, filter, and switch between practical list and visual grid views.",
   },
   {
-    icon: Heart,
-    accent: "from-theme-accent-secondary to-theme-accent-tertiary",
-    title: "Super Secure uwu",
-    body: "Your files are protected with love and care~ (´｡• ᵕ •｡`) ♡",
+    icon: Gauge,
+    title: "Set sensible limits",
+    body: "Choose expiration dates and maximum views before a file leaves your device.",
   },
   {
     icon: BarChart3,
-    accent: "from-theme-accent-tertiary to-theme-accent-quaternary",
-    title: "Analytics & Stats",
-    body: "Track views, manage your uploads, and monitor your storage usage with our amazeballs dashboard! (=^･ω･^=)",
-  },
-];
-
-const themePreviews = [
-  { gradient: "from-slate-800 to-slate-900", name: "Dark", desc: "Classic & sleek" },
-  { gradient: "from-yellow-400 to-orange-500", name: "Light", desc: "Clean & bright" },
-  { gradient: "from-pink-300 to-purple-400", name: "Pastel", desc: "Soft & dreamy" },
-  { gradient: "from-pink-500 to-violet-600", name: "Neon", desc: "Cyberpunk vibes" },
-  { gradient: "from-rose-400 to-pink-600", name: "Valentine", desc: "Romantic pink" },
-  { gradient: "from-slate-500 to-slate-600", name: "Auto", desc: "Follows system" },
-];
-
-const setupSteps = [
-  {
-    icon: User,
-    title: "Sign In",
-    body: "Create your account with Discord~ It's quick and easy!",
+    title: "See what gets opened",
+    body: "Use exact file analytics and a focused 30-day activity view without dashboard clutter.",
   },
   {
-    icon: FileText,
-    title: "Download Config",
-    body: "Get your personalized ShareX configuration file",
+    icon: Link2,
+    title: "Make short links",
+    body: "Create memorable links with optional expiration and click limits.",
   },
   {
-    icon: Rocket,
-    title: "Start Sharing!",
-    body: "Upload files instantly with ShareX uwu",
+    icon: IdCard,
+    title: "Build your public page",
+    body: "Publish a personal bio with links, Discord presence, Spotify, colors, and effects.",
+  },
+  {
+    icon: Settings2,
+    title: "Connect ShareX",
+    body: "Download a personal configuration and send screenshots straight to your account.",
   },
 ];
 
@@ -109,329 +72,275 @@ export default component$(() => {
   const publicStats = usePublicStats();
 
   return (
-    <>
-      {/* Hero */}
-      <div class="py-10 text-center sm:py-20">
-        <h1 class="text-theme-text-primary mb-4 text-3xl leading-tight font-bold sm:mb-6 sm:text-5xl md:text-6xl">
-          Cute femboy
-          <span class="text-gradient-cute block sm:inline"> File Sharing</span>
-        </h1>
-        <p class="text-theme-text-secondary mx-auto mb-8 max-w-3xl text-lg sm:text-xl">
-          Upload and share files with the cutest, most uwu file sharing service
-          ever! I made this 80% with ai cuz i could (´｡• ᵕ •｡`) ♡
-        </p>
-        {user.value ? (
-          <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/dashboard" size="lg" class="w-full sm:w-auto">
-              <Home class="h-5 w-5" />
-              Go to Dashboard
-            </Button>
-            <Button
-              href="/setup/sharex"
-              variant="glass"
-              size="lg"
-              class="w-full sm:w-auto"
-            >
-              <Settings class="h-5 w-5" />
-              Setup ShareX
-            </Button>
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section class="grid gap-10 py-14 sm:py-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:items-center lg:gap-16 lg:py-24">
+        <div class="max-w-2xl">
+          <div class="text-accent-text mb-5 inline-flex items-center gap-2 text-sm font-medium">
+            <Heart class="h-4 w-4 fill-current" aria-hidden="true" />
+            Invite-only community file sharing
           </div>
-        ) : (
-          <LoginButton
-            class="btn-cute mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-full px-8 py-4 text-lg font-semibold text-white sm:w-auto"
-            iconClass="h-5 w-5"
-            label="Get Started"
-          />
-        )}
-      </div>
-
-      {/* Features */}
-      <Section class="py-10 sm:py-16">
-        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-          Why Choose twink.forsale?
-          <Sparkle class="h-6 w-6 sm:h-8 sm:w-8" />
-        </h2>
-        <p class="text-theme-text-secondary text-center">
-          Because we're the cutest file hosting uwu
-        </p>
-        <p class="text-theme-text-muted mb-10 text-center">
-          Do note this is a private/application only site, hit me up on discord
-          @akiradev to ask for access
-        </p>
-        <div class="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
-          {features.map((f) => (
-            <Card key={f.title} hover padding="lg">
-              <div
-                class={`mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${f.accent}`}
-              >
-                <f.icon class="h-8 w-8 text-white" />
-              </div>
-              <h3 class="text-theme-text-primary mb-3 text-xl font-semibold">
-                {f.title}
-              </h3>
-              <p class="text-theme-text-secondary">{f.body}</p>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      {/* Platform Stats */}
-      <Section class="py-10 sm:py-16">
-        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-          Platform Activity
-          <BarChart3 class="h-6 w-6 sm:h-8 sm:w-8" />
-        </h2>
-        <p class="text-theme-text-secondary mb-10 text-center">
-          See how active our twinks are~ (◕‿◕)♡
-        </p>
-
-        <div class="mb-10 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-          <StatCard
-            icon={Upload}
-            accent={0}
-            layout="centered"
-            label="Total Files"
-            value={publicStats.value.totalUploads.toLocaleString()}
-          />
-          <StatCard
-            icon={Eye}
-            accent={1}
-            layout="centered"
-            label="Total Views"
-            value={publicStats.value.totalViews.toLocaleString()}
-          />
-          <StatCard
-            icon={Users}
-            accent={2}
-            layout="centered"
-            label="Twinks"
-            value={publicStats.value.totalUsers.toLocaleString()}
-          />
-          <StatCard
-            icon={Sparkle}
-            accent={3}
-            layout="centered"
-            label="Views (7d)"
-            value={publicStats.value.weeklyStats.views.toLocaleString()}
-          />
-        </div>
-
-        {publicStats.value.analyticsData.length > 0 && (
-          <Card variant="glass" padding="lg" class="mx-auto max-w-4xl">
-            <h3 class="text-theme-text-primary mb-6 flex items-center justify-center gap-2 text-center text-lg font-bold sm:text-xl">
-              <BarChart3 class="h-5 w-5" />
-              7-Day Activity Overview
-            </h3>
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {(
-                [
-                  {
-                    label: "Daily Views",
-                    key: "totalViews" as const,
-                    bar: "from-theme-accent-primary to-theme-accent-secondary",
-                    total: publicStats.value.weeklyStats.views,
-                  },
-                  {
-                    label: "Daily Uploads",
-                    key: "uploadsCount" as const,
-                    bar: "from-theme-accent-secondary to-theme-accent-tertiary",
-                    total: publicStats.value.weeklyStats.uploads,
-                  },
-                  {
-                    label: "New Users",
-                    key: "usersRegistered" as const,
-                    bar: "from-theme-accent-tertiary to-theme-accent-quaternary",
-                    total: publicStats.value.weeklyStats.users,
-                  },
-                ]
-              ).map((series) => {
-                const max = Math.max(
-                  ...publicStats.value.analyticsData.map((d) => d[series.key]),
-                  1,
-                );
-                return (
-                  <div key={series.key} class="text-center">
-                    <div class="text-theme-text-secondary mb-2 text-sm font-medium">
-                      {series.label}
-                    </div>
-                    <div class="flex h-16 items-end justify-center gap-1 sm:h-20">
-                      {publicStats.value.analyticsData.map((day, index) => {
-                        const height = Math.max((day[series.key] / max) * 100, 5);
-                        return (
-                          <div
-                            key={index}
-                            class={`w-3 rounded-sm bg-gradient-to-t sm:w-4 ${series.bar}`}
-                            style={`height: ${height}%`}
-                            title={`${day.date}: ${day[series.key]}`}
-                          />
-                        );
-                      })}
-                    </div>
-                    <div class="text-theme-text-primary mt-2 text-lg font-bold">
-                      {series.total}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {publicStats.value.recentUploads.length > 0 && (
-          <Card variant="glass" padding="md" class="mx-auto mt-8 max-w-2xl">
-            <h3 class="text-theme-text-primary mb-4 flex items-center justify-center gap-2 text-center text-lg font-bold">
-              <Sparkle class="h-5 w-5" />
-              Recent Activity
-            </h3>
-            <div class="space-y-3">
-              {publicStats.value.recentUploads.map((upload) => {
-                const getFileIcon = (mimeType: string) => {
-                  if (mimeType.startsWith("image/")) return ImageIcon;
-                  if (mimeType.startsWith("video/")) return Video;
-                  if (mimeType.startsWith("audio/")) return Music;
-                  if (mimeType.startsWith("text/")) return FileText;
-                  return FileIcon;
-                };
-                const getFileType = (mimeType: string) => {
-                  if (mimeType.startsWith("image/")) return "Image";
-                  if (mimeType.startsWith("video/")) return "Video";
-                  if (mimeType.startsWith("audio/")) return "Audio";
-                  if (mimeType.startsWith("text/")) return "Text";
-                  return "File";
-                };
-                const timeAgo = (date: string) => {
-                  const diffInMinutes = Math.floor(
-                    (Date.now() - new Date(date).getTime()) / (1000 * 60),
-                  );
-                  if (diffInMinutes < 1) return "Just now";
-                  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-                  if (diffInMinutes < 1440)
-                    return `${Math.floor(diffInMinutes / 60)}h ago`;
-                  return `${Math.floor(diffInMinutes / 1440)}d ago`;
-                };
-                const FileIconCmp = getFileIcon(upload.mimeType);
-                return (
-                  <div
-                    key={upload.id}
-                    class="glass border-theme-card-border flex items-center justify-between rounded-xl border p-3"
-                  >
-                    <div class="flex items-center gap-3">
-                      <FileIconCmp class="text-theme-accent-primary h-5 w-5" />
-                      <div>
-                        <div class="text-theme-text-primary text-sm font-medium">
-                          {getFileType(upload.mimeType)} uploaded
-                        </div>
-                        <div class="text-theme-accent-primary text-xs">
-                          {timeAgo(upload.createdAt)} • {upload.views} views
-                        </div>
-                      </div>
-                    </div>
-                    <div class="text-theme-accent-primary flex items-center gap-1">
-                      <Eye class="h-3 w-3" />
-                      <span class="text-xs">{upload.views}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-      </Section>
-
-      {/* ShareX Setup */}
-      <Section class="py-10 sm:py-16">
-        <div class="mx-auto max-w-4xl text-center">
-          <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-2xl font-bold sm:text-3xl">
-            Super Easy ShareX Setup!
-            <Wrench class="h-6 w-6 sm:h-8 sm:w-8" />
-          </h2>
-          <p class="text-theme-text-secondary mb-10 text-lg sm:text-xl">
-            Set up ShareX in seconds with our automatic configuration generator~
-            So easy even a catboy could do it! (=^･ω･^=)
+          <h1 class="text-ink text-4xl leading-[1.08] font-semibold tracking-[-0.035em] sm:text-5xl lg:text-[56px]">
+            Share files without turning it into a whole thing.
+          </h1>
+          <p class="text-ink-muted mt-6 max-w-xl text-base leading-7 sm:text-lg">
+            twink.forsale keeps uploads, links, analytics, and your public bio
+            in one friendly place. Quick when you need it, expressive where it
+            counts.
           </p>
-          <Card variant="glass" padding="lg">
-            <div class="grid grid-cols-1 gap-6 text-left sm:gap-8 md:grid-cols-3">
-              {setupSteps.map((step, i) => (
-                <div key={step.title} class="flex items-start gap-4">
-                  <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-lg font-bold text-white">
-                    {i + 1}
-                  </div>
-                  <div>
-                    <h3 class="text-theme-text-primary mb-2 flex items-center gap-2 font-semibold">
-                      <step.icon class="h-4 w-4" />
-                      {step.title}
-                    </h3>
-                    <p class="text-theme-text-secondary text-sm">{step.body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {user.value ? (
+              <>
+                <Button href="/dashboard" variant="primary" size="lg">
+                  Open Files
+                  <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button href="/upload" size="lg">
+                  <Upload class="h-4 w-4" aria-hidden="true" />
+                  Upload a file
+                </Button>
+              </>
+            ) : (
+              <LoginButton
+                class="focus-ring bg-accent text-on-accent hover:bg-accent-hover rounded-control inline-flex h-11 items-center justify-center gap-2 border border-transparent px-5 text-[15px] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55"
+                label="Sign in with Discord"
+              />
+            )}
+          </div>
+          {!user.value && (
+            <p class="text-ink-muted mt-3 text-[13px] leading-5">
+              New accounts need approval before uploading. Ask in the community
+              Discord for an invite.
+            </p>
+          )}
         </div>
-      </Section>
 
-      {/* Theme Showcase */}
-      <Section class="py-10 sm:py-16">
-        <h2 class="text-gradient-cute mb-3 flex flex-wrap items-center justify-center gap-2 text-center text-2xl font-bold sm:text-3xl">
-          Customize Your Experience
-          <Palette class="h-6 w-6 sm:h-8 sm:w-8" />
-        </h2>
-        <p class="text-theme-text-secondary mb-10 text-center">
-          Choose from multiple adorable themes to match your mood~ (◕‿◕)♡
-        </p>
-        <Card variant="glass" padding="lg" class="mx-auto max-w-4xl">
-          <div class="mb-6 text-center">
-            <h3 class="text-theme-text-primary mb-2 text-lg font-bold sm:text-xl">
-              Try Different Themes!
-            </h3>
-            <p class="text-theme-text-secondary text-sm sm:text-base">
-              Click the theme selector below to see how cute each theme looks~
+        <Surface class="overflow-hidden" padding="lg">
+          <div class="border-edge flex items-center justify-between border-b pb-4">
+            <div>
+              <p class="text-ink text-sm font-semibold">From file to link</p>
+              <p class="text-ink-muted mt-0.5 text-xs">
+                A deliberately short workflow
+              </p>
+            </div>
+            <Upload class="text-accent-text h-5 w-5" aria-hidden="true" />
+          </div>
+          <ol class="divide-edge divide-y">
+            {[
+              [
+                "1",
+                "Choose your files",
+                "Drop them in or use the file picker.",
+              ],
+              [
+                "2",
+                "Add limits if needed",
+                "Expiration and view limits stay optional.",
+              ],
+              [
+                "3",
+                "Copy and share",
+                "Each completed upload gets a ready-to-use link.",
+              ],
+            ].map(([number, title, body]) => (
+              <li key={number} class="grid grid-cols-[32px_1fr] gap-3 py-4">
+                <span class="bg-accent-soft text-accent-text flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold">
+                  {number}
+                </span>
+                <div>
+                  <p class="text-ink text-sm font-medium">{title}</p>
+                  <p class="text-ink-muted mt-1 text-[13px] leading-5">
+                    {body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div class="bg-surface-subtle border-edge -mx-5 -mb-5 flex items-center gap-2 border-t px-5 py-3 text-[13px]">
+            <Check class="text-success h-4 w-4" aria-hidden="true" />
+            <span class="text-ink-muted">
+              Sequential uploads keep progress clear and reliable.
+            </span>
+          </div>
+        </Surface>
+      </section>
+
+      <section
+        aria-labelledby="activity-title"
+        class="border-edge border-y py-7"
+      >
+        <div class="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div>
+            <h2 id="activity-title" class="text-ink text-lg font-semibold">
+              Small community, real activity
+            </h2>
+            <p class="text-ink-muted mt-1 max-w-xl text-sm leading-6">
+              These are live service totals, not launch-day vanity numbers.
             </p>
           </div>
-          <div class="relative z-10 flex justify-center">
-            <ThemeToggle variant="dropdown" showLabel={true} class="scale-110" />
-          </div>
-          <div class="relative z-0 mt-6 grid grid-cols-2 gap-4 text-center md:grid-cols-3">
-            {themePreviews.map((t) => (
-              <div key={t.name} class="glass rounded-xl p-4">
-                <div
-                  class={`mx-auto mb-2 h-8 w-8 rounded-full bg-gradient-to-br ${t.gradient}`}
-                />
-                <div class="text-theme-text-secondary text-xs">{t.name} Theme</div>
-                <div class="text-theme-text-muted text-xs">{t.desc}</div>
+          <dl class="grid grid-cols-3 gap-x-7 sm:gap-x-10">
+            {[
+              ["Files", publicStats.value.totalUploads],
+              ["Views", publicStats.value.totalViews],
+              ["Members", publicStats.value.totalUsers],
+            ].map(([label, value]) => (
+              <div key={label as string}>
+                <dt class="text-ink-muted text-xs">{label}</dt>
+                <dd class="text-ink mt-1 text-xl font-semibold tabular-nums">
+                  {(value as number).toLocaleString()}
+                </dd>
               </div>
             ))}
-          </div>
-          <p class="text-theme-text-muted mt-6 text-center text-xs">
-            Your theme preference is saved automatically and syncs across all
-            your devices~
+          </dl>
+        </div>
+      </section>
+
+      <section class="py-16 sm:py-20" aria-labelledby="capabilities-title">
+        <div class="max-w-2xl">
+          <h2
+            id="capabilities-title"
+            class="text-ink text-2xl leading-8 font-semibold tracking-[-0.015em]"
+          >
+            The useful parts stay close
+          </h2>
+          <p class="text-ink-muted mt-2 text-sm leading-6 sm:text-base">
+            It is a file tool first. The extra pieces support sharing instead of
+            competing with it.
           </p>
-        </Card>
-      </Section>
-    </>
+        </div>
+        <div class="border-edge mt-9 grid border-t md:grid-cols-2 md:gap-x-12">
+          {capabilities.map((item) => (
+            <div key={item.title} class="border-edge flex gap-4 border-b py-6">
+              <item.icon
+                class="text-accent-text mt-0.5 h-5 w-5 shrink-0"
+                aria-hidden="true"
+              />
+              <div>
+                <h3 class="text-ink text-sm font-semibold">{item.title}</h3>
+                <p class="text-ink-muted mt-1 max-w-md text-[13px] leading-5">
+                  {item.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        class="border-edge grid gap-10 border-y py-12 sm:py-16 lg:grid-cols-2 lg:items-start lg:gap-16"
+        aria-labelledby="sharex-title"
+      >
+        <div>
+          <p class="text-accent-text text-sm font-medium">
+            For screenshot regulars
+          </p>
+          <h2
+            id="sharex-title"
+            class="text-ink mt-2 text-2xl leading-8 font-semibold tracking-[-0.015em]"
+          >
+            ShareX setup, explained like a human
+          </h2>
+          <p class="text-ink-muted mt-3 max-w-xl text-sm leading-6 sm:text-base">
+            Create or choose an API key, download your personal{" "}
+            <code class="text-ink text-sm">.sxcu</code> file, then import it
+            into ShareX. The setup screen walks through each step.
+          </p>
+          {user.value && (
+            <Button href="/setup/sharex" class="mt-6">
+              Open ShareX setup
+              <ArrowRight class="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+        <ol class="space-y-5">
+          {[
+            [
+              "Choose a key",
+              "Use an existing API key or create one for ShareX.",
+            ],
+            [
+              "Download the config",
+              "The generated file already knows where to upload.",
+            ],
+            [
+              "Import and share",
+              "Open the file in ShareX and your next capture is ready.",
+            ],
+          ].map(([title, body], index) => (
+            <li key={title} class="grid grid-cols-[28px_1fr] gap-3">
+              <span class="border-edge text-ink-muted flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold">
+                {index + 1}
+              </span>
+              <div>
+                <p class="text-ink text-sm font-medium">{title}</p>
+                <p class="text-ink-muted mt-1 text-[13px] leading-5">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section
+        class="grid gap-8 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(360px,1.2fr)] lg:items-start lg:gap-16"
+        aria-labelledby="themes-title"
+      >
+        <div>
+          <Palette class="text-accent-text h-5 w-5" aria-hidden="true" />
+          <h2
+            id="themes-title"
+            class="text-ink mt-3 text-2xl leading-8 font-semibold tracking-[-0.015em]"
+          >
+            Same tool, your atmosphere
+          </h2>
+          <p class="text-ink-muted mt-3 max-w-lg text-sm leading-6 sm:text-base">
+            Dark, Light, Pastel, Neon, Valentine, and Auto change the palette,
+            not where things move or how they work. Pick one here and it is
+            saved automatically.
+          </p>
+        </div>
+        <ThemeToggle variant="list" />
+      </section>
+
+      <section class="bg-surface-subtle border-edge rounded-surface mb-16 flex flex-col gap-6 border px-5 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h2 class="text-ink text-xl font-semibold">
+            Ready when your next file is.
+          </h2>
+          <p class="text-ink-muted mt-1 text-sm leading-6">
+            Sign in with Discord, then head straight to Files.
+          </p>
+        </div>
+        {user.value ? (
+          <Button href="/dashboard" variant="primary">
+            Open Files
+            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : (
+          <LoginButton
+            class="focus-ring bg-accent text-on-accent hover:bg-accent-hover rounded-control inline-flex h-9 items-center justify-center gap-2 border border-transparent px-3.5 text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55"
+            label="Sign in with Discord"
+          />
+        )}
+      </section>
+    </div>
   );
 });
 
 export const head: DocumentHead = {
-  title: "twink.forsale - Cutest File Sharing Ever!",
+  title: "twink.forsale — Community file sharing",
   meta: [
     {
       name: "description",
       content:
-        "The most amazing file sharing service! Upload and share files with adorable ShareX integration. Made with love by femboys for everyone~ uwu",
-    },
-    {
-      name: "viewport",
-      content: "width=device-width, initial-scale=1.0",
+        "Invite-only community file sharing with uploads, short links, analytics, ShareX integration, and customizable bio pages.",
     },
     {
       property: "og:title",
-      content: "twink.forsale - Cutest File Sharing Ever!",
+      content: "twink.forsale — Community file sharing",
     },
     {
       property: "og:description",
       content:
-        "The most mrrrp file sharing service! Upload and share files with adorable ShareX integration uwu",
+        "Quick uploads, clean links, useful analytics, and a public page that still feels like yours.",
     },
   ],
 };

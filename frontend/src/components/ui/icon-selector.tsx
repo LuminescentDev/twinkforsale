@@ -78,23 +78,23 @@ export const IconSelector = component$<IconSelectorProps>(
 
     return (
       <div class={cn("space-y-2", className)}>
-        <div class="border-theme-card-border bg-theme-bg-secondary/50 flex items-center gap-2 rounded-xl border p-2">
-          <div class="bg-theme-bg-tertiary/40 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+        <div class="border-edge bg-surface rounded-surface flex items-center gap-2 border p-2">
+          <div class="bg-surface-subtle rounded-control flex h-9 w-9 shrink-0 items-center justify-center">
             {selectedIcon ? (
               <BioLinkIcon icon={selectedIcon} size={20} />
             ) : (
-              <Smile class="text-theme-text-muted h-5 w-5" />
+              <Smile class="text-ink-muted h-5 w-5" />
             )}
           </div>
           <div class="min-w-0 flex-1">
-            <div class="text-theme-text-primary truncate text-sm font-medium">
+            <div class="text-ink truncate text-sm font-medium">
               {selectedIcon ? (
                 (selectedDef.value?.label ?? selectedIcon)
               ) : (
-                <span class="text-theme-text-muted font-normal">No icon</span>
+                <span class="text-ink-muted font-normal">No icon</span>
               )}
             </div>
-            <div class="text-theme-text-muted truncate text-xs">
+            <div class="text-ink-muted truncate text-xs">
               {selectedIcon
                 ? "Shown on your bio page"
                 : "Pick a brand, glyph or emoji"}
@@ -105,7 +105,7 @@ export const IconSelector = component$<IconSelectorProps>(
               type="button"
               onClick$={() => select("")}
               aria-label="Remove icon"
-              class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
+              class="text-ink-muted hover:text-ink hover:bg-surface-hover rounded-control p-2 transition-colors"
             >
               <X class="h-4 w-4" />
             </button>
@@ -129,7 +129,7 @@ export const IconSelector = component$<IconSelectorProps>(
           <button
             type="button"
             onClick$={() => select(suggestedDef.value!.id)}
-            class="border-theme-accent-primary/30 bg-theme-accent-primary/10 text-theme-text-secondary hover:bg-theme-accent-primary/20 flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors"
+            class="border-accent/40 bg-accent-soft text-ink hover:bg-accent-soft rounded-surface flex w-full items-center gap-2 border px-3 py-2 text-left text-sm transition-colors"
           >
             <BioLinkIcon
               icon={suggestedDef.value.id}
@@ -145,7 +145,7 @@ export const IconSelector = component$<IconSelectorProps>(
 
         {isOpen.value && (
           <div
-            class="border-theme-card-border bg-theme-bg-secondary/40 space-y-3 rounded-xl border p-3"
+            class="border-edge bg-surface rounded-surface space-y-3 border p-3"
             onKeyDown$={(e) => {
               if (e.key === "Escape") isOpen.value = false;
             }}
@@ -158,14 +158,14 @@ export const IconSelector = component$<IconSelectorProps>(
                 onInput$={(e) =>
                   (query.value = (e.target as HTMLInputElement).value)
                 }
-                class="border-theme-card-border bg-theme-bg-primary/60 text-theme-text-primary placeholder:text-theme-text-muted focus:border-theme-accent-primary focus:ring-theme-accent-primary/30 w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:ring-2 focus:outline-none"
+                class="border-edge bg-surface text-ink placeholder:text-ink-muted focus:border-accent focus:ring-accent/40 rounded-control w-full border px-3 py-2 text-sm transition-colors focus:ring-2 focus:outline-none"
               />
               {query.value && (
                 <button
                   type="button"
                   aria-label="Clear search"
                   onClick$={() => (query.value = "")}
-                  class="text-theme-text-muted hover:text-theme-text-primary p-1"
+                  class="text-ink-muted hover:text-ink p-1"
                 >
                   <X class="h-4 w-4" />
                 </button>
@@ -181,8 +181,8 @@ export const IconSelector = component$<IconSelectorProps>(
                   class={cn(
                     "shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
                     tab.value === t.id
-                      ? "from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-br text-white"
-                      : "text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40",
+                      ? "bg-accent-soft text-accent-text"
+                      : "text-ink-muted hover:text-ink hover:bg-surface-hover",
                   )}
                 >
                   {t.label}
@@ -199,10 +199,10 @@ export const IconSelector = component$<IconSelectorProps>(
                     onClick$={() => select(emoji)}
                     aria-label={`Emoji ${emoji}`}
                     class={cn(
-                      "flex aspect-square items-center justify-center rounded-lg text-lg transition-colors",
+                      "rounded-control flex aspect-square items-center justify-center text-lg transition-colors",
                       selectedIcon === emoji
-                        ? "bg-theme-accent-primary/20 ring-theme-accent-primary ring-2"
-                        : "hover:bg-theme-bg-tertiary/50",
+                        ? "bg-accent-soft ring-accent ring-2"
+                        : "hover:bg-surface-hover",
                     )}
                   >
                     {emoji}
@@ -221,10 +221,10 @@ export const IconSelector = component$<IconSelectorProps>(
                       title={def.label}
                       aria-pressed={active}
                       class={cn(
-                        "relative flex flex-col items-center gap-1.5 rounded-lg px-1 py-2.5 transition-colors",
+                        "rounded-control relative flex flex-col items-center gap-1.5 px-1 py-2.5 transition-colors",
                         active
-                          ? "bg-theme-accent-primary/15 ring-theme-accent-primary ring-2"
-                          : "hover:bg-theme-bg-tertiary/50",
+                          ? "bg-accent-soft ring-accent ring-2"
+                          : "hover:bg-surface-hover",
                       )}
                     >
                       <BioLinkIcon
@@ -232,24 +232,24 @@ export const IconSelector = component$<IconSelectorProps>(
                         size={22}
                         color={getIconTint(def)}
                       />
-                      <span class="text-theme-text-secondary w-full truncate text-center text-[11px] leading-tight">
+                      <span class="text-ink w-full truncate text-center text-[11px] leading-tight">
                         {def.label}
                       </span>
                       {active && (
-                        <Check class="text-theme-accent-primary absolute top-1 right-1 h-3 w-3" />
+                        <Check class="text-accent-text absolute top-1 right-1 h-3 w-3" />
                       )}
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <p class="text-theme-text-muted py-6 text-center text-sm">
+              <p class="text-ink-muted py-6 text-center text-sm">
                 No icons match “{query.value}”. Try the Emoji tab or paste one
                 below.
               </p>
             )}
 
-            <div class="border-theme-card-border border-t pt-3">
+            <div class="border-edge border-t pt-3">
               <div class="flex items-center gap-2">
                 <input
                   type="text"
@@ -262,7 +262,7 @@ export const IconSelector = component$<IconSelectorProps>(
                   onKeyDown$={(e) => {
                     if (e.key === "Enter") applyCustom();
                   }}
-                  class="border-theme-card-border bg-theme-bg-primary/60 text-theme-text-primary placeholder:text-theme-text-muted focus:border-theme-accent-primary focus:ring-theme-accent-primary/30 min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm transition-colors focus:ring-2 focus:outline-none"
+                  class="border-edge bg-surface text-ink placeholder:text-ink-muted focus:border-accent focus:ring-accent/40 rounded-control min-w-0 flex-1 border px-3 py-1.5 text-sm transition-colors focus:ring-2 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -274,7 +274,7 @@ export const IconSelector = component$<IconSelectorProps>(
                 </button>
               </div>
               {customValue.value.trim() && !customIsUsable.value && (
-                <p class="text-theme-text-muted mt-1.5 text-xs">
+                <p class="text-ink-muted mt-1.5 text-xs">
                   That isn't an emoji — plain text would show up as-is on your
                   page.
                 </p>

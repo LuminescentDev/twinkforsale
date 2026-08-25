@@ -9,9 +9,11 @@ import {
   Music,
   FileText,
   FileArchive,
+  FileCode,
   File as FileIcon,
   ImageOff,
 } from "lucide-icons-qwik";
+import { cn } from "~/lib/utils";
 
 interface LazyImageProps {
   src: string;
@@ -19,22 +21,23 @@ interface LazyImageProps {
   class?: string;
   width?: number;
   height?: number;
-  placeholder?: string;
   onClick$?: QRL<() => void>;
 }
 
+/**
+ * Thumbnail that only fetches once it is near the viewport. Reserves its box
+ * up front so a long file list does not shift as images arrive.
+ */
 export const LazyImage = component$<LazyImageProps>(
-  ({ src, alt, class: className, width, height, placeholder, onClick$ }) => {
-    const imageRef = useSignal<HTMLImageElement>();
+  ({ src, alt, class: className, width, height, onClick$ }) => {
+    const holderRef = useSignal<HTMLElement>();
     const isLoaded = useSignal(false);
     const isInView = useSignal(false);
     const hasError = useSignal(false);
 
-    // Intersection Observer to detect when image enters viewport
     // eslint-disable-next-line qwik/no-use-visible-task
     useVisibleTask$(({ cleanup }) => {
-      if (!imageRef.value) return;
-
+      if (!holderRef.value) return;
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -44,136 +47,119 @@ export const LazyImage = component$<LazyImageProps>(
             }
           });
         },
-        {
-          rootMargin: "50px", // Start loading 50px before the image is visible
-        },
+        { rootMargin: "150px" },
       );
-
-      observer.observe(imageRef.value);
-
-      cleanup(() => {
-        observer.disconnect();
-      });
+      observer.observe(holderRef.value);
+      cleanup(() => observer.disconnect());
     });
 
     return (
       <div
-        ref={imageRef}
-        class={`relative overflow-hidden ${className || ""}`}
+        ref={holderRef}
+        class={cn(
+          "bg-surface-subtle border-edge relative overflow-hidden border",
+          className,
+        )}
         onClick$={onClick$}
       >
-        {/* Placeholder while loading */}
-        {!isLoaded.value && (
-          <div class="bg-gradient-to-br from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 absolute inset-0 flex items-center justify-center">
-            {placeholder ? (
-              <div class="text-4xl">{placeholder}</div>
-            ) : (
-              <div class="bg-gradient-to-br from-theme-accent-secondary/60 to-theme-accent-tertiary/60 h-8 w-8 animate-pulse rounded"></div>
-            )}
-          </div>
-        )}
-
-        {/* Error state */}
-        {hasError.value && (
-          <div class="bg-gradient-to-br from-theme-accent-primary/10 via-theme-accent-secondary to-theme-accent-tertiary/10 absolute inset-0 flex items-center justify-center">
-            <div class="text-center">
-              <ImageOff class="text-theme-text-muted mx-auto h-6 w-6" />
-              <div class="text-theme-text-muted text-xs mt-1">Failed to load</div>
-            </div>
-          </div>
-        )}
-
-        {/* Actual image - only load when in view */}
-        {isInView.value && (
-          <img
-            src={src}
-            alt={alt}
-            width={width}
-            height={height}
-            class={`transition-opacity duration-300 ${
-              isLoaded.value ? "opacity-100" : "opacity-0"
-            } ${className || ""}`}
-            onLoad$={() => {
-              isLoaded.value = true;
-            }}
-            onError$={() => {
-              hasError.value = true;
-            }}
-            loading="lazy"
-            decoding="async"
-          />
+        {hasError.value ? (
+          <span class="text-ink-muted absolute inset-0 flex items-center justify-center">
+            <ImageOff class="h-4 w-4" aria-hidden="true" />
+          </span>
+        ) : (
+          isInView.value && (
+            <img
+              src={src}
+              alt={alt}
+              width={width}
+              height={height}
+              class={cn(
+                "h-full w-full object-cover transition-opacity duration-150",
+                isLoaded.value ? "opacity-100" : "opacity-0",
+              )}
+              onLoad$={() => (isLoaded.value = true)}
+              onError$={() => (hasError.value = true)}
+              loading="lazy"
+              decoding="async"
+            />
+          )
         )}
       </div>
     );
   },
 );
 
-// Component for file type icons with lazy loading for images
-export const FileTypeIcon = component$<{
-  upload: any;
+const sizeClasses = {
+  sm: "h-9 w-9 rounded-[5px]",
+  md: "h-11 w-11 rounded-surface",
+  lg: "aspect-square w-full rounded-t-surface",
+};
+
+const iconSizes = {
+  sm: "h-4 w-4",
+  md: "h-5 w-5",
+  lg: "h-7 w-7",
+};
+
+function iconFor(mimeType: string) {
+  if (mimeType.startsWith("video/")) return Video;
+  if (mimeType.startsWith("audio/")) return Music;
+  if (
+    mimeType.includes("zip") ||
+    mimeType.includes("rar") ||
+    mimeType.includes("tar")
+  )
+    return FileArchive;
+  if (
+    mimeType.includes("json") ||
+    mimeType.includes("javascript") ||
+    mimeType.includes("xml") ||
+    mimeType.includes("html")
+  )
+    return FileCode;
+  if (mimeType.startsWith("text/") || mimeType.includes("pdf")) return FileText;
+  return FileIcon;
+}
+
+export interface FileTypeIconProps {
+  upload: { mimeType: string; shortCode: string; originalName: string };
   size?: "sm" | "md" | "lg";
   onClick$?: QRL<() => void>;
-}>(({ upload, size = "md", onClick$ }) => {
-  const sizeClasses = {
-    sm: "h-8 w-8 sm:h-10 sm:w-10",
-    md: "h-12 w-12 sm:h-16 sm:w-16",
-    lg: "aspect-square w-full",
-  };
+}
 
-  const iconSizes = {
-    sm: "h-4 w-4 sm:h-5 sm:w-5",
-    md: "h-6 w-6 sm:h-8 sm:w-8",
-    lg: "h-16 w-16",
-  };
+/**
+ * File thumbnail: the real image for image uploads, otherwise a quiet tile
+ * carrying a type icon. Type is also stated in text next to it, so the icon is
+ * recognition support rather than the only signal.
+ */
+export const FileTypeIcon = component$<FileTypeIconProps>(
+  ({ upload, size = "md", onClick$ }) => {
+    const isImage = upload.mimeType.startsWith("image/");
 
-  if (upload.mimeType.startsWith("image/")) {
+    if (isImage) {
+      return (
+        <LazyImage
+          src={`/f/${upload.shortCode}?preview=true`}
+          alt=""
+          class={cn(sizeClasses[size], onClick$ && "cursor-pointer")}
+          width={size === "lg" ? 480 : 96}
+          height={size === "lg" ? 480 : 96}
+          onClick$={onClick$}
+        />
+      );
+    }
+
+    const Icon = iconFor(upload.mimeType);
     return (
-      <LazyImage
-        src={`/f/${upload.shortCode}?preview=true`}
-        alt={upload.originalName}
-        class={`${sizeClasses[size]} cursor-pointer overflow-hidden rounded-lg transition-all duration-300 hover:scale-110 object-cover`}        width={size === "lg" ? 400 : 80}
-        height={size === "lg" ? 400 : 80}
-        onClick$={onClick$}
-      />
+      <div
+        aria-hidden="true"
+        class={cn(
+          "bg-surface-subtle border-edge text-ink-muted flex shrink-0 items-center justify-center border",
+          sizeClasses[size],
+        )}
+      >
+        <Icon class={iconSizes[size]} />
+      </div>
     );
-  }
-
-  // Non-image file types → Lucide icon + a theme-accent gradient tile.
-  const getFileIcon = () => {
-    if (upload.mimeType.startsWith("video/")) return Video;
-    if (upload.mimeType.startsWith("audio/")) return Music;
-    if (upload.mimeType.includes("text")) return FileText;
-    if (
-      upload.mimeType.includes("zip") ||
-      upload.mimeType.includes("rar") ||
-      upload.mimeType.includes("archive")
-    )
-      return FileArchive;
-    return FileIcon;
-  };
-
-  const getGradientClass = () => {
-    if (upload.mimeType.startsWith("video/")) return "bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary";
-    if (upload.mimeType.startsWith("audio/")) return "bg-gradient-to-br from-theme-accent-secondary to-theme-accent-tertiary";
-    if (upload.mimeType.includes("pdf")) return "bg-gradient-to-br from-theme-accent-tertiary to-theme-accent-quaternary";
-    if (
-      upload.mimeType.includes("zip") ||
-      upload.mimeType.includes("rar") ||
-      upload.mimeType.includes("archive")
-    )
-      return "bg-gradient-to-br from-theme-accent-quaternary to-theme-accent-primary";
-    if (upload.mimeType.includes("text")) return "bg-gradient-to-br from-theme-accent-primary to-theme-accent-tertiary";
-    return "glass";
-  };
-
-  const Icon = getFileIcon();
-
-  return (
-    <div
-      class={`${getGradientClass()} ${sizeClasses[size]} flex items-center justify-center rounded-lg cursor-pointer transition-all duration-300 hover:scale-105`}
-      onClick$={onClick$}
-    >
-      <Icon class={`text-white ${iconSizes[size]}`} />
-    </div>
-  );
-});
+  },
+);

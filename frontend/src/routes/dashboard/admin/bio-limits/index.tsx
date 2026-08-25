@@ -1,17 +1,34 @@
-import { component$, useSignal } from "@builder.io/qwik";
-import { routeLoader$, Form, routeAction$, z, zod$ } from "@builder.io/qwik-city";
-import type { DocumentHead } from "@builder.io/qwik-city";
-import { Edit, Save, X, Settings } from "lucide-icons-qwik";
+import { component$, useSignal, useComputed$, $ } from "@builder.io/qwik";
+import {
+  routeLoader$,
+  routeAction$,
+  Form,
+  z,
+  zod$,
+  type DocumentHead,
+} from "@builder.io/qwik-city";
+import { Users, SearchX } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
-import { getCurrentUser } from "~/lib/auth-client";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
 import {
+  PageHeader,
+  Surface,
+  Button,
+  Badge,
+  Field,
+  Input,
+  SearchField,
+  CollectionToolbar,
   Callout,
   EmptyState,
-  IconButton,
-  PageContainer,
-  PageHeader,
-  SearchInput,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
 
 interface AdminBioLimitUser {
@@ -26,18 +43,11 @@ interface AdminBioLimitUser {
 
 export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
-  const admin = await getCurrentUser(auth);
-  if (!admin) {
-    throw requestEvent.redirect(302, "/");
-  }
-  if (!admin.isAdmin) {
-    throw requestEvent.redirect(302, "/dashboard");
-  }
 
   // Prefer the dedicated bio-limits endpoint; fall back to the users list.
-  const bioLimits = (await api.admin
-    .bioLimits(auth)
-    .catch(() => null)) as { users?: AdminBioLimitUser[] } | null;
+  const bioLimits = (await api.admin.bioLimits(auth).catch(() => null)) as {
+    users?: AdminBioLimitUser[];
+  } | null;
 
   let sourceUsers: AdminBioLimitUser[];
   if (bioLimits?.users) {
@@ -58,26 +68,29 @@ export const useAdminBioLimitsData = routeLoader$(async (requestEvent) => {
       name: user.name,
       email: user.email,
       isApproved: user.isApproved,
-      settings: { bioUsername: user.bioUsername ?? null },
+      bioUsername: user.bioUsername ?? null,
       bioLinksCount: user.bioLinksCount ?? 0,
-      // Show effective limits (user override or default)
+      /** The user's override, or the service default when unset. */
       effectiveLimits: {
         maxBioLinks: user.limits?.maxBioLinks ?? DEFAULT_BIO_LIMITS.maxBioLinks,
         maxUsernameLength:
-          user.limits?.maxUsernameLength ?? DEFAULT_BIO_LIMITS.maxUsernameLength,
+          user.limits?.maxUsernameLength ??
+          DEFAULT_BIO_LIMITS.maxUsernameLength,
         maxDisplayNameLength:
           user.limits?.maxDisplayNameLength ??
           DEFAULT_BIO_LIMITS.maxDisplayNameLength,
         maxDescriptionLength:
           user.limits?.maxDescriptionLength ??
           DEFAULT_BIO_LIMITS.maxDescriptionLength,
-        maxUrlLength: user.limits?.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
+        maxUrlLength:
+          user.limits?.maxUrlLength ?? DEFAULT_BIO_LIMITS.maxUrlLength,
         maxLinkTitleLength:
           user.limits?.maxLinkTitleLength ??
           DEFAULT_BIO_LIMITS.maxLinkTitleLength,
         maxIconLength:
           user.limits?.maxIconLength ?? DEFAULT_BIO_LIMITS.maxIconLength,
       },
+      hasOverride: Boolean(user.limits && Object.keys(user.limits).length > 0),
     })),
     defaultLimits: DEFAULT_BIO_LIMITS,
   };
@@ -88,311 +101,272 @@ export const useUpdateUserBioLimits = routeAction$(
     const { userId, ...limits } = values;
     try {
       await api.admin.updateBioLimits(userId, limits, serverAuth(requestEvent));
-      return { success: true, message: "Bio limits updated successfully" };
+      return { success: true, message: "Bio limits updated." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to update bio limits",
+          error instanceof Error
+            ? error.message
+            : "Could not update the limits.",
       });
     }
   },
   zod$({
     userId: z.string(),
-    maxBioLinks: z.number().min(1).max(100),
-    maxUsernameLength: z.number().min(3).max(50),
-    maxDisplayNameLength: z.number().min(1).max(100),
-    maxDescriptionLength: z.number().min(1).max(5000),
-    maxUrlLength: z.number().min(10).max(1000),
-    maxLinkTitleLength: z.number().min(1).max(200),
-    maxIconLength: z.number().min(1).max(50),
+    maxBioLinks: z.coerce.number().min(1).max(100),
+    maxUsernameLength: z.coerce.number().min(3).max(50),
+    maxDisplayNameLength: z.coerce.number().min(1).max(100),
+    maxDescriptionLength: z.coerce.number().min(1).max(5000),
+    maxUrlLength: z.coerce.number().min(10).max(1000),
+    maxLinkTitleLength: z.coerce.number().min(1).max(200),
+    maxIconLength: z.coerce.number().min(1).max(50),
   }),
 );
+
+const LIMIT_FIELDS = [
+  {
+    key: "maxBioLinks",
+    label: "Links",
+    help: "How many links a page may hold.",
+  },
+  { key: "maxUsernameLength", label: "Username length", help: "Characters." },
+  {
+    key: "maxDisplayNameLength",
+    label: "Display name length",
+    help: "Characters.",
+  },
+  {
+    key: "maxDescriptionLength",
+    label: "Introduction length",
+    help: "Characters.",
+  },
+  { key: "maxUrlLength", label: "URL length", help: "Characters." },
+  {
+    key: "maxLinkTitleLength",
+    label: "Link title length",
+    help: "Characters.",
+  },
+  { key: "maxIconLength", label: "Icon value length", help: "Characters." },
+] as const;
 
 export default component$(() => {
   const data = useAdminBioLimitsData();
   const updateLimits = useUpdateUserBioLimits();
-  const editingUser = useSignal<string | null>(null);
-  const searchQuery = useSignal("");
-  const filteredUsers = data.value.users.filter(user => 
-    user.name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    user.settings?.bioUsername?.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+
+  const search = useSignal("");
+  const editing = useSignal<(typeof data.value.users)[number] | null>(null);
+  const editOpen = useSignal(false);
+
+  const visible = useComputed$(() => {
+    const query = search.value.trim().toLowerCase();
+    if (!query) return data.value.users;
+    return data.value.users.filter(
+      (user) =>
+        user.name?.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.bioUsername?.toLowerCase().includes(query),
+    );
+  });
+
+  const openEditor = $((user: (typeof data.value.users)[number]) => {
+    editing.value = user;
+    editOpen.value = true;
+  });
 
   return (
-    <PageContainer>
+    <>
       <PageHeader
-        title="Bio Limits Management"
-        icon={Settings}
-        align="left"
-        subtitle="Manage bio service limits for individual users"
+        title="Bio limits"
+        description={`Per-account overrides for bio pages. Accounts without an override use the service defaults: ${data.value.defaultLimits.maxBioLinks} links, ${data.value.defaultLimits.maxDescriptionLength}-character introduction.`}
       />
 
-      {/* Default Limits Info */}
-      <Callout tone="info" icon={Settings} title="Global Default Limits" class="mb-6">
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxBioLinks}
-            </div>
-            <div class="text-xs text-theme-info">Bio Links</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxUsernameLength}
-            </div>
-            <div class="text-xs text-theme-info">Username</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxDisplayNameLength}
-            </div>
-            <div class="text-xs text-theme-info">Display Name</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxDescriptionLength}
-            </div>
-            <div class="text-xs text-theme-info">Description</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxUrlLength}
-            </div>
-            <div class="text-xs text-theme-info">URL Length</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxLinkTitleLength}
-            </div>
-            <div class="text-xs text-theme-info">Link Title</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-theme-info">
-              {data.value.defaultLimits.maxIconLength}
-            </div>
-            <div class="text-xs text-theme-info">Icon</div>
-          </div>
-        </div>
-      </Callout>
-
-      {/* Search */}
-      <SearchInput
-        value={searchQuery}
-        placeholder="Search users by name, email, or bio username…"
-        class="mb-6"
-      />
-
-      {/* Users Table */}
-      <div class="overflow-hidden rounded-xl border border-theme-card-border bg-theme-bg-secondary/40 shadow-lg">
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-theme-bg-tertiary/40">
-              <tr>
-                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  User
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Bio Links
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Username Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Display Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Desc Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  URL Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Link Title Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Icon Len
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-theme-text-secondary">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-theme-card-border">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} class="hover:bg-theme-bg-tertiary/20">
-                  <td class="px-6 py-4">
-                    <div>
-                      <div class="font-medium text-theme-text-primary">
-                        {user.name || "No name"}
-                      </div>
-                      <div class="text-sm text-theme-text-muted">
-                        {user.email}
-                      </div>
-                      {user.settings?.bioUsername && (
-                        <div class="text-sm text-theme-info">
-                          @{user.settings.bioUsername}
-                        </div>
-                      )}
-                      <div class="text-xs text-theme-text-muted">
-                        {user.bioLinksCount} bio links
-                      </div>
-                    </div>
-                  </td>                  {editingUser.value === user.id ? (
-                    <td class="px-6 py-4" colSpan={8}>
-                      <Form action={updateLimits}>
-                        <input type="hidden" name="userId" value={user.id} />
-                        <div class="grid grid-cols-7 gap-2">
-                          <input
-                            type="number"
-                            name="maxBioLinks"
-                            value={user.effectiveLimits.maxBioLinks}
-                            min="1"
-                            max="100"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxUsernameLength"
-                            value={user.effectiveLimits.maxUsernameLength}
-                            min="3"
-                            max="50"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxDisplayNameLength"
-                            value={user.effectiveLimits.maxDisplayNameLength}
-                            min="1"
-                            max="100"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxDescriptionLength"
-                            value={user.effectiveLimits.maxDescriptionLength}
-                            min="1"
-                            max="5000"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-20 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxUrlLength"
-                            value={user.effectiveLimits.maxUrlLength}
-                            min="10"
-                            max="1000"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-20 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxLinkTitleLength"
-                            value={user.effectiveLimits.maxLinkTitleLength}
-                            min="1"
-                            max="200"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                          <input
-                            type="number"
-                            name="maxIconLength"
-                            value={user.effectiveLimits.maxIconLength}
-                            min="1"
-                            max="50"
-                            class="border-theme-card-border bg-theme-bg-secondary/50 text-theme-text-primary focus:border-theme-accent-primary w-16 rounded-lg border px-2 py-1 text-center text-sm focus:outline-none"
-                          />
-                        </div>
-                        <div class="mt-2 flex justify-center gap-2">
-                          <IconButton
-                            type="submit"
-                            size="sm"
-                            title="Save"
-                            class="bg-theme-success text-white"
-                          >
-                            <Save class="h-4 w-4" />
-                          </IconButton>
-                          <IconButton
-                            type="button"
-                            size="sm"
-                            title="Cancel"
-                            onClick$={() => (editingUser.value = null)}
-                          >
-                            <X class="h-4 w-4" />
-                          </IconButton>
-                        </div>
-                      </Form>
-                    </td>
-                  ) : (
-                    <>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxBioLinks !== DEFAULT_BIO_LIMITS.maxBioLinks ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxBioLinks}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxUsernameLength !== DEFAULT_BIO_LIMITS.maxUsernameLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxUsernameLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxDisplayNameLength !== DEFAULT_BIO_LIMITS.maxDisplayNameLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxDisplayNameLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxDescriptionLength !== DEFAULT_BIO_LIMITS.maxDescriptionLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxDescriptionLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxUrlLength !== DEFAULT_BIO_LIMITS.maxUrlLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxUrlLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxLinkTitleLength !== DEFAULT_BIO_LIMITS.maxLinkTitleLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxLinkTitleLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={user.effectiveLimits.maxIconLength !== DEFAULT_BIO_LIMITS.maxIconLength ? "font-bold text-theme-warning" : ""}>
-                          {user.effectiveLimits.maxIconLength}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <IconButton
-                          size="sm"
-                          title="Edit limits"
-                          onClick$={() => (editingUser.value = user.id)}
-                        >
-                          <Edit class="h-4 w-4" />
-                        </IconButton>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {filteredUsers.length === 0 && (
-        <EmptyState
-          icon={Settings}
-          title="No users found"
-          description="No users match your search."
-        />
+      {updateLimits.value?.failed && (
+        <Callout tone="danger" title="Could not update the limits" class="mb-4">
+          {updateLimits.value.message}
+        </Callout>
       )}
-    </PageContainer>
+
+      <CollectionToolbar class="mb-3">
+        <SearchField
+          value={search}
+          label="Search accounts"
+          placeholder="Name, email or bio username"
+          class="min-w-[11rem] flex-1 sm:max-w-sm"
+          resultSummary={`${visible.value.length} of ${data.value.users.length} accounts shown`}
+        />
+      </CollectionToolbar>
+
+      {visible.value.length === 0 ? (
+        <Surface flush>
+          <EmptyState
+            icon={data.value.users.length === 0 ? Users : SearchX}
+            title={
+              data.value.users.length === 0
+                ? "No accounts yet"
+                : "No accounts match"
+            }
+            description={
+              data.value.users.length === 0
+                ? "Accounts appear here once people sign in."
+                : `${data.value.users.length} accounts are hidden by the current search.`
+            }
+          >
+            {data.value.users.length > 0 && (
+              <Button variant="secondary" onClick$={() => (search.value = "")}>
+                Clear search
+              </Button>
+            )}
+          </EmptyState>
+        </Surface>
+      ) : (
+        <>
+          <Surface flush class="hidden overflow-hidden lg:block">
+            <Table label="Bio limits by account" minWidth="820px">
+              <Thead>
+                <Tr hover={false}>
+                  <Th>Account</Th>
+                  <Th class="w-32">Bio page</Th>
+                  <Th class="w-24">Links</Th>
+                  <Th class="w-32">Introduction</Th>
+                  <Th class="w-28">Limits</Th>
+                  <Th class="w-20 text-right">Edit</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {visible.value.map((user) => (
+                  <Tr key={user.id}>
+                    <Td class="max-w-0">
+                      <p class="text-ink truncate font-medium">
+                        {user.name || "Unnamed"}
+                      </p>
+                      <p class="text-ink-muted truncate text-xs">
+                        {user.email}
+                      </p>
+                    </Td>
+                    <TdMeta class="font-mono">
+                      {user.bioUsername ? `/${user.bioUsername}` : "Not set"}
+                    </TdMeta>
+                    <Td class="tabular-nums">
+                      {user.bioLinksCount} / {user.effectiveLimits.maxBioLinks}
+                    </Td>
+                    <TdMeta class="tabular-nums">
+                      {user.effectiveLimits.maxDescriptionLength} chars
+                    </TdMeta>
+                    <Td>
+                      <Badge tone={user.hasOverride ? "accent" : "neutral"}>
+                        {user.hasOverride ? "Custom" : "Default"}
+                      </Badge>
+                    </Td>
+                    <Td class="text-right">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick$={() => openEditor(user)}
+                      >
+                        Edit
+                      </Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Surface>
+
+          <Surface flush class="overflow-hidden lg:hidden">
+            <ul class="divide-edge divide-y">
+              {visible.value.map((user) => (
+                <li key={user.id} class="flex items-start gap-2.5 px-3 py-2.5">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-ink truncate text-[13px] font-medium">
+                      {user.name || "Unnamed"}
+                    </p>
+                    <p class="text-ink-muted truncate text-xs">{user.email}</p>
+                    <p class="text-ink-muted mt-0.5 text-xs">
+                      {user.bioLinksCount} / {user.effectiveLimits.maxBioLinks}{" "}
+                      links ·{" "}
+                      {user.bioUsername
+                        ? `/${user.bioUsername}`
+                        : "no bio page"}
+                    </p>
+                    <div class="mt-1.5">
+                      <Badge tone={user.hasOverride ? "accent" : "neutral"}>
+                        {user.hasOverride ? "Custom limits" : "Default limits"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick$={() => openEditor(user)}
+                  >
+                    Edit
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        </>
+      )}
+
+      <Dialog
+        open={editOpen}
+        title={`Bio limits for ${editing.value?.name || editing.value?.email || "account"}`}
+        description="These replace the service defaults for this account only."
+      >
+        {editing.value && (
+          <LimitsForm
+            user={editing.value}
+            defaults={data.value.defaultLimits}
+            action={updateLimits}
+            onCancel$={$(() => (editOpen.value = false))}
+          />
+        )}
+      </Dialog>
+    </>
   );
 });
 
+/** Extracted so the non-null account is captured once, not per field. */
+const LimitsForm = component$<{
+  user: {
+    id: string;
+    effectiveLimits: Record<string, number>;
+  };
+  defaults: Record<string, number>;
+  action: any;
+  onCancel$: any;
+}>(({ user, defaults, action, onCancel$ }) => (
+  <Form action={action} class="grid gap-4 sm:grid-cols-2">
+    <input type="hidden" name="userId" value={user.id} />
+    {LIMIT_FIELDS.map((field) => (
+      <Field
+        key={field.key}
+        label={field.label}
+        for={`limit-${field.key}`}
+        help={`${field.help} Default ${defaults[field.key]}.`}
+      >
+        <Input
+          id={`limit-${field.key}`}
+          name={field.key}
+          type="number"
+          min="1"
+          inputMode="numeric"
+          value={user.effectiveLimits[field.key]}
+        />
+      </Field>
+    ))}
+    <div class="flex justify-end gap-2 sm:col-span-2">
+      <Button variant="secondary" onClick$={onCancel$}>
+        Cancel
+      </Button>
+      <Button type="submit" variant="primary" loading={action.isRunning}>
+        Save limits
+      </Button>
+    </div>
+  </Form>
+));
+
 export const head: DocumentHead = {
-  title: "Bio Limits Management - Admin",
-  meta: [
-    {
-      name: "description",
-      content: "Manage bio service limits for users",
-    },
-  ],
+  title: "Bio limits - Admin - twink.forsale",
 };

@@ -1,93 +1,65 @@
-import { component$, useSignal, useComputed$ } from "@builder.io/qwik";
-import { routeLoader$, routeAction$, Link } from "@builder.io/qwik-city";
+import { component$, useSignal, useComputed$, $ } from "@builder.io/qwik";
 import {
-  Users,
-  CheckCircle,
-  Ban,
-  Search,
-  Filter,
-  ArrowUpDown,
-  Globe,
-  Activity,
-  Bell,
-  Settings,
-  Crown,
-  ArrowUp,
-  ArrowDown,
-  X,
-  Clock,
-  TrendingUp,
-  HardDrive,
-  Mail,
-  MessageCircle,
-  Calendar,
-  Folder,
-  Package,
-  Save,
-  RotateCcw,
-  ChevronRight,
-} from "lucide-icons-qwik";
-import { AnalyticsChart } from "~/components/charts/analytics-chart";
-import { UserAnalytics } from "~/components/charts/user-analytics";
-import { api, serverAuth } from "~/lib/api-client";
+  routeLoader$,
+  routeAction$,
+  type DocumentHead,
+} from "@builder.io/qwik-city";
+import { Users, SearchX, ShieldCheck, Clock } from "lucide-icons-qwik";
+import { api, serverAuth, type AdminUserDto } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
+import { formatRelativeDate, formatAbsoluteDate } from "~/lib/file-kinds";
+import { useToast } from "~/lib/toast-store";
 import {
-  Badge,
-  Button,
-  Callout,
-  Input,
   PageHeader,
-  StatCard,
+  Section,
+  Surface,
+  Button,
+  Badge,
+  Field,
+  Input,
+  Select,
+  SearchField,
+  CollectionToolbar,
+  SummaryList,
+  EmptyState,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  SortHeader,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
 
-const DEFAULT_STORAGE_LIMIT = 10737418240;
+const DEFAULT_STORAGE_LIMIT = 10_737_418_240;
 
-export const useUserData = routeLoader$(async (requestEvent) => {
+export const useAdminUsers = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const currentUser = await getCurrentUser(auth);
-  if (!currentUser) {
-    throw requestEvent.redirect(302, "/");
-  }
-  if (!currentUser.isAdmin) {
-    throw requestEvent.redirect(302, "/dashboard");
-  }
+  if (!currentUser) throw requestEvent.redirect(302, "/");
+  if (!currentUser.isAdmin) throw requestEvent.redirect(302, "/dashboard");
 
-  const [usersRes, analyticsRes] = await Promise.all([
-    api.admin.users(auth).catch(() => ({ users: [] })),
-    api.admin.analytics(auth).catch(() => null),
-  ]);
-
-  // Shape backend users to what the table expects (settings/_count/accounts).
-  const users = (usersRes.users ?? []).map((u) => ({
-    ...u,
-    settings: {
-      maxUploads: 100,
-      maxFileSize: 10485760,
-      maxStorageLimit: null as number | null,
-      storageUsed: u.storageUsed,
-    },
-    _count: { uploads: u.uploads, apiKeys: u.apiKeys },
-    accounts: [] as { provider: string; providerAccountId: string }[],
-  }));
+  const usersRes = await api.admin.users(auth).catch(() => ({ users: [] }));
 
   return {
-    users,
-    currentUser,
-    config: { BASE_STORAGE_LIMIT: DEFAULT_STORAGE_LIMIT },
-    analyticsData: analyticsRes?.analytics ?? [],
+    users: usersRes.users ?? [],
+    currentUserId: currentUser.id,
+    baseStorageLimit: DEFAULT_STORAGE_LIMIT,
   };
 });
 
 export const useUpdateUser = routeAction$(async (data, requestEvent) => {
   if (!data.userId) {
-    return { success: false, error: "userId is required" };
+    return { success: false, error: "No user selected." };
   }
 
   const parseLimit = (val: unknown): number | null | undefined => {
     if (typeof val !== "string") return undefined;
-    if (val.trim() === "") return null; // explicit reset to default
-    const n = parseInt(val);
+    if (val.trim() === "") return null; // explicit reset to the default
+    const n = parseInt(val, 10);
     return !isNaN(n) && n > 0 ? n : undefined;
   };
 
@@ -108,808 +80,528 @@ export const useUpdateUser = routeAction$(async (data, requestEvent) => {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update user",
+      error:
+        error instanceof Error
+          ? error.message
+          : "The update did not go through.",
     };
   }
 });
 
+type SortKey = "createdAt" | "name" | "email" | "uploads" | "storage";
+
 export default component$(() => {
-  const userData = useUserData();
+  const data = useAdminUsers();
   const updateUser = useUpdateUser();
-  const searchQuery = useSignal("");
-  const approvalFilter = useSignal("all"); // all, approved, pending
-  const adminFilter = useSignal("all"); // all, admin, user  const sortBy = useSignal("createdAt"); // createdAt, name, uploads, storageUsed, email
-  const sortBy = useSignal("createdAt"); // createdAt, name, uploads, storageUsed, email
-  const sortOrder = useSignal("desc"); // asc, desc
+  const toast = useToast();
 
-  const getEffectiveStorageLimit = (user: any): number => {
-    const limit = user.settings?.maxStorageLimit ||
-      userData.value?.config.BASE_STORAGE_LIMIT ||
-      10737418240;
-    return typeof limit === 'bigint' ? Number(limit) : limit;
-  }; // Filter and sort users based on all criteria
-  const filteredUsers = useComputed$(() => {
-    let users = userData.value?.users || [];
+  const search = useSignal("");
+  const statusFilter = useSignal("all");
+  const roleFilter = useSignal("all");
+  const sortKey = useSignal<SortKey>("createdAt");
+  const sortDir = useSignal<"asc" | "desc">("desc");
 
-    // Apply search filter
-    if (searchQuery.value.trim()) {
-      const query = searchQuery.value.toLowerCase().trim();
-      users = users.filter((user: any) => {
-        // Search by name (Discord display name/username)
-        if (user.name?.toLowerCase().includes(query)) return true;
+  /** Locally applied changes, so the table reflects an action immediately. */
+  const overrides = useSignal<Record<string, Partial<AdminUserDto>>>({});
+  const editing = useSignal<AdminUserDto | null>(null);
+  const editOpen = useSignal(false);
+  const maxUploads = useSignal("");
+  const maxFileSize = useSignal("");
+  const maxStorageLimit = useSignal("");
 
-        // Search by email
-        if (user.email?.toLowerCase().includes(query)) return true;
+  const users = useComputed$(() =>
+    data.value.users.map((u) => ({ ...u, ...(overrides.value[u.id] ?? {}) })),
+  );
 
-        // Search by Discord ID (providerAccountId)
-        if (
-          user.accounts?.some(
-            (account: any) =>
-              account.provider === "discord" &&
-              account.providerAccountId?.includes(query),
-          )
-        )
-          return true;
+  const pendingCount = useComputed$(
+    () => users.value.filter((u) => !u.isApproved).length,
+  );
 
-        // Search by user ID
-        if (user.id?.toLowerCase().includes(query)) return true;
+  const visible = useComputed$(() => {
+    const query = search.value.trim().toLowerCase();
+    let list = users.value;
 
-        return false;
-      });
+    if (query) {
+      list = list.filter(
+        (u) =>
+          u.name?.toLowerCase().includes(query) ||
+          u.email?.toLowerCase().includes(query) ||
+          u.id.toLowerCase().includes(query),
+      );
     }
+    if (statusFilter.value === "approved")
+      list = list.filter((u) => u.isApproved);
+    if (statusFilter.value === "pending")
+      list = list.filter((u) => !u.isApproved);
+    if (roleFilter.value === "admin") list = list.filter((u) => u.isAdmin);
+    if (roleFilter.value === "member") list = list.filter((u) => !u.isAdmin);
 
-    // Apply approval status filter
-    if (approvalFilter.value !== "all") {
-      users = users.filter((user: any) => {
-        if (approvalFilter.value === "approved") return user.isApproved;
-        if (approvalFilter.value === "pending") return !user.isApproved;
-        return true;
-      });
-    }
-
-    // Apply admin status filter
-    if (adminFilter.value !== "all") {
-      users = users.filter((user: any) => {
-        if (adminFilter.value === "admin") return user.isAdmin;
-        if (adminFilter.value === "user") return !user.isAdmin;
-        return true;
-      });
-    }
-
-    // Apply sorting
-    users = [...users].sort((a: any, b: any) => {
-      let aVal, bVal;
-
-      switch (sortBy.value) {
+    const dir = sortDir.value === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      switch (sortKey.value) {
         case "name":
-          aVal = (a.name || "").toLowerCase();
-          bVal = (b.name || "").toLowerCase();
-          break;
+          return (a.name || "").localeCompare(b.name || "") * dir;
         case "email":
-          aVal = (a.email || "").toLowerCase();
-          bVal = (b.email || "").toLowerCase();
-          break;
+          return a.email.localeCompare(b.email) * dir;
         case "uploads":
-          aVal = a._count?.uploads || 0;
-          bVal = b._count?.uploads || 0;
-          break;
-        case "storageUsed":
-          aVal = Number(a.storageUsed || 0);
-          bVal = Number(b.storageUsed || 0);
-          break;
-        case "createdAt":
+          return (a.uploads - b.uploads) * dir;
+        case "storage":
+          return (Number(a.storageUsed) - Number(b.storageUsed)) * dir;
         default:
-          aVal = new Date(a.createdAt).getTime();
-          bVal = new Date(b.createdAt).getTime();
-          break;
+          return (
+            (new Date(a.createdAt).getTime() -
+              new Date(b.createdAt).getTime()) *
+            dir
+          );
       }
-
-      if (aVal < bVal) return sortOrder.value === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortOrder.value === "asc" ? 1 : -1;
-      return 0;
     });
-
-    return users;
   });
+
+  const toggleSort = $((key: SortKey) => {
+    if (sortKey.value === key) {
+      sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
+    } else {
+      sortKey.value = key;
+      sortDir.value = key === "name" || key === "email" ? "asc" : "desc";
+    }
+  });
+
+  const applyChange = $(
+    async (
+      user: AdminUserDto,
+      patch: { isApproved?: boolean; isAdmin?: boolean },
+    ) => {
+      const result = await updateUser.submit({ userId: user.id, ...patch });
+      if (result.value.success) {
+        overrides.value = {
+          ...overrides.value,
+          [user.id]: { ...(overrides.value[user.id] ?? {}), ...patch },
+        };
+        const label = user.name || user.email;
+        if (patch.isApproved === true) toast.success(`Approved ${label}`);
+        else if (patch.isApproved === false) toast.success(`Revoked ${label}`);
+        else if (patch.isAdmin === true)
+          toast.success(`${label} is now an admin`);
+        else if (patch.isAdmin === false)
+          toast.success(`${label} is now a member`);
+      } else {
+        toast.error("Could not update the account", result.value.error);
+      }
+    },
+  );
+
+  const openLimits = $((user: AdminUserDto) => {
+    editing.value = user;
+    maxUploads.value = "";
+    maxFileSize.value = "";
+    maxStorageLimit.value = "";
+    editOpen.value = true;
+  });
+
+  const saveLimits = $(async () => {
+    const user = editing.value;
+    if (!user) return;
+    const result = await updateUser.submit({
+      userId: user.id,
+      maxUploads: maxUploads.value,
+      maxFileSize: maxFileSize.value,
+      maxStorageLimit: maxStorageLimit.value,
+    });
+    if (result.value.success) {
+      editOpen.value = false;
+      toast.success(`Limits updated for ${user.name || user.email}`);
+    } else {
+      toast.error("Could not update the limits", result.value.error);
+    }
+  });
+
+  const totalStorage = users.value.reduce(
+    (sum, u) => sum + Number(u.storageUsed),
+    0,
+  );
 
   return (
     <>
-      <PageHeader
-        align="left"
-        title="Admin Dashboard"
-        icon={Users}
-        subtitle="Manage your twink community~ Approve users and keep everything safe! (◕‿◕)♡"
+      <PageHeader title="Users" />
+
+      <SummaryList
+        label="Account totals"
+        class="mb-4"
+        items={[
+          { label: "Accounts", value: users.value.length },
+          {
+            label: "Awaiting approval",
+            value: pendingCount.value,
+          },
+          {
+            label: "Administrators",
+            value: users.value.filter((u) => u.isAdmin).length,
+          },
+          { label: "Storage used", value: formatBytes(totalStorage, 1) },
+        ]}
       />
-      {/* Status Messages */}
-      {updateUser.value?.success && (
-        <Callout tone="success" icon={CheckCircle} class="mb-6 sm:mb-8">
-          User updated successfully!
-        </Callout>
-      )}
-      {updateUser.value?.error && (
-        <Callout tone="danger" icon={Ban} class="mb-6 sm:mb-8">
-          Error: {updateUser.value.error}
-        </Callout>
-      )}
-      {/* Stats Cards */}
-      <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <StatCard
-          icon={Users}
-          accent={0}
-          label="Total Users"
-          value={userData.value?.users.length || 0}
-        />
-        <StatCard
-          icon={CheckCircle}
-          accent={1}
-          label="Approved"
-          value={userData.value?.users.filter((u) => u.isApproved).length || 0}
-        />
-        <StatCard
-          icon={Ban}
-          accent={2}
-          label="Pending"
-          value={userData.value?.users.filter((u) => !u.isApproved).length || 0}
-        />
-        <StatCard
-          icon={Users}
-          accent={3}
-          label="New Users (7d)"
-          value={
-            userData.value?.analyticsData?.reduce(
-              (sum, day) => sum + (day.usersRegistered || 0),
-              0,
-            ) || 0
-          }
-        />
-      </div>
-      {/* Analytics Section */}
-      <div class="mb-6 sm:mb-8">
-        <h2 class="text-gradient-cute mb-4 flex items-center gap-2 text-xl font-bold sm:mb-6 sm:text-2xl">
-          Analytics Overview - Last 7 Days
-        </h2>
-        <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-4">
-          <AnalyticsChart
-            data={userData.value?.analyticsData || []}
-            metric="totalViews"
-            title="Total Views"
-            color="var(--theme-accent-primary)"
-          />
-          <AnalyticsChart
-            data={userData.value?.analyticsData || []}
-            metric="uniqueViews"
-            title="Unique Visitors"
-            color="var(--theme-accent-secondary)"
-          />
-          <AnalyticsChart
-            data={userData.value?.analyticsData || []}
-            metric="uploadsCount"
-            title="New Uploads"
-            color="var(--theme-accent-tertiary)"
-          />
-          <AnalyticsChart
-            data={userData.value?.analyticsData || []}
-            metric="usersRegistered"
-            title="New Users"
-            color="var(--theme-accent-quaternary)"
-          />
-        </div>
-      </div>
-      {/* Admin Quick Actions */}
-      <div class="mb-6 sm:mb-8">
-        <h2 class="text-gradient-cute mb-4 flex items-center justify-center gap-2 text-center text-xl font-bold sm:mb-6 sm:text-2xl">
-          <Settings class="h-5 w-5 sm:h-6 sm:w-6" />
-          Admin Actions~
-        </h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Link
-            href="/dashboard/admin/domains"
-            class="card-cute group rounded-2xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-primary to-theme-accent-secondary rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Globe class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-            </div>
-            <div class="mb-2">
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary text-base font-medium transition-all duration-300 sm:text-lg">
-                Upload Domains
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Manage available upload domains for users~ Add cute domains!
-              (◕‿◕)♡
-            </p>
-          </Link>
 
-          <Link
-            href="/dashboard/admin/health"
-            class="card-cute group rounded-2xl p-4 sm:p-6"
+      <CollectionToolbar class="mb-3">
+        <SearchField
+          value={search}
+          label="Search accounts"
+          placeholder="Name, email or ID"
+          class="min-w-[11rem] flex-1"
+          resultSummary={`${visible.value.length} of ${users.value.length} accounts shown`}
+        />
+        <div class="w-[9rem] shrink-0">
+          <label class="sr-only" for="status-filter">
+            Filter by status
+          </label>
+          <Select
+            id="status-filter"
+            value={statusFilter.value}
+            onChange$={(_, el) => (statusFilter.value = el.value)}
           >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-secondary to-theme-accent-tertiary animation-delay-200 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Activity class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-            </div>
-            <div class="mb-2">
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary text-base font-medium transition-all duration-300 sm:text-lg">
-                Health Dashboard
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Monitor server performance, system metrics, and health status~
-            </p>
-          </Link>
-
-          <Link
-            href="/dashboard/admin/events"
-            class="card-cute group rounded-2xl p-4 sm:p-6"
-          >
-            <div class="mb-3 flex items-center sm:mb-4">
-              <div class="pulse-soft from-theme-accent-tertiary to-theme-accent-quaternary animation-delay-400 rounded-full bg-gradient-to-br p-2 sm:p-3">
-                <Bell class="text-theme-text-primary h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-            </div>
-            <div class="mb-2">
-              <h3 class="group-hover:text-gradient-cute text-theme-text-primary text-base font-medium transition-all duration-300 sm:text-lg">
-                System Events
-              </h3>
-            </div>
-            <p class="text-theme-text-secondary text-xs sm:text-sm">
-              Monitor system alerts, user warnings, and automated events~
-            </p>
-          </Link>
+            <option value="all">All statuses</option>
+            <option value="pending">Awaiting approval</option>
+            <option value="approved">Approved</option>
+          </Select>
         </div>
-      </div>
-      {/* User Management */}
-      <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6">
-        <div class="mb-4 flex flex-col gap-4">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 class="text-gradient-cute flex items-center gap-2 text-lg font-bold sm:text-xl">
-              User Management
-              {(searchQuery.value.trim() ||
-                approvalFilter.value !== "all" ||
-                adminFilter.value !== "all") && (
-                <span class="text-theme-accent-primary text-sm font-normal">
-                  ({filteredUsers.value.length} of
-                  {userData.value?.users.length || 0} users)
-                </span>
-              )}
-            </h2>
-            {/* Search Input */}
-            <div class="relative w-full max-w-md sm:w-auto">
-              <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
-                <Search class="text-theme-accent-primary h-4 w-4 drop-shadow-sm" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search by name, email, Discord ID..."
-                value={searchQuery.value}
-                onInput$={(e) => {
-                  searchQuery.value = (e.target as HTMLInputElement).value;
-                }}
-                class="text-theme-text-primary bg-theme-accent-primary/10 border-theme-card-border placeholder:theme-text-muted focus:border-theme-accent-primary/60 focus:from-theme-accent-primary/20 focus:to-theme-accent-secondary/20 focus:ring-theme-accent-primary/30 focus:shadow-theme-accent-primary/20 hover:border-theme-accent-primary/40 hover:shadow-theme-accent-primary/10 w-full rounded-full border bg-gradient-to-br py-2 pr-4 pl-10 text-sm backdrop-blur-sm transition-all duration-500 hover:shadow-md focus:bg-gradient-to-br focus:shadow-lg focus:ring-2 focus:outline-none"
-              />
-              <div class="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-pink-400/5 via-purple-400/5 to-cyan-400/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-            </div>
-          </div>
-          {/* Filters and Sorting */}
-          <div class="flex flex-wrap items-center gap-3 sm:gap-4">
-            {/* Approval Status Filter */}
-            <div class="flex items-center gap-2">
-              <Filter class="text-theme-accent-primary h-4 w-4" />
-              <select
-                value={approvalFilter.value}
-                onChange$={(e) => {
-                  approvalFilter.value = (e.target as HTMLSelectElement).value;
-                }}
-                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 rounded-full border px-3 py-1 text-sm focus:outline-none"
-              >
-                <option value="all" class="bg-theme-card text-theme-primary">
-                  All Users
-                </option>
-                <option
-                  value="approved"
-                  class="bg-theme-card text-theme-primary"
-                >
-                  Approved
-                </option>
-                <option
-                  value="pending"
-                  class="bg-theme-card text-theme-primary"
-                >
-                  Pending
-                </option>
-              </select>
-            </div>
-            {/* Admin Status Filter */}
-            <div class="flex items-center gap-2">
-              <select
-                value={adminFilter.value}
-                onChange$={(e) => {
-                  adminFilter.value = (e.target as HTMLSelectElement).value;
-                }}
-                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 rounded-full border bg-transparent px-3 py-1 text-sm focus:outline-none"
-              >
-                <option value="all" class="bg-theme-card text-theme-primary">
-                  All Roles
-                </option>
-                <option value="admin" class="bg-theme-card text-theme-primary">
-                  Admins
-                </option>
-                <option value="user" class="bg-theme-card text-theme-primary">
-                  Users
-                </option>
-              </select>
-            </div>
-            {/* Sort By */}
-            <div class="flex items-center gap-2">
-              <ArrowUpDown class="text-theme-accent-primary h-4 w-4" />
-              <select
-                value={sortBy.value}
-                onChange$={(e) => {
-                  sortBy.value = (e.target as HTMLSelectElement).value;
-                }}
-                class="glass border-theme-card-border text-theme-text-primary focus:border-theme-accent-primary/60 rounded-full border bg-transparent px-3 py-1 text-sm focus:outline-none"
-              >
-                <option
-                  value="createdAt"
-                  class="bg-theme-card text-theme-primary"
-                >
-                  Join Date
-                </option>
-                <option value="name" class="bg-theme-card text-theme-primary">
-                  Name
-                </option>
-                <option value="email" class="bg-theme-card text-theme-primary">
-                  Email
-                </option>
-                <option
-                  value="uploads"
-                  class="bg-theme-card text-theme-primary"
-                >
-                  Upload Count
-                </option>
-                <option
-                  value="storageUsed"
-                  class="bg-theme-card text-theme-primary"
-                >
-                  Storage Used
-                </option>
-              </select>
-            </div>
-            {/* Sort Order */}
-            <button
-              onClick$={() => {
-                sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
-              }}
-              class="glass border-theme-card-border text-theme-text-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border bg-transparent px-3 py-1 text-sm transition-all duration-300 focus:outline-none"
-            >
-              {sortOrder.value === "asc" ? (
-                <>
-                  <ArrowUp class="h-3.5 w-3.5" />
-                  Ascending
-                </>
-              ) : (
-                <>
-                  <ArrowDown class="h-3.5 w-3.5" />
-                  Descending
-                </>
-              )}
-            </button>
-            {/* Clear Filters */}
-            {(searchQuery.value.trim() ||
-              approvalFilter.value !== "all" ||
-              adminFilter.value !== "all" ||
-              sortBy.value !== "createdAt" ||
-              sortOrder.value !== "desc") && (
-              <button
+        <div class="w-[8.5rem] shrink-0">
+          <label class="sr-only" for="role-filter">
+            Filter by role
+          </label>
+          <Select
+            id="role-filter"
+            value={roleFilter.value}
+            onChange$={(_, el) => (roleFilter.value = el.value)}
+          >
+            <option value="all">All roles</option>
+            <option value="admin">Administrators</option>
+            <option value="member">Members</option>
+          </Select>
+        </div>
+      </CollectionToolbar>
+
+      {pendingCount.value > 0 && statusFilter.value === "all" && (
+        <p class="text-ink-muted mb-3 text-[13px]">
+          {pendingCount.value} account{pendingCount.value === 1 ? "" : "s"}{" "}
+          awaiting approval.{" "}
+          <button
+            type="button"
+            onClick$={() => (statusFilter.value = "pending")}
+            class="focus-ring text-accent-text rounded-[4px] underline underline-offset-2"
+          >
+            Show only those
+          </button>
+        </p>
+      )}
+
+      {visible.value.length === 0 ? (
+        <Surface flush>
+          <EmptyState
+            icon={users.value.length === 0 ? Users : SearchX}
+            title={
+              users.value.length === 0 ? "No accounts yet" : "No accounts match"
+            }
+            description={
+              users.value.length === 0
+                ? "Accounts appear here once people sign in for the first time."
+                : `${users.value.length} accounts are hidden by the current search and filters.`
+            }
+          >
+            {users.value.length > 0 && (
+              <Button
+                variant="secondary"
                 onClick$={() => {
-                  searchQuery.value = "";
-                  approvalFilter.value = "all";
-                  adminFilter.value = "all";
-                  sortBy.value = "createdAt";
-                  sortOrder.value = "desc";
+                  search.value = "";
+                  statusFilter.value = "all";
+                  roleFilter.value = "all";
                 }}
-                class="from-theme-deny to-theme-deny-hover border-theme-error text-theme-error inline-flex items-center gap-1.5 rounded-full border bg-gradient-to-br px-3 py-1 text-sm font-medium transition-all duration-300 hover:bg-gradient-to-br"
               >
-                <X class="h-3.5 w-3.5" />
-                Clear Filters
-              </button>
+                Clear search and filters
+              </Button>
             )}
-          </div>
-          {/* Quick Filter Buttons */}
-          <div class="flex flex-wrap gap-2 text-xs">
-            <span class="text-theme-accent-primary font-medium">
-              Quick filters:
-            </span>
-            <button
-              onClick$={() => {
-                approvalFilter.value = "pending";
-                adminFilter.value = "all";
-                sortBy.value = "createdAt";
-                sortOrder.value = "asc";
-              }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
-            >
-              <Clock class="h-3.5 w-3.5" />
-              Pending Approval
-            </button>
-            <button
-              onClick$={() => {
-                approvalFilter.value = "all";
-                adminFilter.value = "all";
-                sortBy.value = "uploads";
-                sortOrder.value = "desc";
-              }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
-            >
-              <TrendingUp class="h-3.5 w-3.5" />
-              Most Active
-            </button>
-            <button
-              onClick$={() => {
-                approvalFilter.value = "all";
-                adminFilter.value = "all";
-                sortBy.value = "storageUsed";
-                sortOrder.value = "desc";
-              }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
-            >
-              <HardDrive class="h-3.5 w-3.5" />
-              Storage Usage
-            </button>
-            <button
-              onClick$={() => {
-                approvalFilter.value = "all";
-                adminFilter.value = "admin";
-                sortBy.value = "createdAt";
-                sortOrder.value = "desc";
-              }}
-              class="glass border-theme-card-border text-theme-accent-primary hover:border-theme-accent-primary/40 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all duration-300"
-            >
-              <Crown class="h-3.5 w-3.5" />
-              Admins Only
-            </button>
-          </div>
-        </div>
-        <div class="overflow-x-auto">
-          <div class="glass border-theme-card-border rounded-2xl border">
-            {!userData.value?.users || userData.value.users.length === 0 ? (
-              <div class="py-8 text-center sm:py-12">
-                <div class="glass mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
-                  <Users class="text-theme-accent-primary h-6 w-6" />
-                </div>
-                <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-                  No Users Yet!
-                </h3>
-                <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
-                  Waiting for the first twinks to join~ (◕‿◕)♡
-                </p>
-              </div>
-            ) : filteredUsers.value.length === 0 ? (
-              <div class="py-8 text-center sm:py-12">
-                <div class="glass mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16">
-                  <Search class="text-theme-accent-primary h-6 w-6" />
-                </div>
-                <h3 class="text-theme-text-primary mb-2 text-base font-medium sm:text-lg">
-                  No Results Found!
-                </h3>
-                <p class="text-theme-text-secondary px-4 text-sm sm:text-base">
-                  Try adjusting your filters or search terms~ (◕‿◕)♡
-                </p>
-              </div>
-            ) : (
-              <div class="space-y-4 p-4">
-                {filteredUsers.value.map((user: any) => (
-                  <div
-                    key={user.id}
-                    class="glass border-theme-card-border hover:border-theme-accent-primary/40 group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-lg"
+          </EmptyState>
+        </Surface>
+      ) : (
+        <>
+          {/* Desktop comparison table */}
+          <Surface flush class="hidden overflow-hidden lg:block">
+            <Table label="User accounts" minWidth="900px">
+              <Thead>
+                <Tr hover={false}>
+                  <SortHeader
+                    active={sortKey.value === "name"}
+                    direction={sortDir.value}
+                    onClick$={() => toggleSort("name")}
                   >
-                    {/* Main User Card */}
-                    <div class="p-5">
-                      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        {/* Left Section: User Info */}
-                        <div class="flex flex-1 items-start gap-4">
-                          {/* Avatar */}
-                          {user.image && (
-                            <div class="relative flex-shrink-0">
-                              <img
-                                class="border-theme-accent-primary/20 h-14 w-14 rounded-2xl border-2 shadow-lg transition-transform duration-300 group-hover:scale-105"
-                                src={user.image}
-                                alt={user.name || "User"}
-                                width="56"
-                                height="56"
-                              />
-                              {/* Status Indicator */}
-                              <div
-                                class={`absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 border-white ${
-                                  user.isApproved
-                                    ? "bg-theme-success"
-                                    : "bg-theme-warning"
-                                }`}
-                              />
-                            </div>
-                          )}
-                          
-                          {/* User Details */}
-                          <div class="min-w-0 flex-1">
-                            <div class="mb-2 flex flex-wrap items-center gap-2">
-                              <h3 class="text-theme-text-primary text-lg font-semibold">
-                                {user.name || "Anonymous Cutie"}
-                              </h3>
-                              {/* Badges */}
-                              {user.isApproved ? (
-                                <Badge status="success" icon={CheckCircle}>
-                                  Approved
-                                </Badge>
-                              ) : (
-                                <Badge status="warning" icon={Clock}>
-                                  Pending
-                                </Badge>
-                              )}
-                              {user.isAdmin && (
-                                <Badge status="accent" icon={Crown}>
-                                  Admin
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Contact Info */}
-                            <div class="text-theme-text-secondary space-y-1 text-sm">
-                              <div class="flex items-center gap-2">
-                                <Mail class="text-theme-accent-primary h-3.5 w-3.5 flex-shrink-0" />
-                                <span class="truncate">{user.email}</span>
-                              </div>
-                              {user.accounts?.[0]?.providerAccountId && (
-                                <div class="flex items-center gap-2">
-                                  <MessageCircle class="text-theme-accent-secondary h-3.5 w-3.5 flex-shrink-0" />
-                                  <span class="font-mono text-xs">
-                                    {user.accounts[0].providerAccountId}
-                                  </span>
-                                </div>
-                              )}
-                              <div class="flex items-center gap-2">
-                                <Calendar class="text-theme-accent-tertiary h-3.5 w-3.5 flex-shrink-0" />
-                                <span class="text-xs">
-                                  Joined{" "}
-                                  {new Date(user.createdAt).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    },
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                    Account
+                  </SortHeader>
+                  <Th class="w-32">Status</Th>
+                  <SortHeader
+                    class="w-24"
+                    active={sortKey.value === "uploads"}
+                    direction={sortDir.value}
+                    onClick$={() => toggleSort("uploads")}
+                  >
+                    Files
+                  </SortHeader>
+                  <SortHeader
+                    class="w-28"
+                    active={sortKey.value === "storage"}
+                    direction={sortDir.value}
+                    onClick$={() => toggleSort("storage")}
+                  >
+                    Storage
+                  </SortHeader>
+                  <Th class="w-20">Keys</Th>
+                  <SortHeader
+                    class="w-28"
+                    active={sortKey.value === "createdAt"}
+                    direction={sortDir.value}
+                    onClick$={() => toggleSort("createdAt")}
+                  >
+                    Joined
+                  </SortHeader>
+                  <Th class="w-[19rem] text-right">Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {visible.value.map((user) => (
+                  <Tr key={user.id}>
+                    <Td>
+                      <div class="flex min-w-0 items-center gap-2.5">
+                        {user.image ? (
+                          <img
+                            src={user.image}
+                            alt=""
+                            width="28"
+                            height="28"
+                            class="h-7 w-7 shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            class="bg-surface-subtle text-ink-muted border-edge flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold"
+                          >
+                            {(user.name || user.email).charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div class="min-w-0">
+                          <p class="text-ink truncate font-medium">
+                            {user.name || "Unnamed"}
+                          </p>
+                          <p class="text-ink-muted truncate text-xs">
+                            {user.email}
+                          </p>
                         </div>
+                      </div>
+                    </Td>
+                    <Td>
+                      <div class="flex flex-wrap gap-1">
+                        <Badge
+                          tone={user.isApproved ? "success" : "warning"}
+                          icon={user.isApproved ? ShieldCheck : Clock}
+                        >
+                          {user.isApproved ? "Approved" : "Pending"}
+                        </Badge>
+                        {user.isAdmin && <Badge tone="accent">Admin</Badge>}
+                      </div>
+                    </Td>
+                    <Td class="tabular-nums">
+                      {user.uploads.toLocaleString()}
+                    </Td>
+                    <TdMeta>{formatBytes(Number(user.storageUsed), 1)}</TdMeta>
+                    <TdMeta class="tabular-nums">{user.apiKeys}</TdMeta>
+                    <TdMeta title={formatAbsoluteDate(user.createdAt)}>
+                      {formatRelativeDate(user.createdAt)}
+                    </TdMeta>
+                    <Td class="text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant={user.isApproved ? "secondary" : "primary"}
+                          onClick$={() =>
+                            applyChange(user, { isApproved: !user.isApproved })
+                          }
+                        >
+                          {user.isApproved ? "Revoke" : "Approve"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={user.id === data.value.currentUserId}
+                          title={
+                            user.id === data.value.currentUserId
+                              ? "You cannot change your own role."
+                              : undefined
+                          }
+                          onClick$={() =>
+                            applyChange(user, { isAdmin: !user.isAdmin })
+                          }
+                        >
+                          {user.isAdmin ? "Remove admin" : "Make admin"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick$={() => openLimits(user)}
+                        >
+                          Limits
+                        </Button>
+                      </div>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Surface>
 
-                        {/* Right Section: Stats & Actions */}
-                        <div class="flex flex-col gap-4 lg:items-end">
-                          {/* Stats Grid */}
-                          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                            {/* Uploads */}
-                            <div class="glass rounded-xl p-3 text-center">
-                              <div class="text-theme-accent-primary text-2xl font-bold">
-                                {user._count.uploads}
-                              </div>
-                              <div class="text-theme-text-secondary text-xs">
-                                Uploads
-                              </div>
-                            </div>
-                            
-                            {/* API Keys */}
-                            <div class="glass rounded-xl p-3 text-center">
-                              <div class="text-theme-accent-secondary text-2xl font-bold">
-                                {user._count.apiKeys}
-                              </div>
-                              <div class="text-theme-text-secondary text-xs">
-                                API Keys
-                              </div>
-                            </div>
-                            
-                            {/* Storage Used */}
-                            <div class="glass rounded-xl p-3 text-center lg:col-span-2">
-                              <div class="text-theme-accent-tertiary mb-1 text-lg font-bold">
-                                {formatBytes(user.settings?.storageUsed || 0)}
-                              </div>
-                              <div class="text-theme-text-secondary text-xs">
-                                of {formatBytes(getEffectiveStorageLimit(user))}
-                              </div>
-                              {/* Storage Bar */}
-                              <div class="bg-theme-accent-primary/10 mt-2 h-1.5 overflow-hidden rounded-full">
-                                <div
-                                  class="from-theme-accent-primary to-theme-accent-secondary h-full rounded-full bg-gradient-to-r transition-all duration-300"
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      (Number(user.settings?.storageUsed || 0) /
-                                        getEffectiveStorageLimit(user)) *
-                                        100,
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div class="flex flex-wrap gap-2 lg:justify-end">
-                            {!user.isApproved ? (
-                              <Button
-                                variant="confirm"
-                                size="sm"
-                                pill={false}
-                                onClick$={() => {
-                                  updateUser.submit({
-                                    userId: user.id,
-                                    isApproved: true,
-                                  });
-                                }}
-                              >
-                                <CheckCircle class="h-4 w-4" />
-                                Approve User
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                pill={false}
-                                onClick$={() => {
-                                  updateUser.submit({
-                                    userId: user.id,
-                                    isApproved: false,
-                                  });
-                                }}
-                              >
-                                <Ban class="h-4 w-4" />
-                                Revoke Access
-                              </Button>
-                            )}
-
-                            <Button
-                              variant={user.isAdmin ? "primary" : "glass"}
-                              size="sm"
-                              pill={false}
-                              onClick$={() => {
-                                updateUser.submit({
-                                  userId: user.id,
-                                  isAdmin: !user.isAdmin,
-                                });
-                              }}
-                            >
-                              <Crown class="h-4 w-4" />
-                              {user.isAdmin ? "Remove Admin" : "Make Admin"}
-                            </Button>
-                          </div>
-                        </div>
+          {/* Below lg: priority fields, with editing moved into the dialog */}
+          <Surface flush class="overflow-hidden lg:hidden">
+            <ul class="divide-edge divide-y">
+              {visible.value.map((user) => (
+                <li key={user.id} class="px-3 py-2.5">
+                  <div class="flex items-start gap-2.5">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-ink truncate text-[13px] font-medium">
+                        {user.name || "Unnamed"}
+                      </p>
+                      <p class="text-ink-muted truncate text-xs">
+                        {user.email}
+                      </p>
+                      <p class="text-ink-muted mt-0.5 text-xs">
+                        {user.uploads} files ·{" "}
+                        {formatBytes(Number(user.storageUsed), 1)} ·{" "}
+                        {formatRelativeDate(user.createdAt)}
+                      </p>
+                      <div class="mt-1.5 flex flex-wrap gap-1">
+                        <Badge
+                          tone={user.isApproved ? "success" : "warning"}
+                          icon={user.isApproved ? ShieldCheck : Clock}
+                        >
+                          {user.isApproved ? "Approved" : "Pending"}
+                        </Badge>
+                        {user.isAdmin && <Badge tone="accent">Admin</Badge>}
                       </div>
                     </div>
-
-                    {/* Expandable Sections */}
-                    <div class="border-theme-card-border/50 border-t">
-                      {/* Limits Editor */}
-                      <details class="group/limits">
-                        <summary class="text-theme-accent-primary hover:bg-theme-accent-primary/5 flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-medium transition-colors">
-                          <span class="flex items-center gap-2">
-                            <ChevronRight class="h-4 w-4 transition-transform group-open/limits:rotate-90" />
-                            <Settings class="h-4 w-4" />
-                            Edit User Limits
-                          </span>
-                        </summary>
-                        <div class="bg-theme-card/30 p-5">
-                          <form
-                            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                            preventdefault:submit
-                            onSubmit$={(e, currentTarget) => {
-                              const formData = new FormData(currentTarget);
-                              updateUser.submit({
-                                userId: user.id,
-                                maxUploads: formData.get("maxUploads") as string,
-                                maxFileSize: formData.get("maxFileSize") as string,
-                                maxStorageLimit: formData.get("maxStorageLimit") as string,
-                              });
-                            }}
-                          >
-                            {/* Max Uploads */}
-                            <div class="space-y-2">
-                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <Folder class="h-4 w-4" />
-                                Max Uploads
-                              </label>
-                              <Input
-                                type="number"
-                                name="maxUploads"
-                                value={user.settings?.maxUploads || 100}
-                                min="1"
-                              />
-                              <p class="text-theme-text-secondary text-xs">
-                                Current: {user.settings?.maxUploads || 100} files
-                              </p>
-                            </div>
-
-                            {/* Max File Size */}
-                            <div class="space-y-2">
-                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <Package class="h-4 w-4" />
-                                Max File Size
-                              </label>
-                              <Input
-                                type="number"
-                                name="maxFileSize"
-                                value={user.settings?.maxFileSize || 10485760}
-                                min="1"
-                              />
-                              <p class="text-theme-text-secondary text-xs">
-                                Current: {formatBytes(user.settings?.maxFileSize || 10485760)}
-                              </p>
-                            </div>
-
-                            {/* Storage Limit */}
-                            <div class="space-y-2">
-                              <label class="text-theme-text-primary flex items-center gap-2 text-sm font-medium">
-                                <HardDrive class="h-4 w-4" />
-                                Storage Limit
-                              </label>
-                              <Input
-                                type="number"
-                                name="maxStorageLimit"
-                                value={user.settings?.maxStorageLimit || ""}
-                                placeholder="Leave empty for default"
-                                min="1"
-                              />
-                              <p class="text-theme-text-secondary text-xs">
-                                {user.settings?.maxStorageLimit
-                                  ? `Custom: ${formatBytes(user.settings.maxStorageLimit)}`
-                                  : `Default: ${formatBytes(userData.value?.config.BASE_STORAGE_LIMIT || 10737418240)}`}
-                              </p>
-                            </div>
-
-                            {/* Buttons */}
-                            <div class="flex flex-col gap-2 sm:col-span-2 lg:col-span-1 lg:justify-center">
-                              <Button type="submit" size="sm" pill={false} block>
-                                <Save class="h-4 w-4" />
-                                Save Changes
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="glass"
-                                size="sm"
-                                pill={false}
-                                block
-                                onClick$={() => {
-                                  updateUser.submit({
-                                    userId: user.id,
-                                    maxStorageLimit: "",
-                                  });
-                                }}
-                              >
-                                <RotateCcw class="h-4 w-4" />
-                                Reset to Default
-                              </Button>
-                            </div>
-                          </form>
-                        </div>
-                      </details>
-
-                      {/* User Analytics */}
-                      <div class="border-theme-card-border/50 border-t p-5">
-                        <UserAnalytics
-                          userId={user.id}
-                          userName={user.name || "Anonymous Cutie"}
-                        />
-                      </div>
+                    <div class="flex shrink-0 flex-col gap-1">
+                      <Button
+                        size="sm"
+                        variant={user.isApproved ? "secondary" : "primary"}
+                        onClick$={() =>
+                          applyChange(user, { isApproved: !user.isApproved })
+                        }
+                      >
+                        {user.isApproved ? "Revoke" : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick$={() => openLimits(user)}
+                      >
+                        Manage
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        </>
+      )}
+
+      <Dialog
+        open={editOpen}
+        title={`Limits for ${editing.value?.name || editing.value?.email || "account"}`}
+        description="Leave a field empty to keep the current value; enter 0 or clear storage to reset it to the default."
+      >
+        <div class="grid gap-4">
+          <Field
+            label="Maximum files"
+            for="limit-uploads"
+            help="How many files this account may hold at once."
+          >
+            <Input
+              id="limit-uploads"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              placeholder="Unchanged"
+              value={maxUploads.value}
+              onInput$={(_, el) => (maxUploads.value = el.value)}
+            />
+          </Field>
+          <Field
+            label="Maximum file size"
+            for="limit-filesize"
+            help="In bytes. 10485760 is 10 MB."
+          >
+            <Input
+              id="limit-filesize"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              placeholder="Unchanged"
+              value={maxFileSize.value}
+              onInput$={(_, el) => (maxFileSize.value = el.value)}
+            />
+          </Field>
+          <Field
+            label="Storage limit"
+            for="limit-storage"
+            help={`In bytes. Empty resets to the default of ${formatBytes(data.value.baseStorageLimit, 0)}.`}
+          >
+            <Input
+              id="limit-storage"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              placeholder="Unchanged"
+              value={maxStorageLimit.value}
+              onInput$={(_, el) => (maxStorageLimit.value = el.value)}
+            />
+          </Field>
+
+          {editing.value && (
+            <Section title="Current usage">
+              <dl class="border-edge divide-edge rounded-surface bg-surface-subtle divide-y border px-3">
+                <div class="flex justify-between py-1.5">
+                  <dt class="text-ink-muted text-[13px]">Files</dt>
+                  <dd class="text-ink text-[13px]">{editing.value.uploads}</dd>
+                </div>
+                <div class="flex justify-between py-1.5">
+                  <dt class="text-ink-muted text-[13px]">Storage used</dt>
+                  <dd class="text-ink text-[13px]">
+                    {formatBytes(Number(editing.value.storageUsed), 1)}
+                  </dd>
+                </div>
+                <div class="flex justify-between py-1.5">
+                  <dt class="text-ink-muted text-[13px]">API keys</dt>
+                  <dd class="text-ink text-[13px]">{editing.value.apiKeys}</dd>
+                </div>
+              </dl>
+            </Section>
+          )}
         </div>
-      </div>
+
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (editOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          q:slot="footer"
+          variant="primary"
+          loading={updateUser.isRunning}
+          onClick$={saveLimits}
+        >
+          Save limits
+        </Button>
+      </Dialog>
     </>
   );
 });
+
+export const head: DocumentHead = {
+  title: "Users - Admin - twink.forsale",
+};

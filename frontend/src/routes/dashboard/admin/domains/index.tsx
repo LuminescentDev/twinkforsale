@@ -1,46 +1,34 @@
 import { component$, useSignal } from "@builder.io/qwik";
 import {
   routeLoader$,
-  Form,
   routeAction$,
+  Form,
   z,
   zod$,
+  type DocumentHead,
 } from "@builder.io/qwik-city";
+import { Globe, Plus, Trash2, Edit } from "lucide-icons-qwik";
+import { api, serverAuth, ApiError, type DomainDto } from "~/lib/api-client";
 import {
-  Plus,
-  Edit,
-  Trash2,
-  Globe,
-  List,
-  Save,
-  CheckCircle,
-  CircleX,
-} from "lucide-icons-qwik";
-import { Toggle } from "@luminescent/ui-qwik";
-import { api, serverAuth, ApiError } from "~/lib/api-client";
-import { getCurrentUser } from "~/lib/auth-client";
-import {
-  Badge,
-  Button,
-  Callout,
-  FieldLabel,
-  IconButton,
-  Input,
-  PageContainer,
   PageHeader,
-  Panel,
+  Surface,
+  Button,
+  IconButton,
+  Field,
+  Input,
+  Switch,
+  Badge,
+  Callout,
+  EmptyState,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
-
-export const useAdminCheck = routeLoader$(async (requestEvent) => {
-  const user = await getCurrentUser(serverAuth(requestEvent));
-  if (!user) {
-    throw requestEvent.redirect(302, "/");
-  }
-  if (!user.isAdmin) {
-    throw requestEvent.redirect(302, "/dashboard");
-  }
-  return { isAdmin: true };
-});
 
 export const useUploadDomainsLoader = routeLoader$(async (requestEvent) => {
   const { domains } = await api.domains
@@ -62,18 +50,18 @@ export const useCreateDomainAction = routeAction$(
         },
         serverAuth(requestEvent),
       );
-      return { success: true, message: "Upload domain created successfully" };
+      return { success: true, message: "Domain added." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to create domain",
+          error instanceof Error ? error.message : "Could not add the domain.",
       });
     }
   },
   zod$({
-    domain: z.string().min(1, "Domain is required"),
-    name: z.string().min(1, "Name is required"),
+    domain: z.string().min(1, "Enter the domain"),
+    name: z.string().min(1, "Enter a name"),
     isDefault: z
       .string()
       .optional()
@@ -99,19 +87,21 @@ export const useUpdateDomainAction = routeAction$(
         },
         serverAuth(requestEvent),
       );
-      return { success: true, message: "Upload domain updated successfully" };
+      return { success: true, message: "Domain updated." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to update domain",
+          error instanceof Error
+            ? error.message
+            : "Could not update the domain.",
       });
     }
   },
   zod$({
     id: z.string(),
-    domain: z.string().min(1, "Domain is required"),
-    name: z.string().min(1, "Name is required"),
+    domain: z.string().min(1, "Enter the domain"),
+    name: z.string().min(1, "Enter a name"),
     isActive: z
       .string()
       .optional()
@@ -131,343 +121,385 @@ export const useDeleteDomainAction = routeAction$(
   async (values, requestEvent) => {
     try {
       await api.domains.delete(values.id, serverAuth(requestEvent));
-      return { success: true, message: "Upload domain deleted successfully" };
+      return { success: true, message: "Domain deleted." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to delete domain",
+          error instanceof Error
+            ? error.message
+            : "Could not delete the domain.",
       });
     }
   },
-  zod$({
-    id: z.string(),
-  }),
+  zod$({ id: z.string() }),
 );
 
 export default component$(() => {
-  useAdminCheck();
   const domains = useUploadDomainsLoader();
   const createAction = useCreateDomainAction();
   const updateAction = useUpdateDomainAction();
   const deleteAction = useDeleteDomainAction();
 
-  const showCreateForm = useSignal(false);
-  const editingDomain = useSignal<string | null>(null);
+  const createOpen = useSignal(false);
+  const editing = useSignal<DomainDto | null>(null);
+  const editOpen = useSignal(false);
+  const pendingDelete = useSignal<DomainDto | null>(null);
+  const deleteOpen = useSignal(false);
 
-  // Signals for edit form toggle states
+  // Switch state for the edit dialog, mirrored into hidden checkbox inputs so
+  // the existing `on`-based action contract is unchanged.
   const editIsActive = useSignal(false);
   const editIsDefault = useSignal(false);
   const editSupportsSubdomains = useSignal(false);
+  const newIsDefault = useSignal(false);
+  const newSupportsSubdomains = useSignal(false);
 
   return (
-    <PageContainer>
+    <>
       <PageHeader
-        align="left"
-        title="Upload Domains Management~"
-        icon={Globe}
-        subtitle="Manage available upload domains for users."
-      />
-
-      {/* Create Domain Button */}
-      <div class="mb-6 flex justify-start">
+        title="Domains"
+        description="Domains that can serve uploaded files. The default is used for accounts that have not chosen one."
+      >
         <Button
+          q:slot="actions"
+          variant="primary"
           onClick$={() => {
-            showCreateForm.value = !showCreateForm.value;
-            editingDomain.value = null;
-            // Reset edit form signals when switching to create form
-            editIsActive.value = false;
-            editIsDefault.value = false;
-            editSupportsSubdomains.value = false;
+            newIsDefault.value = false;
+            newSupportsSubdomains.value = false;
+            createOpen.value = true;
           }}
         >
-          <Plus class="h-4 w-4" />
-          Add New Domain
+          <Plus class="h-4 w-4" aria-hidden="true" />
+          Add domain
         </Button>
-      </div>
+      </PageHeader>
 
-      {/* Create Form */}
-      {showCreateForm.value && (
-        <Panel title="Create New Upload Domain~" icon={Globe} class="mb-6">
-          <Form action={createAction}>
-            <div class="space-y-4 sm:space-y-6">
-              <div>
-                <FieldLabel>Domain</FieldLabel>
-                <Input
-                  type="text"
-                  name="domain"
-                  placeholder="example.com"
-                  required
-                />
-                <p class="text-theme-text-muted mt-1.5 text-xs">
-                  The top-level domain (e.g., "twink.forsale", "example.com")~
-                </p>
-              </div>
-
-              <div>
-                <FieldLabel>Display Name</FieldLabel>
-                <Input
-                  type="text"
-                  name="name"
-                  placeholder="Example Domain"
-                  required
-                />
-                <p class="text-theme-text-muted mt-1.5 text-xs">
-                  Friendly name shown to users~
-                </p>
-              </div>
-
-              <div class="flex items-center gap-3">
-                <Toggle
-                  id="isDefault"
-                  label="Set as default domain~"
-                  checkbox
-                  name="isDefault"
-                />
-              </div>
-
-              <div class="flex items-center gap-3">
-                <Toggle
-                  id="supportsSubdomains"
-                  label="Supports subdomains~"
-                  checkbox
-                  name="supportsSubdomains"
-                />
-              </div>
-
-              {/* Hidden inputs to ensure checkbox values are always submitted */}
-              <input type="hidden" name="isDefault" value="off" />
-              <input type="hidden" name="supportsSubdomains" value="off" />
-
-              <div class="flex gap-3">
-                <Button type="submit" block>
-                  <Save class="h-4 w-4" />
-                  Create Domain~
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  block
-                  onClick$={() => {
-                    showCreateForm.value = false;
-                    editIsActive.value = false;
-                    editIsDefault.value = false;
-                    editSupportsSubdomains.value = false;
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Form>
-
-          {createAction.value?.success && (
-            <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
-              {createAction.value.message}~
-            </Callout>
-          )}
-
-          {createAction.value?.failed && (
-            <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
-              {createAction.value.message}~
-            </Callout>
-          )}
-        </Panel>
+      {createAction.value?.failed && (
+        <Callout tone="danger" title="Could not add the domain" class="mb-4">
+          {createAction.value.message}
+        </Callout>
+      )}
+      {updateAction.value?.failed && (
+        <Callout tone="danger" title="Could not update the domain" class="mb-4">
+          {updateAction.value.message}
+        </Callout>
+      )}
+      {deleteAction.value?.failed && (
+        <Callout tone="danger" title="Could not delete the domain" class="mb-4">
+          {deleteAction.value.message}
+        </Callout>
       )}
 
-      {/* Domains List */}
-      <Panel title="Existing Domains~" icon={List}>
-        <div class="space-y-4">
-          {domains.value.map((domain) => (
-            <div key={domain.id} class="glass rounded-2xl p-4 sm:p-5">
-              {editingDomain.value === domain.id ? (
-                <Form action={updateAction}>
-                  <input type="hidden" name="id" value={domain.id} />
-                  <div class="space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <FieldLabel>Domain</FieldLabel>
-                        <Input
-                          type="text"
-                          name="domain"
-                          value={domain.domain}
-                          required
-                        />
+      {domains.value.length === 0 ? (
+        <Surface flush>
+          <EmptyState
+            icon={Globe}
+            title="No domains configured"
+            description="Add at least one domain so uploaded files have an address."
+          >
+            <Button
+              variant="primary"
+              onClick$={() => (createOpen.value = true)}
+            >
+              Add domain
+            </Button>
+          </EmptyState>
+        </Surface>
+      ) : (
+        <>
+          <Surface flush class="hidden overflow-hidden md:block">
+            <Table label="Upload domains" minWidth="720px">
+              <Thead>
+                <Tr hover={false}>
+                  <Th>Domain</Th>
+                  <Th>Name</Th>
+                  <Th class="w-44">Status</Th>
+                  <Th class="w-24">In use by</Th>
+                  <Th class="w-24 text-right">Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {domains.value.map((domain) => (
+                  <Tr key={domain.id}>
+                    <Td class="font-mono">{domain.domain}</Td>
+                    <Td>{domain.name}</Td>
+                    <Td>
+                      <div class="flex flex-wrap gap-1">
+                        <Badge tone={domain.isActive ? "success" : "neutral"}>
+                          {domain.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        {domain.isDefault && (
+                          <Badge tone="accent">Default</Badge>
+                        )}
+                        {domain.supportsSubdomains && (
+                          <Badge tone="info">Subdomains</Badge>
+                        )}
                       </div>
-                      <div>
-                        <FieldLabel>Display Name</FieldLabel>
-                        <Input
-                          type="text"
-                          name="name"
-                          value={domain.name}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div class="flex flex-wrap gap-4">
-                      <div class="flex items-center gap-2">
-                        <Toggle
-                          id={`isActive-${domain.id}`}
-                          label="Active"
-                          checkbox
-                          name="isActive"
-                          checked={editIsActive.value}
-                          onChange$={(e, el) => {
-                            editIsActive.value = el.checked;
+                    </Td>
+                    <TdMeta class="tabular-nums">
+                      {domain.userSettingsCount} account
+                      {domain.userSettingsCount === 1 ? "" : "s"}
+                    </TdMeta>
+                    <Td class="text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <IconButton
+                          size="sm"
+                          label={`Edit ${domain.domain}`}
+                          onClick$={() => {
+                            editing.value = domain;
+                            editIsActive.value = domain.isActive;
+                            editIsDefault.value = domain.isDefault;
+                            editSupportsSubdomains.value =
+                              domain.supportsSubdomains;
+                            editOpen.value = true;
                           }}
-                        />
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <Toggle
-                          id={`isDefault-${domain.id}`}
-                          label="Default"
-                          checkbox
-                          name="isDefault"
-                          checked={editIsDefault.value}
-                          onChange$={(e, el) => {
-                            editIsDefault.value = el.checked;
+                        >
+                          <Edit class="h-4 w-4" />
+                        </IconButton>
+                        <IconButton
+                          size="sm"
+                          variant="danger"
+                          label={`Delete ${domain.domain}`}
+                          onClick$={() => {
+                            pendingDelete.value = domain;
+                            deleteOpen.value = true;
                           }}
-                        />
+                        >
+                          <Trash2 class="h-4 w-4" />
+                        </IconButton>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <Toggle
-                          id={`supportsSubdomains-${domain.id}`}
-                          label="Supports Subdomains"
-                          checkbox
-                          name="supportsSubdomains"
-                          checked={editSupportsSubdomains.value}
-                          onChange$={(e, el) => {
-                            editSupportsSubdomains.value = el.checked;
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {/* Hidden inputs to ensure checkbox values are always submitted */}
-                    <input
-                      type="hidden"
-                      name="isActive"
-                      value={editIsActive.value ? "on" : "off"}
-                    />
-                    <input
-                      type="hidden"
-                      name="isDefault"
-                      value={editIsDefault.value ? "on" : "off"}
-                    />
-                    <input
-                      type="hidden"
-                      name="supportsSubdomains"
-                      value={editSupportsSubdomains.value ? "on" : "off"}
-                    />
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Surface>
 
-                    <div class="flex gap-2">
-                      <Button type="submit" size="sm">
-                        <Save class="h-4 w-4" />
-                        Save
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick$={() => {
-                          editingDomain.value = null;
-                          editIsActive.value = false;
-                          editIsDefault.value = false;
-                          editSupportsSubdomains.value = false;
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </Form>
-              ) : (
-                <div class="flex items-center gap-4">
+          <Surface flush class="overflow-hidden md:hidden">
+            <ul class="divide-edge divide-y">
+              {domains.value.map((domain) => (
+                <li
+                  key={domain.id}
+                  class="flex items-start gap-2.5 px-3 py-2.5"
+                >
                   <div class="min-w-0 flex-1">
-                    <div class="flex min-w-0 items-center gap-3">
-                      <Globe class="text-theme-accent-primary h-5 w-5 flex-shrink-0" />
-                      <div class="min-w-0">
-                        <div class="flex min-w-0 flex-wrap items-center gap-2">
-                          <h3 class="text-theme-text-primary font-semibold break-words">
-                            {domain.name}
-                          </h3>
-                          {domain.isDefault && (
-                            <Badge status="accent">Default</Badge>
-                          )}
-                          {domain.supportsSubdomains && (
-                            <Badge status="info">Subdomains</Badge>
-                          )}
-                          {!domain.isActive && (
-                            <Badge status="error">Inactive</Badge>
-                          )}
-                        </div>
-                        <p class="text-theme-text-secondary text-sm font-medium break-all">
-                          {domain.domain}
-                        </p>
-                        <p class="text-theme-text-muted text-xs">
-                          {domain.userSettingsCount} users using this domain
-                        </p>
-                      </div>
+                    <p class="text-ink truncate font-mono text-[13px] font-medium">
+                      {domain.domain}
+                    </p>
+                    <p class="text-ink-muted truncate text-xs">{domain.name}</p>
+                    <div class="mt-1.5 flex flex-wrap gap-1">
+                      <Badge tone={domain.isActive ? "success" : "neutral"}>
+                        {domain.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                      {domain.isDefault && <Badge tone="accent">Default</Badge>}
+                      {domain.supportsSubdomains && (
+                        <Badge tone="info">Subdomains</Badge>
+                      )}
                     </div>
                   </div>
-                  <div class="flex flex-shrink-0 gap-1">
+                  <div class="flex shrink-0 items-center gap-1">
                     <IconButton
-                      type="button"
-                      title={`Edit ${domain.name}`}
+                      size="sm"
+                      label={`Edit ${domain.domain}`}
                       onClick$={() => {
-                        editingDomain.value = domain.id;
+                        editing.value = domain;
                         editIsActive.value = domain.isActive;
                         editIsDefault.value = domain.isDefault;
                         editSupportsSubdomains.value =
                           domain.supportsSubdomains;
+                        editOpen.value = true;
                       }}
                     >
                       <Edit class="h-4 w-4" />
                     </IconButton>
-                    <Form action={deleteAction}>
-                      <input type="hidden" name="id" value={domain.id} />
-                      <button
-                        type="submit"
-                        aria-label={`Delete ${domain.name}`}
-                        title={`Delete ${domain.name}`}
-                        class="text-theme-error hover:bg-theme-error/10 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200"
-                        onClick$={(e) => {
-                          if (
-                            !confirm(
-                              `Are you sure you want to delete ${domain.name}?`,
-                            )
-                          ) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <Trash2 class="h-4 w-4" />
-                      </button>
-                    </Form>
+                    <IconButton
+                      size="sm"
+                      variant="danger"
+                      label={`Delete ${domain.domain}`}
+                      onClick$={() => {
+                        pendingDelete.value = domain;
+                        deleteOpen.value = true;
+                      }}
+                    >
+                      <Trash2 class="h-4 w-4" />
+                    </IconButton>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        </>
+      )}
 
-        {updateAction.value?.success && (
-          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
-            {updateAction.value.message}~
-          </Callout>
-        )}
+      {/* Add */}
+      <Dialog open={createOpen} title="Add upload domain">
+        <Form action={createAction} class="grid gap-4">
+          <Field
+            label="Domain"
+            for="new-domain"
+            required
+            help="Hostname only, without a scheme. DNS must already point here."
+          >
+            <Input
+              id="new-domain"
+              name="domain"
+              required
+              placeholder="cdn.example.com"
+            />
+          </Field>
+          <Field
+            label="Name"
+            for="new-domain-name"
+            required
+            help="Shown to users when picking a domain."
+          >
+            <Input
+              id="new-domain-name"
+              name="name"
+              required
+              placeholder="Primary CDN"
+            />
+          </Field>
+          <Switch
+            checked={newIsDefault.value}
+            label="Make this the default"
+            help="New accounts and accounts without a choice use this domain."
+            onChange$={(checked) => (newIsDefault.value = checked)}
+          />
+          <Switch
+            checked={newSupportsSubdomains.value}
+            label="Allow per-user subdomains"
+            help="Users can serve files from name.domain instead of the bare domain."
+            onChange$={(checked) => (newSupportsSubdomains.value = checked)}
+          />
+          {newIsDefault.value && (
+            <input type="hidden" name="isDefault" value="on" />
+          )}
+          {newSupportsSubdomains.value && (
+            <input type="hidden" name="supportsSubdomains" value="on" />
+          )}
+          <div class="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick$={() => (createOpen.value = false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={createAction.isRunning}
+            >
+              Add domain
+            </Button>
+          </div>
+        </Form>
+      </Dialog>
 
-        {(updateAction.value?.failed || deleteAction.value?.failed) && (
-          <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
-            {updateAction.value?.message || deleteAction.value?.message}~
-          </Callout>
-        )}
+      {/* Edit */}
+      <Dialog
+        open={editOpen}
+        title={`Edit ${editing.value?.domain ?? "domain"}`}
+      >
+        <Form action={updateAction} class="grid gap-4">
+          <input type="hidden" name="id" value={editing.value?.id} />
+          <Field label="Domain" for="edit-domain" required>
+            <Input
+              id="edit-domain"
+              name="domain"
+              required
+              value={editing.value?.domain}
+            />
+          </Field>
+          <Field label="Name" for="edit-domain-name" required>
+            <Input
+              id="edit-domain-name"
+              name="name"
+              required
+              value={editing.value?.name}
+            />
+          </Field>
+          <Switch
+            checked={editIsActive.value}
+            label="Active"
+            help="Inactive domains stop being offered and stop serving new links."
+            onChange$={(checked) => (editIsActive.value = checked)}
+          />
+          <Switch
+            checked={editIsDefault.value}
+            label="Default domain"
+            onChange$={(checked) => (editIsDefault.value = checked)}
+          />
+          <Switch
+            checked={editSupportsSubdomains.value}
+            label="Allow per-user subdomains"
+            onChange$={(checked) => (editSupportsSubdomains.value = checked)}
+          />
+          {editIsActive.value && (
+            <input type="hidden" name="isActive" value="on" />
+          )}
+          {editIsDefault.value && (
+            <input type="hidden" name="isDefault" value="on" />
+          )}
+          {editSupportsSubdomains.value && (
+            <input type="hidden" name="supportsSubdomains" value="on" />
+          )}
+          <div class="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick$={() => (editOpen.value = false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={updateAction.isRunning}
+            >
+              Save domain
+            </Button>
+          </div>
+        </Form>
+      </Dialog>
 
-        {deleteAction.value?.success && (
-          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
-            {deleteAction.value.message}~
-          </Callout>
-        )}
-      </Panel>
-    </PageContainer>
+      {/* Delete */}
+      <Dialog open={deleteOpen} title="Delete this domain?" size="sm">
+        <p class="text-ink-muted text-[13px] leading-5">
+          <span class="text-ink font-mono">{pendingDelete.value?.domain}</span>{" "}
+          is removed from the list of upload domains.
+          {pendingDelete.value && pendingDelete.value.userSettingsCount > 0 && (
+            <>
+              {" "}
+              {pendingDelete.value.userSettingsCount} account
+              {pendingDelete.value.userSettingsCount === 1 ? "" : "s"} currently
+              use it and will fall back to the default.
+            </>
+          )}{" "}
+          Existing links on this domain stop resolving.
+        </p>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (deleteOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Form q:slot="footer" action={deleteAction}>
+          <input type="hidden" name="id" value={pendingDelete.value?.id} />
+          <Button
+            type="submit"
+            variant="danger"
+            loading={deleteAction.isRunning}
+          >
+            Delete domain
+          </Button>
+        </Form>
+      </Dialog>
+    </>
   );
 });
+
+export const head: DocumentHead = {
+  title: "Domains - Admin - twink.forsale",
+};

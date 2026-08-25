@@ -1,174 +1,75 @@
-import { component$, $ } from "@builder.io/qwik";
+import { $, component$ } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
-import { useCurrentUser } from "~/routes/layout";
-import { logout } from "~/lib/auth-client";
-import { Home, Folder, Upload, Wrench, LogOut } from "lucide-icons-qwik";
-import { Nav } from "@luminescent/ui-qwik";
-import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { Folder, Heart, LogOut, Upload } from "lucide-icons-qwik";
 import { LoginButton } from "~/components/auth/login-button";
-import { adminNav, dashboardNav, isNavItemActive } from "~/lib/dashboard-nav";
-
-// Primary links shown inline on desktop. Everything else moved into the
-// dashboard sidebar (desktop) and the grouped mobile menu, so the top bar
-// stays uncluttered instead of jamming in every destination.
-const primaryLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: Home, exact: true },
-  { href: "/dashboard/uploads", label: "Files", icon: Folder },
-  { href: "/upload", label: "Upload", icon: Upload },
-];
+import { Button, ThemeToggle } from "~/components/ui";
+import { logout } from "~/lib/auth-client";
+import { useCurrentUser } from "~/routes/layout";
 
 export default component$(() => {
   const user = useCurrentUser();
-  const signOut = $(() => logout());
   const location = useLocation();
-  const pathname = location.url.pathname;
+  const signOut = $(() => logout());
 
-  // Calmer active state: accent text + a subtle tinted pill instead of a full
-  // gradient button that "pops" out of the bar.
-  const desktopLink = (active: boolean) =>
-    `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+  const linkClass = (active: boolean) =>
+    `focus-ring rounded-control hidden h-8 items-center gap-2 px-2.5 text-[13px] font-medium transition-colors duration-150 sm:inline-flex ${
       active
-        ? "text-theme-accent-primary bg-theme-accent-primary/10"
-        : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
-    }`;
-
-  const mobileLink = (active: boolean) =>
-    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
-      active
-        ? "text-theme-accent-primary bg-theme-accent-primary/10"
-        : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20"
+        ? "bg-accent-soft text-accent-text"
+        : "text-ink-muted hover:bg-surface-hover hover:text-ink"
     }`;
 
   return (
-    <Nav
-      fixed
-      colorClass="bg-theme-bg-primary/80 backdrop-blur-md !border-b border-theme-card-border"
-    >
-      {/* Logo/Brand */}
-      <Link
-        href="/"
-        q:slot="start"
-        class="text-gradient-cute flex items-center gap-2 text-xl font-bold transition-transform duration-300 hover:scale-105 sm:text-2xl"
-      >
-        <div class="heart-gradient sm"></div>
-        <span>twink.forsale</span>
-      </Link>
+    <header class="bg-nav border-edge relative z-30 border-b">
+      <div class="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          class="focus-ring rounded-control text-ink mr-auto inline-flex items-center gap-2 text-base font-semibold tracking-[-0.01em] sm:text-lg"
+        >
+          <Heart
+            class="text-accent-text h-5 w-5 fill-current"
+            aria-hidden="true"
+          />
+          twink.forsale
+        </Link>
 
-      {/* Desktop primary links */}
-      {user.value && (
-        <div q:slot="center" class="hidden items-center gap-2 lg:flex">
-          {primaryLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              class={desktopLink(
-                link.exact
-                  ? pathname === link.href || pathname === link.href + "/"
-                  : pathname.startsWith(link.href),
-              )}
-            >
-              <link.icon class="h-4 w-4" />
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Desktop right side */}
-      <div q:slot="end" class="hidden items-center gap-3 lg:flex">
         {user.value ? (
           <>
-            <ThemeToggle variant="compact" />
-            <Link
-              href="/setup/sharex"
-              class="btn-cute flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium !whitespace-nowrap text-white"
-            >
-              <Wrench class="h-4 w-4" />
-              ShareX Setup
-            </Link>
-            <button
+            <nav aria-label="Public navigation" class="flex items-center gap-1">
+              <Link
+                href="/dashboard"
+                class={linkClass(location.url.pathname === "/dashboard")}
+              >
+                <Folder class="h-4 w-4" aria-hidden="true" />
+                Files
+              </Link>
+              <Link href="/upload" class={linkClass(false)}>
+                <Upload class="h-4 w-4" aria-hidden="true" />
+                Upload
+              </Link>
+            </nav>
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="sm"
               onClick$={signOut}
-              class="text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/20 flex items-center gap-2 rounded-full px-4 py-2 text-sm !whitespace-nowrap transition-all duration-300"
+              aria-label="Sign out"
+              title="Sign out"
+              class="px-2"
             >
-              <LogOut class="h-4 w-4" />
-              Sign Out
-            </button>
+              <LogOut class="h-4 w-4" aria-hidden="true" />
+              <span class="hidden lg:inline">Sign out</span>
+            </Button>
           </>
         ) : (
           <>
-            <ThemeToggle variant="compact" />
-            <LoginButton class="btn-cute flex items-center gap-2 rounded-full px-6 py-2 text-sm font-medium text-white" />
+            <ThemeToggle />
+            <LoginButton
+              class="focus-ring bg-accent text-on-accent hover:bg-accent-hover rounded-control inline-flex h-8 items-center justify-center gap-2 border border-transparent px-2.5 text-[13px] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55"
+              label="Sign in"
+            />
           </>
         )}
       </div>
-
-      {/* Mobile menu — full grouped navigation (sidebar is desktop-only) */}
-      {user.value ? (
-        <>
-          {dashboardNav.map((group) => (
-            <div key={group.title} q:slot="mobile" class="px-2 pt-2">
-              <div class="text-theme-text-muted mb-1 px-2 text-xs font-semibold tracking-wider uppercase">
-                {group.title}
-              </div>
-              <div class="space-y-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    class={mobileLink(isNavItemActive(pathname, item))}
-                  >
-                    <item.icon class="h-5 w-5" />
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {user.value.isAdmin && (
-            <div q:slot="mobile" class="px-2 pt-2">
-              <div class="text-theme-text-muted mb-1 px-2 text-xs font-semibold tracking-wider uppercase">
-                Admin
-              </div>
-              <div class="space-y-1">
-                {adminNav.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    class={mobileLink(isNavItemActive(pathname, item))}
-                  >
-                    <item.icon class="h-5 w-5" />
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div q:slot="mobile" class="mt-2 border-t border-theme-card-border px-4 py-3">
-            <ThemeToggle variant="dropdown" showLabel={true} />
-          </div>
-          <button
-            onClick$={signOut}
-            q:slot="mobile"
-            class={`mx-2 ${mobileLink(false)}`}
-          >
-            <LogOut class="h-5 w-5" />
-            Sign Out
-          </button>
-        </>
-      ) : (
-        <>
-          <div q:slot="mobile" class="px-4 py-3">
-            <ThemeToggle variant="dropdown" showLabel={true} />
-          </div>
-          <LoginButton
-            q:slot="mobile"
-            class={`mx-2 ${mobileLink(false)} btn-cute text-white`}
-            iconClass="h-5 w-5"
-          />
-        </>
-      )}
-    </Nav>
+    </header>
   );
 });

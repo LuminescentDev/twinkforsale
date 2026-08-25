@@ -1,21 +1,58 @@
-import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
-import { routeLoader$, server$, type DocumentHead } from "@builder.io/qwik-city";
-import { isValidHttpUrl } from "~/lib/url-utils";
-import { useAlert } from "~/lib/use-alert";
-import { Link2 as ChainIcon, ExternalLink, Trash2 } from "lucide-icons-qwik";
-import { api, serverAuth, ApiError } from "~/lib/api-client";
-import { getCurrentUser } from "~/lib/auth-client";
 import {
-  Badge,
-  Button,
-  Callout,
-  CopyButton,
-  EmptyState,
-  FieldLabel,
-  IconButton,
-  Input,
+  component$,
+  useSignal,
+  useStore,
+  $,
+  useComputed$,
+} from "@builder.io/qwik";
+import {
+  routeLoader$,
+  server$,
+  type DocumentHead,
+} from "@builder.io/qwik-city";
+import {
+  Link2,
+  ExternalLink,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-icons-qwik";
+import { isValidHttpUrl } from "~/lib/url-utils";
+import {
+  api,
+  serverAuth,
+  ApiError,
+  type ShortLinkListItem,
+} from "~/lib/api-client";
+import { getCurrentUser } from "~/lib/auth-client";
+import { useToast } from "~/lib/toast-store";
+import {
+  formatRelativeDate,
+  formatAbsoluteDate,
+  describeExpiry,
+} from "~/lib/file-kinds";
+import {
+  Page,
   PageHeader,
-  Panel,
+  Section,
+  Surface,
+  Button,
+  IconButton,
+  CopyButton,
+  Field,
+  Input,
+  CodeInput,
+  Badge,
+  Callout,
+  EmptyState,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
 
 export const useLinks = routeLoader$(async (requestEvent) => {
@@ -31,14 +68,12 @@ export const useLinks = routeLoader$(async (requestEvent) => {
   ]);
 
   const links = linksRes.links ?? [];
-  const maxShort = settings?.maxShortLinks ?? 500;
 
   return {
-    user,
     links,
     origin: requestEvent.url.origin,
-    maxShort,
-    count: links.length,
+    maxShort: settings?.maxShortLinks ?? 500,
+    isApproved: user.isApproved,
   };
 });
 
@@ -49,11 +84,15 @@ export const createShortLink = server$(async function (payload: {
   maxClicks?: number | null;
 }): Promise<
   | { ok: true; code: string }
-  | { ok: false; reason: string; message: string; existingCode?: string }
+  | { ok: false; field: "url" | "code" | null; message: string }
 > {
   const url = (payload.url || "").trim();
   if (!isValidHttpUrl(url)) {
-    return { ok: false, reason: "INVALID_URL", message: "Invalid URL. Must start with http(s)://" };
+    return {
+      ok: false,
+      field: "url",
+      message: "Enter a full URL starting with http:// or https://",
+    };
   }
 
   try {
@@ -62,7 +101,9 @@ export const createShortLink = server$(async function (payload: {
         url,
         code: payload.code?.trim() || undefined,
         expiresDays:
-          typeof payload.expiresDays === "number" ? payload.expiresDays : undefined,
+          typeof payload.expiresDays === "number"
+            ? payload.expiresDays
+            : undefined,
         maxClicks:
           typeof payload.maxClicks === "number" ? payload.maxClicks : undefined,
       },
@@ -72,33 +113,42 @@ export const createShortLink = server$(async function (payload: {
   } catch (err) {
     if (err instanceof ApiError) {
       const body = (err.body ?? {}) as { error?: string; code?: string };
-      // The backend flags a duplicate URL with error "duplicate_url" + the code.
       if (err.status === 409 && body.error === "duplicate_url") {
         return {
           ok: false,
-          reason: "DUPLICATE_URL",
-          message: "URL already shortened",
-          existingCode: body.code,
+          field: "url",
+          message: `This URL already has a short link: /${body.code ?? ""}`,
         };
       }
       const message = body.error || err.message;
-      // Map backend messages/status onto the UI's reason codes.
-      const reason =
-        err.status === 429
-          ? "LIMIT_EXCEEDED"
-          : /code already/i.test(message)
-            ? "CODE_TAKEN"
-            : /custom code/i.test(message)
-              ? "CODE_INVALID"
-              : /invalid url/i.test(message)
-                ? "INVALID_URL"
-                : "UNKNOWN";
-      return { ok: false, reason, message };
+      if (err.status === 429) {
+        return {
+          ok: false,
+          field: null,
+          message: "You have reached your short link limit.",
+        };
+      }
+      if (/code already/i.test(message)) {
+        return {
+          ok: false,
+          field: "code",
+          message: "That code is already taken.",
+        };
+      }
+      if (/custom code/i.test(message)) {
+        return {
+          ok: false,
+          field: "code",
+          message: "Codes may use letters, numbers, hyphens and underscores.",
+        };
+      }
+      return { ok: false, field: null, message };
     }
     return {
       ok: false,
-      reason: "UNKNOWN",
-      message: err instanceof Error ? err.message : "Unknown error",
+      field: null,
+      message:
+        err instanceof Error ? err.message : "Could not create the link.",
     };
   }
 });
@@ -112,242 +162,457 @@ export const deleteShortLink = server$(async function (id: string) {
 
 export default component$(() => {
   const data = useLinks();
+  const toast = useToast();
+
+  const links = useStore<{ items: ShortLinkListItem[] }>({
+    items: [...data.value.links],
+  });
+
+  // The form is the whole point of an empty collection, so it starts open there
+  // and stays collapsed once there is something to manage.
+  const formOpen = useSignal(data.value.links.length === 0);
+  const advancedOpen = useSignal(false);
+
   const url = useSignal("");
   const code = useSignal("");
-  const expiresDays = useSignal<number | "">("");
-  const maxClicks = useSignal<number | "">("");
+  const expiresDays = useSignal("");
+  const maxClicks = useSignal("");
   const creating = useSignal(false);
-  const alerts = useAlert();
+  const urlError = useSignal("");
+  const codeError = useSignal("");
 
-  const remaining = useComputed$(() => data.value.maxShort - data.value.count);
+  const pendingDelete = useSignal<ShortLinkListItem | null>(null);
+  const deleteOpen = useSignal(false);
+  const deleteBusy = useSignal(false);
 
-  const submitCreate = $(async () => {
+  const remaining = useComputed$(
+    () => data.value.maxShort - links.items.length,
+  );
+
+  const submit = $(async () => {
+    urlError.value = "";
+    codeError.value = "";
+
     if (!url.value.trim()) {
-      alerts.error("Missing URL", "Please enter a URL to shorten.");
+      urlError.value = "Enter the address you want to shorten.";
       return;
     }
-    if (!isValidHttpUrl(url.value.trim())) {
-      alerts.error("Invalid URL", "The URL must start with http:// or https://");
-      return;
-    }
-    if (code.value.trim() && !/^[a-zA-Z0-9_-]{3,32}$/.test(code.value.trim())) {
-      alerts.error("Invalid Code", "Custom code must be 3-32 characters and only include letters, numbers, - or _.");
-      return;
-    }
+
     creating.value = true;
-    try {
-      const result = await createShortLink({
+    const result = await createShortLink({
+      url: url.value.trim(),
+      code: code.value.trim() || undefined,
+      expiresDays: expiresDays.value ? Number(expiresDays.value) : null,
+      maxClicks: maxClicks.value ? Number(maxClicks.value) : null,
+    });
+    creating.value = false;
+
+    if (!result.ok) {
+      if (result.field === "url") urlError.value = result.message;
+      else if (result.field === "code") codeError.value = result.message;
+      else toast.error("Could not create the short link", result.message);
+      return;
+    }
+
+    links.items = [
+      {
+        id: result.code,
+        code: result.code,
         url: url.value.trim(),
-        code: code.value.trim() || undefined,
-        expiresDays: typeof expiresDays.value === 'number' ? expiresDays.value : undefined,
-        maxClicks: typeof maxClicks.value === 'number' ? maxClicks.value : undefined,
-      });
+        clicks: 0,
+        maxClicks: maxClicks.value ? Number(maxClicks.value) : null,
+        createdAt: new Date().toISOString(),
+        expiresAt: null,
+        lastClicked: null,
+      },
+      ...links.items,
+    ];
 
-      if (result?.ok) {
-        alerts.success("Link Created", "Your short link was created successfully.");
-        window.location.reload();
-      } else if (result) {
-        switch (result.reason) {
-          case 'LIMIT_EXCEEDED':
-            alerts.error("Limit Reached", `You've reached your short link limit (${data.value.maxShort}). Delete some links or request a higher limit.`);
-            break;
-          case 'INVALID_URL':
-            alerts.error("Invalid URL", "Please provide a valid URL starting with http(s)://");
-            break;
-          case 'DUPLICATE_URL': {
-            const codeFound = result.existingCode;
-            const shortUrl = codeFound ? `${data.value.origin}/l/${codeFound}` : "(unknown)";
-            alerts.error("Already Shortened", `You already have a short link for this URL: ${shortUrl}`);
-            break;
-          }
-          case 'CODE_TAKEN':
-            alerts.error("Code Taken", "That custom code is already in use. Try another.");
-            break;
-          case 'CODE_INVALID':
-            alerts.error("Invalid Code", "Custom code must be 3-32 characters and only include letters, numbers, - or _.");
-            break;
-          case 'NOT_APPROVED':
-            alerts.error("Not Approved", "Your account must be approved before creating short links.");
-            break;
-          case 'NOT_AUTHENTICATED':
-          case 'USER_NOT_FOUND':
-          default:
-            alerts.error("Creation Failed", result.message || "Failed to create short link");
-        }
-      } else {
-        alerts.error("Creation Failed", "Failed to create short link");
-      }
-    } finally {
-      creating.value = false;
-    }
+    url.value = "";
+    code.value = "";
+    expiresDays.value = "";
+    maxClicks.value = "";
+    advancedOpen.value = false;
+    formOpen.value = false;
+    toast.success(
+      "Short link created",
+      `${data.value.origin}/s/${result.code}`,
+    );
   });
 
-  const handleDelete = $(async (id: string) => {
-    const confirmed = await alerts.confirmAsync("Delete Link", "Are you sure you want to delete this short link? This cannot be undone.");
-    if (!confirmed) return;
+  const confirmDelete = $(async () => {
+    const target = pendingDelete.value;
+    if (!target) return;
+    deleteBusy.value = true;
     try {
-      await deleteShortLink(id);
-      alerts.success("Deleted", "Short link removed.");
-      window.location.reload();
-    } catch (e: any) {
-      alerts.error("Delete Failed", String(e?.message || "Failed to delete"));
+      await deleteShortLink(target.id);
+      links.items = links.items.filter((l) => l.id !== target.id);
+      deleteOpen.value = false;
+      toast.success(`Deleted /${target.code}`);
+    } catch (error) {
+      toast.error(
+        "Could not delete the short link",
+        error instanceof Error ? error.message : "Try again in a moment.",
+      );
+    } finally {
+      deleteBusy.value = false;
     }
   });
+
+  const shortUrl = (linkCode: string) => `${data.value.origin}/s/${linkCode}`;
+
+  const form = (
+    <Surface class="mb-5">
+      <div class="grid gap-4">
+        <Field
+          label="Destination"
+          for="link-url"
+          error={urlError.value}
+          help="The address people land on after following the short link."
+          required
+        >
+          <Input
+            id="link-url"
+            type="url"
+            inputMode="url"
+            placeholder="https://example.com/a/long/address"
+            value={url.value}
+            aria-invalid={urlError.value ? true : undefined}
+            onInput$={(_, el) => {
+              url.value = el.value;
+              urlError.value = "";
+            }}
+          />
+        </Field>
+
+        <div>
+          <button
+            type="button"
+            onClick$={() => (advancedOpen.value = !advancedOpen.value)}
+            aria-expanded={advancedOpen.value}
+            aria-controls="link-advanced"
+            class="focus-ring rounded-control text-ink-muted hover:text-ink inline-flex items-center gap-1.5 py-1 text-[13px]"
+          >
+            {advancedOpen.value ? (
+              <ChevronUp class="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown class="h-4 w-4" aria-hidden="true" />
+            )}
+            Advanced options
+          </button>
+
+          {advancedOpen.value && (
+            <div id="link-advanced" class="mt-3 grid gap-4 sm:grid-cols-3">
+              <Field
+                label="Custom code"
+                for="link-code"
+                error={codeError.value}
+                help="Leave empty for a generated code."
+              >
+                <CodeInput
+                  id="link-code"
+                  placeholder="my-link"
+                  value={code.value}
+                  onInput$={(_, el) => {
+                    code.value = el.value;
+                    codeError.value = "";
+                  }}
+                />
+              </Field>
+              <Field
+                label="Expires after"
+                for="link-expires"
+                help="Days. Empty means never."
+              >
+                <Input
+                  id="link-expires"
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  placeholder="Never"
+                  value={expiresDays.value}
+                  onInput$={(_, el) => (expiresDays.value = el.value)}
+                />
+              </Field>
+              <Field
+                label="Click limit"
+                for="link-clicks"
+                help="Stops working after this many clicks."
+              >
+                <Input
+                  id="link-clicks"
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  placeholder="Unlimited"
+                  value={maxClicks.value}
+                  onInput$={(_, el) => (maxClicks.value = el.value)}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <Button variant="primary" loading={creating.value} onClick$={submit}>
+            Create short link
+          </Button>
+          {links.items.length > 0 && (
+            <Button variant="ghost" onClick$={() => (formOpen.value = false)}>
+              Cancel
+            </Button>
+          )}
+          <span class="text-ink-muted ml-auto text-xs">
+            {remaining.value} of {data.value.maxShort} remaining
+          </span>
+        </div>
+      </div>
+    </Surface>
+  );
 
   return (
-    <>
-      <PageHeader
-        align="left"
-        title="Short Links"
-        icon={ChainIcon}
-        subtitle="Create and manage your cute short URLs under /l/<code>"
-      />
+    <Page>
+      <PageHeader title="Short Links">
+        {!formOpen.value && (
+          <Button
+            q:slot="actions"
+            variant="primary"
+            onClick$={() => (formOpen.value = true)}
+          >
+            Create short link
+          </Button>
+        )}
+      </PageHeader>
 
-      {!data.value.user.isApproved && (
-        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
-          You cannot create short links until approved by an administrator.
+      {!data.value.isApproved && (
+        <Callout tone="warning" title="Account pending approval" class="mb-4">
+          Short links stay disabled until an administrator approves your
+          account.
         </Callout>
       )}
 
-      {data.value.user.isApproved && (
-        <Panel
-          title="Create New Short Link"
-          icon={ChainIcon}
-          class="mb-6 sm:mb-8"
-        >
-          <Badge q:slot="actions" status={remaining.value > 0 ? "accent" : "warning"}>
-            {remaining.value} remaining
-          </Badge>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-              <FieldLabel>Destination URL</FieldLabel>
-              <Input
-                type="url"
-                placeholder="https://example.com/very/long/url"
-                value={url.value}
-                onInput$={(e) => (url.value = (e.target as HTMLInputElement).value)}
-              />
-            </div>
-            <div>
-              <FieldLabel>Custom code (optional)</FieldLabel>
-              <Input
-                type="text"
-                placeholder="e.g. cute-bunny-123"
-                value={code.value}
-                onInput$={(e) => (code.value = (e.target as HTMLInputElement).value)}
-              />
-            </div>
-            <div>
-              <FieldLabel>Expires in days (optional)</FieldLabel>
-              <Input
-                type="number"
-                placeholder="Never"
-                value={expiresDays.value as any}
-                onInput$={(e) => {
-                  const v = (e.target as HTMLInputElement).value;
-                  expiresDays.value = v === "" ? "" : Number(v);
-                }}
-                min={1}
-              />
-            </div>
-            <div class="sm:col-span-2">
-              <FieldLabel>Max clicks (optional)</FieldLabel>
-              <Input
-                type="number"
-                placeholder="Unlimited"
-                value={maxClicks.value as any}
-                onInput$={(e) => {
-                  const v = (e.target as HTMLInputElement).value;
-                  maxClicks.value = v === "" ? "" : Number(v);
-                }}
-                min={1}
-              />
-            </div>
-          </div>
-          <div class="mt-4 flex justify-end">
-            <Button onClick$={submitCreate} disabled={!url.value.trim() || creating.value}>
-              {creating.value ? (
-                "Creating…"
-              ) : (
-                <>
-                  <ChainIcon class="h-4 w-4" />
-                  Create Link
-                </>
-              )}
-            </Button>
-          </div>
-        </Panel>
+      {formOpen.value && form}
+
+      {links.items.length === 0 ? (
+        !formOpen.value && (
+          <Surface flush>
+            <EmptyState
+              icon={Link2}
+              title="No short links yet"
+              description="Turn a long address into a short, shareable one."
+            >
+              <Button
+                variant="primary"
+                onClick$={() => (formOpen.value = true)}
+              >
+                Create short link
+              </Button>
+            </EmptyState>
+          </Surface>
+        )
+      ) : (
+        <Section>
+          {/* Desktop table */}
+          <Surface flush class="hidden overflow-hidden md:block">
+            <Table label="Your short links" minWidth="820px">
+              <Thead>
+                <Tr hover={false}>
+                  <Th class="w-40">Short link</Th>
+                  <Th>Destination</Th>
+                  <Th class="w-28">Clicks</Th>
+                  <Th class="w-28">Created</Th>
+                  <Th class="w-36">Limits</Th>
+                  <Th class="w-36 text-right">Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {links.items.map((link) => {
+                  const expiry = describeExpiry(link.expiresAt);
+                  const exhausted =
+                    link.maxClicks !== null && link.clicks >= link.maxClicks;
+                  return (
+                    <Tr key={link.id}>
+                      <Td class="font-mono">/s/{link.code}</Td>
+                      <Td class="max-w-0">
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={link.url}
+                          class="focus-ring text-ink hover:text-accent-text block truncate rounded-[4px]"
+                        >
+                          {link.url}
+                        </a>
+                      </Td>
+                      <Td class="tabular-nums">
+                        {link.clicks.toLocaleString()}
+                        {link.lastClicked && (
+                          <span class="text-ink-muted block text-xs">
+                            last {formatRelativeDate(link.lastClicked)}
+                          </span>
+                        )}
+                      </Td>
+                      <TdMeta title={formatAbsoluteDate(link.createdAt)}>
+                        {formatRelativeDate(link.createdAt)}
+                      </TdMeta>
+                      <Td>
+                        <div class="flex flex-wrap gap-1">
+                          {expiry && (
+                            <Badge
+                              tone={expiry === "Expired" ? "error" : "warning"}
+                            >
+                              {expiry}
+                            </Badge>
+                          )}
+                          {link.maxClicks !== null && (
+                            <Badge tone={exhausted ? "error" : "neutral"}>
+                              {link.clicks}/{link.maxClicks} clicks
+                            </Badge>
+                          )}
+                          {!expiry && link.maxClicks === null && (
+                            <span class="text-ink-muted text-xs">None</span>
+                          )}
+                        </div>
+                      </Td>
+                      <Td class="text-right">
+                        <div class="flex items-center justify-end gap-1">
+                          <CopyButton
+                            value={shortUrl(link.code)}
+                            label="Copy"
+                            variant="secondary"
+                          />
+                          <IconButton
+                            size="sm"
+                            variant="outline"
+                            label={`Open /s/${link.code}`}
+                            href={shortUrl(link.code)}
+                            external
+                          >
+                            <ExternalLink class="h-4 w-4" />
+                          </IconButton>
+                          <IconButton
+                            size="sm"
+                            variant="danger"
+                            label={`Delete /s/${link.code}`}
+                            onClick$={() => {
+                              pendingDelete.value = link;
+                              deleteOpen.value = true;
+                            }}
+                          >
+                            <Trash2 class="h-4 w-4" />
+                          </IconButton>
+                        </div>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+            </Table>
+          </Surface>
+
+          {/* Compact rows below md */}
+          <Surface flush class="overflow-hidden md:hidden">
+            <ul class="divide-edge divide-y">
+              {links.items.map((link) => {
+                const expiry = describeExpiry(link.expiresAt);
+                return (
+                  <li key={link.id} class="px-3 py-2.5">
+                    <div class="flex flex-wrap items-start gap-x-2.5 gap-y-2">
+                      <div class="min-w-[9rem] flex-1">
+                        <p class="text-ink truncate font-mono text-[13px] font-medium">
+                          /s/{link.code}
+                        </p>
+                        <p
+                          class="text-ink-muted mt-0.5 truncate text-xs"
+                          title={link.url}
+                        >
+                          {link.url}
+                        </p>
+                        <p class="text-ink-muted mt-0.5 text-xs">
+                          {link.clicks.toLocaleString()} clicks ·{" "}
+                          {formatRelativeDate(link.createdAt)}
+                          {expiry && (
+                            <span
+                              class={
+                                expiry === "Expired"
+                                  ? "text-danger"
+                                  : "text-warning"
+                              }
+                            >
+                              {" "}
+                              · {expiry}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div class="ml-auto flex shrink-0 items-center gap-1">
+                        <CopyButton
+                          value={shortUrl(link.code)}
+                          title={`Copy /s/${link.code}`}
+                          variant="secondary"
+                        />
+                        <IconButton
+                          size="sm"
+                          variant="outline"
+                          label={`Open /s/${link.code}`}
+                          href={shortUrl(link.code)}
+                          external
+                        >
+                          <ExternalLink class="h-4 w-4" />
+                        </IconButton>
+                        <IconButton
+                          size="sm"
+                          variant="danger"
+                          label={`Delete /s/${link.code}`}
+                          onClick$={() => {
+                            pendingDelete.value = link;
+                            deleteOpen.value = true;
+                          }}
+                        >
+                          <Trash2 class="h-4 w-4" />
+                        </IconButton>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Surface>
+        </Section>
       )}
 
-      <Panel title="Your Short Links" icon={ChainIcon} flush>
-        {data.value.links.length === 0 ? (
-          <EmptyState
-            icon={ChainIcon}
-            title="No short links yet~"
-            description="Create your first one above!"
-            class="px-4 sm:px-6"
-          />
-        ) : (
-          <div class="divide-theme-card-border/60 divide-y">
-            {data.value.links.map((link: any) => {
-              const shortUrl = `${data.value.origin}/l/${link.code}`;
-              return (
-                <div
-                  key={link.id}
-                  class="hover:bg-theme-bg-tertiary/20 flex flex-col gap-3 px-4 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-6"
-                >
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-1.5">
-                      <a
-                        href={shortUrl}
-                        target="_blank"
-                        class="text-theme-accent-secondary font-medium break-all hover:underline"
-                      >
-                        {shortUrl}
-                      </a>
-                      <CopyButton value={shortUrl} />
-                    </div>
-                    <div class="text-theme-text-muted mt-1 truncate text-xs sm:text-sm">
-                      → {link.url}
-                    </div>
-                    <div class="text-theme-text-muted mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                      <Badge status="neutral">{link.clicks} clicks</Badge>
-                      <Badge status="neutral">
-                        {new Date(link.createdAt).toLocaleDateString()}
-                      </Badge>
-                      {link.expiresAt && (
-                        <Badge status="warning">
-                          Expires {new Date(link.expiresAt).toLocaleDateString()}
-                        </Badge>
-                      )}
-                      {typeof link.maxClicks === "number" && (
-                        <Badge status="info">Max {link.maxClicks}</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1 self-end sm:self-auto">
-                    <IconButton href={shortUrl} external title="Open link">
-                      <ExternalLink class="h-4 w-4" />
-                    </IconButton>
-                    <IconButton
-                      variant="danger"
-                      title="Delete link"
-                      onClick$={() => handleDelete(link.id)}
-                    >
-                      <Trash2 class="h-4 w-4" />
-                    </IconButton>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
-    </>
+      <Dialog open={deleteOpen} title="Delete this short link?" size="sm">
+        <p class="text-ink-muted text-[13px] leading-5">
+          <span class="text-ink font-mono">/s/{pendingDelete.value?.code}</span>{" "}
+          stops working immediately and anyone following it will get an error.
+          This cannot be undone.
+        </p>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (deleteOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          q:slot="footer"
+          variant="danger"
+          loading={deleteBusy.value}
+          onClick$={confirmDelete}
+        >
+          Delete link
+        </Button>
+      </Dialog>
+    </Page>
   );
 });
 
 export const head: DocumentHead = {
   title: "Short Links - twink.forsale",
-  meta: [{ name: "description", content: "Create and manage URL shortener links." }],
+  meta: [
+    {
+      name: "description",
+      content: "Create and manage short links.",
+    },
+  ],
 };

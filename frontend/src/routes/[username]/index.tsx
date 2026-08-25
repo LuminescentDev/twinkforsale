@@ -2,8 +2,14 @@ import { component$, $ } from "@builder.io/qwik";
 import { routeLoader$, routeAction$, z, zod$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { Eye } from "lucide-icons-qwik";
-import { BioPageDisplay, type BioPageData } from "~/components/bio/bio-page-display";
-import { getGradientCSS, type GradientConfig } from "~/components/ui/gradient-config-panel";
+import {
+  BioPageDisplay,
+  type BioPageData,
+} from "~/components/bio/bio-page-display";
+import {
+  getGradientCSS,
+  type GradientConfig,
+} from "~/components/ui/gradient-config-panel";
 import { api } from "~/lib/api-client";
 
 export const useBioPage = routeLoader$(async (requestEvent) => {
@@ -25,34 +31,38 @@ export const useBioPage = routeLoader$(async (requestEvent) => {
   };
 });
 
-export const useLinkClickAction = routeAction$(async (data) => {
-  const linkId = data.linkId as string;
+export const useLinkClickAction = routeAction$(
+  async (data) => {
+    const linkId = data.linkId as string;
 
-  if (!linkId) {
-    return { success: false, error: "Link ID is required" };
-  }
+    if (!linkId) {
+      return { success: false, error: "Link ID is required" };
+    }
 
-  try {
-    await api.publicBio.clickLink(linkId);
-    return { success: true };
-  } catch (error) {
-    console.error("Error tracking link click:", error);
-    return { success: false, error: "Failed to track click" };
-  }
-}, zod$({
-  linkId: z.string()
-}));
+    try {
+      await api.publicBio.clickLink(linkId);
+      return { success: true };
+    } catch (error) {
+      console.error("Error tracking link click:", error);
+      return { success: false, error: "Failed to track click" };
+    }
+  },
+  zod$({
+    linkId: z.string(),
+  }),
+);
 
 export default component$(() => {
   const bioData = useBioPage();
   const linkClickAction = useLinkClickAction();
   const { bioPage } = bioData.value;
-  
+
   const handleLinkClick = $(async (linkId: string) => {
     // Track the click using the route action
     if (linkId) {
       linkClickAction.submit({ linkId }).catch(console.error);
-    }  });
+    }
+  });
 
   // Parse and process gradient configuration
   const parseGradientConfig = (): GradientConfig | null => {
@@ -67,8 +77,8 @@ export default component$(() => {
   };
 
   const gradientConfig = parseGradientConfig();
-  const baseBackgroundColor = bioPage.backgroundColor || '#8B5CF6';
-  const finalBackgroundColor = gradientConfig?.enabled 
+  const baseBackgroundColor = bioPage.backgroundColor || "#8B5CF6";
+  const finalBackgroundColor = gradientConfig?.enabled
     ? getGradientCSS(gradientConfig, baseBackgroundColor)
     : baseBackgroundColor;
   // Convert bioPage data to BioPageData format
@@ -78,8 +88,8 @@ export default component$(() => {
     profileImage: bioPage.profileImage,
     backgroundImage: bioPage.backgroundImage,
     backgroundColor: finalBackgroundColor,
-    textColor: bioPage.textColor || '#FFFFFF',
-    accentColor: bioPage.accentColor || '#F59E0B',
+    textColor: bioPage.textColor || "#FFFFFF",
+    accentColor: bioPage.accentColor || "#F59E0B",
     customCss: bioPage.customCss,
     spotifyTrack: bioPage.spotifyTrack,
     gradientConfig: bioPage.gradientConfig,
@@ -100,16 +110,19 @@ export default component$(() => {
 
   return (
     <div class="min-h-screen">
-      <BioPageDisplay 
+      <BioPageDisplay
         bioData={bioDisplayData}
         isPreview={false}
         onLinkClick={handleLinkClick}
       />
-      
+
       {/* View Counter */}
-      <div class="fixed bottom-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1 text-white text-sm flex items-center gap-2">
-        <Eye class="w-4 h-4" />
-        <span>{bioPage.views.toLocaleString()} views</span>
+      <div
+        class="fixed right-3 bottom-3 z-20 flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-xs text-white sm:right-4 sm:bottom-4"
+        aria-label={`${bioPage.views.toLocaleString()} page views`}
+      >
+        <Eye class="h-4 w-4" />
+        <span aria-hidden="true">{bioPage.views.toLocaleString()} views</span>
       </div>
     </div>
   );
@@ -124,7 +137,9 @@ export const head: DocumentHead = ({ resolveValue }) => {
     meta: [
       {
         name: "description",
-        content: bioPage.description || `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
+        content:
+          bioPage.description ||
+          `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
       },
       {
         property: "og:title",
@@ -132,7 +147,9 @@ export const head: DocumentHead = ({ resolveValue }) => {
       },
       {
         property: "og:description",
-        content: bioPage.description || `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
+        content:
+          bioPage.description ||
+          `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
       },
       {
         property: "og:image",
@@ -152,7 +169,9 @@ export const head: DocumentHead = ({ resolveValue }) => {
       },
       {
         name: "twitter:description",
-        content: bioPage.description || `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
+        content:
+          bioPage.description ||
+          `Check out ${bioPage.displayName || bioPage.username}'s bio links`,
       },
       {
         name: "twitter:image",

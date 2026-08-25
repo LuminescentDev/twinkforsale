@@ -1,70 +1,48 @@
-import { component$, $, useSignal } from "@builder.io/qwik";
+import {
+  component$,
+  $,
+  useSignal,
+  useStore,
+  useComputed$,
+  useVisibleTask$,
+  noSerialize,
+  type NoSerialize,
+} from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { api, serverAuth } from "~/lib/api-client";
-import { getCurrentUser } from "~/lib/auth-client";
 import {
-  Upload,
-  Image,
-  Video,
-  FileText,
-  File as FileIcon,
+  CloudUpload,
   X,
-  Copy,
-  Eye,
-  Trash2,
-  Settings,
-  Sparkle,
+  ExternalLink,
+  RotateCcw,
   ChevronDown,
   ChevronUp,
-  CheckCircle,
+  CheckCircle2,
   AlertCircle,
-  Clock,
-  Loader,
+  Ban,
 } from "lucide-icons-qwik";
+import { api, serverAuth } from "~/lib/api-client";
+import { getCurrentUser } from "~/lib/auth-client";
+import { uploadFileWithProgress, isAbortError } from "~/lib/upload-transport";
+import { formatBytes } from "~/lib/utils";
+import { fileTypeLabel } from "~/lib/file-kinds";
 import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  FieldLabel,
-  Input,
+  Page,
   PageHeader,
+  Section,
+  Surface,
+  Button,
+  IconButton,
+  CopyButton,
+  Field,
+  Input,
+  Callout,
+  Badge,
+  ProgressBar,
+  Meter,
 } from "~/components/ui";
 
-interface FileUpload {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  preview?: string;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-  error?: string;
-  url?: string;
-  deletionUrl?: string;
-  uploadProgress?: number;
-}
-
-// Utility function to format file size
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-// Utility function to clean filename (matches server-side logic)
-const cleanFilename = (filename: string): string => {
-  return filename
-    .replace(/\s+/g, '-')  // Replace spaces with hyphens
-    .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace other special chars with underscores
-    .replace(/-+/g, '-')  // Replace multiple consecutive hyphens with single hyphen
-    .replace(/_+/g, '_')  // Replace multiple consecutive underscores with single underscore
-    .replace(/^[-_]+|[-_]+$/g, '');  // Remove leading/trailing hyphens and underscores
-};
-
-export const useUserSession = routeLoader$(async (requestEvent) => {
+export const useUploadContext = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
   if (!user) {
@@ -80,566 +58,645 @@ export const useUserSession = routeLoader$(async (requestEvent) => {
   ]);
 
   return {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      maxFileSize: settings?.maxFileSize ?? 10485760,
-      maxUploads: settings?.maxUploads ?? 100,
-      storageUsed: summary?.storageUsed ?? settings?.storageUsed ?? 0,
-      maxStorageLimit:
-        summary?.storageLimit ?? settings?.maxStorageLimit ?? 104857600,
-    },
+    maxFileSize: settings?.maxFileSize ?? 10_485_760,
+    maxUploads: settings?.maxUploads ?? 100,
+    uploadCount: summary?.totalUploads ?? 0,
+    storageUsed: summary?.storageUsed ?? settings?.storageUsed ?? 0,
+    storageLimit:
+      summary?.storageLimit ?? settings?.maxStorageLimit ?? 104_857_600,
+    defaultExpirationDays: settings?.defaultExpirationDays ?? null,
+    defaultMaxViews: settings?.defaultMaxViews ?? null,
     origin: requestEvent.url.origin,
   };
 });
 
+type QueueStatus =
+  | "pending"
+  | "uploading"
+  | "completed"
+  | "failed"
+  | "retrying"
+  | "cancelled";
+
+interface QueueItem {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  status: QueueStatus;
+  /** Bytes sent so far, for per-file byte progress. */
+  loaded: number;
+  error?: string;
+  url?: string;
+  /** Set once the file has been rejected before it ever reaches the network. */
+  validationError?: string;
+  /** Preserves the Retry status while a failed file waits for its turn. */
+  queuedAsRetry?: boolean;
+}
+
+const STATUS_LABEL: Record<QueueStatus, string> = {
+  pending: "Waiting",
+  uploading: "Uploading",
+  completed: "Uploaded",
+  failed: "Failed",
+  retrying: "Retrying",
+  cancelled: "Cancelled",
+};
+
 export default component$(() => {
-  const sessionData = useUserSession();
+  const ctx = useUploadContext();
 
-  // State management
-  const files = useSignal<FileUpload[]>([]);
-  const fileObjects = useSignal<Map<string, File>>(new Map());
-  const isDragOver = useSignal(false);
-  const showAdvancedSettings = useSignal(false);
-  
-  // Advanced settings
-  const expirationDays = useSignal<number | null>(null);
-  const maxViews = useSignal<number | null>(null);
+  // `nextId` lives in the store because the Qwik optimizer turns a
+  // module-level `let` into a `const` inside extracted QRL chunks.
+  const queue = useStore<{ items: QueueItem[]; nextId: number }>({
+    items: [],
+    nextId: 0,
+  });
+  // File objects and AbortControllers cannot be serialized into Qwik state, so
+  // they live in non-serializable side maps keyed by queue id. `noSerialize`
+  // values are dropped when the component resumes in the browser, so the maps
+  // are created on first use rather than at declaration.
+  const fileMap = useSignal<NoSerialize<Map<string, File>>>();
+  const controllers = useSignal<NoSerialize<Map<string, AbortController>>>();
 
-  // Get file type icon component
-  const getFileTypeIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return Image;
-    if (mimeType.startsWith('video/')) return Video;
-    if (mimeType.startsWith('text/')) return FileText;
-    return FileIcon;
-  };
-
-  // Generate unique ID
-  const generateId = $(() => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  const fileStore = $(() => {
+    if (!fileMap.value) fileMap.value = noSerialize(new Map<string, File>());
+    return fileMap.value!;
+  });
+  const abortStore = $(() => {
+    if (!controllers.value) {
+      controllers.value = noSerialize(new Map<string, AbortController>());
+    }
+    return controllers.value!;
   });
 
-  // Handle file selection
-  const handleFiles = $(async (fileList: FileList) => {
-    const user = sessionData.value.user;
-    const newFiles: FileUpload[] = [];
-    const newFileObjects = new Map(fileObjects.value);
-    
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      
-      // Check for duplicate files (same name and size)
-      const isDuplicate = files.value.some(f => 
-        f.name === file.name && f.size === file.size
+  const dragging = useSignal(false);
+  const advancedOpen = useSignal(false);
+  const inputRef = useSignal<HTMLInputElement>();
+
+  const expirationDays = useSignal<string>(
+    ctx.value.defaultExpirationDays?.toString() ?? "",
+  );
+  const maxViews = useSignal<string>(
+    ctx.value.defaultMaxViews?.toString() ?? "",
+  );
+
+  const active = useComputed$(() =>
+    queue.items.some(
+      (i) => i.status === "uploading" || i.status === "retrying",
+    ),
+  );
+  const pendingCount = useComputed$(
+    () => queue.items.filter((i) => i.status === "pending").length,
+  );
+  const doneCount = useComputed$(
+    () => queue.items.filter((i) => i.status === "completed").length,
+  );
+  const totalBytes = useComputed$(() =>
+    queue.items
+      .filter((i) => i.status !== "cancelled" && !i.validationError)
+      .reduce((sum, i) => sum + i.size, 0),
+  );
+  const sentBytes = useComputed$(() =>
+    queue.items
+      .filter((i) => i.status !== "cancelled" && !i.validationError)
+      .reduce(
+        (sum, i) => sum + (i.status === "completed" ? i.size : i.loaded),
+        0,
+      ),
+  );
+  const queueAnnouncement = useComputed$(() => {
+    const transferring = queue.items.find(
+      (item) => item.status === "uploading" || item.status === "retrying",
+    );
+    if (transferring) {
+      return `${STATUS_LABEL[transferring.status]} ${transferring.name}. ${doneCount.value} of ${queue.items.length} complete.`;
+    }
+    const failed = queue.items.filter(
+      (item) => item.status === "failed",
+    ).length;
+    if (failed > 0) {
+      return `${doneCount.value} of ${queue.items.length} uploaded. ${failed} failed.`;
+    }
+    return queue.items.length
+      ? `${doneCount.value} of ${queue.items.length} uploaded.`
+      : "";
+  });
+
+  // Warn before leaving while transfers are in flight.
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
+    const busy = track(() => active.value);
+    if (!busy) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    cleanup(() => window.removeEventListener("beforeunload", handler));
+  });
+
+  const sendOne = $(async (id: string) => {
+    const item = queue.items.find((i) => i.id === id);
+    const file = (await fileStore()).get(id);
+    if (!item || !file) return;
+
+    const controller = new AbortController();
+    (await abortStore()).set(id, controller);
+    item.loaded = 0;
+    item.error = undefined;
+
+    const form = new FormData();
+    form.append("file", file);
+    if (expirationDays.value.trim()) {
+      form.append("expirationDays", expirationDays.value.trim());
+    }
+    if (maxViews.value.trim()) {
+      form.append("maxViews", maxViews.value.trim());
+    }
+
+    try {
+      const result = await uploadFileWithProgress(form, {
+        signal: controller.signal,
+        onProgress: ({ loaded }) => {
+          const live = queue.items.find((i) => i.id === id);
+          if (live) live.loaded = loaded;
+        },
+      });
+      const live = queue.items.find((i) => i.id === id);
+      if (live) {
+        live.status = "completed";
+        live.loaded = live.size;
+        live.url = result.url ?? undefined;
+      }
+    } catch (error) {
+      const live = queue.items.find((i) => i.id === id);
+      if (!live) return;
+      if (isAbortError(error)) {
+        live.status = "cancelled";
+        live.loaded = 0;
+      } else {
+        live.status = "failed";
+        live.error =
+          error instanceof Error
+            ? error.message
+            : "The upload did not complete.";
+      }
+    } finally {
+      (await abortStore()).delete(id);
+    }
+  });
+
+  /**
+   * Drain the queue one file at a time. Sequential transfer keeps the server's
+   * load characteristics unchanged from the previous implementation.
+   */
+  const drain = $(async () => {
+    if (active.value) return;
+    for (;;) {
+      const next = queue.items.find((i) => i.status === "pending");
+      if (!next) break;
+      next.status = next.queuedAsRetry ? "retrying" : "uploading";
+      next.queuedAsRetry = false;
+      await sendOne(next.id);
+    }
+  });
+
+  // Takes a plain array: a live FileList is emptied as soon as the input is
+  // reset, which happens before this async handler runs.
+  const addFiles = $(async (selected: File[]) => {
+    if (selected.length === 0) return;
+    const map = await fileStore();
+
+    for (const file of selected) {
+      const duplicate = queue.items.some(
+        (i) =>
+          i.name === file.name &&
+          i.size === file.size &&
+          i.status !== "cancelled",
       );
-      
-      if (isDuplicate) {
-        console.warn(`Duplicate file skipped: ${file.name}`);
-        continue;
-      }
-      
-      const id = await generateId();
-      
-      // Store the original File object
-      newFileObjects.set(id, file);
-      
-      // Create preview for images
-      let preview: string | undefined;
-      if (file.type.startsWith('image/')) {
-        try {
-          const reader = new FileReader();
-          preview = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        } catch (e) {
-          console.warn('Failed to create preview:', e);
-        }
-      }
-      
-      // Validate file
-      let status: FileUpload['status'] = 'pending';
-      let error: string | undefined;
-      
-      if (file.size > user.maxFileSize) {
-        status = 'error';
-        error = `File too large. Max: ${formatFileSize(user.maxFileSize)}`;
-      } else if (file.size === 0) {
-        status = 'error';
-        error = 'File is empty';
-      } else if (file.name.length > 255) {
-        status = 'error';
-        error = 'Filename too long (max 255 characters)';
-      }
-      
-      newFiles.push({
+      if (duplicate) continue;
+
+      const id = `q${++queue.nextId}`;
+      const tooLarge = file.size > ctx.value.maxFileSize;
+      const empty = file.size === 0;
+
+      map.set(id, file);
+      queue.items.push({
         id,
         name: file.name,
         size: file.size,
-        type: file.type,
-        preview,
-        status,
-        error
+        type: file.type || "application/octet-stream",
+        status: tooLarge || empty ? "failed" : "pending",
+        loaded: 0,
+        validationError: empty
+          ? "This file is empty."
+          : tooLarge
+            ? `Larger than your ${formatBytes(ctx.value.maxFileSize, 0)} limit.`
+            : undefined,
+        error: empty
+          ? "This file is empty."
+          : tooLarge
+            ? `Larger than your ${formatBytes(ctx.value.maxFileSize, 0)} limit.`
+            : undefined,
       });
     }
-    
-    // Update both files and file objects
-    files.value = [...files.value, ...newFiles];
-    fileObjects.value = newFileObjects;
+
+    await drain();
   });
 
-  // Upload a single file
-  const uploadFile = $(async (fileUpload: FileUpload) => {
-    const originalFile = fileObjects.value.get(fileUpload.id);
-    
-    if (!originalFile) {
-      files.value = files.value.map(f => 
-        f.id === fileUpload.id 
-          ? { ...f, status: 'error' as const, error: 'File not found' }
-          : f
-      );
-      return;
-    }
+  const retry = $(async (id: string) => {
+    const item = queue.items.find((i) => i.id === id);
+    if (!item || item.validationError) return;
+    item.queuedAsRetry = true;
+    item.status = "pending";
+    await drain();
+  });
 
-    // Update status to uploading
-    files.value = files.value.map(f => 
-      f.id === fileUpload.id 
-        ? { ...f, status: 'uploading' as const, error: undefined }
-        : f
+  const cancel = $(async (id: string) => {
+    (await abortStore()).get(id)?.abort();
+    const item = queue.items.find((i) => i.id === id);
+    if (item && item.status === "pending") item.status = "cancelled";
+  });
+
+  const remove = $(async (id: string) => {
+    (await abortStore()).get(id)?.abort();
+    (await fileStore()).delete(id);
+    queue.items = queue.items.filter((i) => i.id !== id);
+  });
+
+  const clearFinished = $(async () => {
+    const map = await fileStore();
+    const keep = queue.items.filter(
+      (i) => i.status !== "completed" && i.status !== "cancelled",
     );
-
-    try {
-      const formData = new FormData();
-      formData.append('file', originalFile);
-
-      // Add advanced settings if specified
-      if (expirationDays.value) {
-        formData.append('expirationDays', expirationDays.value.toString());
-      }
-
-      if (maxViews.value) {
-        formData.append('maxViews', maxViews.value.toString());
-      }
-
-      // Upload through the session-authenticated backend API.
-      const result = await api.uploads.create(formData);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      // Update file with success data
-      files.value = files.value.map(f =>
-        f.id === fileUpload.id
-          ? {
-              ...f,
-              status: 'success' as const,
-              url: result.url ?? undefined,
-              deletionUrl: result.deletionUrl ?? undefined
-            }
-          : f
-      );
-
-      // Remove file object from memory after successful upload
-      const newFileObjects = new Map(fileObjects.value);
-      newFileObjects.delete(fileUpload.id);
-      fileObjects.value = newFileObjects;
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      files.value = files.value.map(f => 
-        f.id === fileUpload.id 
-          ? { 
-              ...f, 
-              status: 'error' as const, 
-              error: error instanceof Error ? error.message : 'Upload failed'
-            }
-          : f
-      );
-    }
+    const keepIds = new Set(keep.map((i) => i.id));
+    queue.items.forEach((i) => {
+      if (!keepIds.has(i.id)) map.delete(i.id);
+    });
+    queue.items = keep;
   });
 
-  // Remove file from list
-  const removeFile = $((id: string) => {
-    files.value = files.value.filter(f => f.id !== id);
-    // Also remove from file objects
-    const newFileObjects = new Map(fileObjects.value);
-    newFileObjects.delete(id);
-    fileObjects.value = newFileObjects;
-  });
-
-  // Clear all files
-  const clearAll = $(() => {
-    files.value = [];
-    fileObjects.value = new Map();
-  });
-
-  // Upload all pending files
-  const uploadAll = $(async () => {
-    const pendingFiles = files.value.filter(f => f.status === 'pending');
-    
-    // Upload files sequentially to avoid overwhelming the server
-    for (const fileUpload of pendingFiles) {
-      await uploadFile(fileUpload);
-    }
-  });
-
-  // Copy URL to clipboard
-  const copyUrl = $((url: string) => {
-    navigator.clipboard.writeText(url);
-    // Could add toast notification here
-  });
-
-  // Drag and drop handlers
-  const handleDragOver = $((e: DragEvent) => {
-    e.preventDefault();
-    isDragOver.value = true;
-  });
-
-  const handleDragLeave = $(() => {
-    isDragOver.value = false;
-  });
-
-  const handleDrop = $(async (e: DragEvent) => {
-    e.preventDefault();
-    isDragOver.value = false;
-    
-    const droppedFiles = e.dataTransfer?.files;
-    if (droppedFiles && droppedFiles.length > 0) {
-      await handleFiles(droppedFiles);
-    }
-  });
+  const storagePercent =
+    ctx.value.storageLimit > 0
+      ? (ctx.value.storageUsed / ctx.value.storageLimit) * 100
+      : 0;
 
   return (
-    <>
-      <PageHeader
-        align="left"
-        title="File Upload~"
-        icon={Upload}
-        subtitle="Drag and drop files or click to select files to upload! (◕‿◕)♡"
-      />
+    <Page width="narrow">
+      <PageHeader title="Upload" />
 
-      <div class="mx-auto max-w-5xl">
-        {/* User Info */}
-        <Card padding="sm" class="mb-6">
-          <div class="flex flex-wrap items-center justify-between gap-4">
+      {/* Context first: what you are allowed to send. */}
+      <Surface class="mb-4" padding="sm">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <Meter
+            label="Storage used"
+            used={formatBytes(ctx.value.storageUsed, 1)}
+            total={formatBytes(ctx.value.storageLimit, 0)}
+            percent={storagePercent}
+            class="min-w-[10rem] flex-1"
+          />
+          <dl class="flex gap-6">
             <div>
-              <h3 class="text-theme-text-primary font-medium">
-                Welcome back, {sessionData.value.user.name}!
-              </h3>
-              <p class="text-theme-text-secondary text-sm">
-                Storage: {formatFileSize(sessionData.value.user.storageUsed)} / {formatFileSize(sessionData.value.user.maxStorageLimit)}
-              </p>
+              <dt class="text-ink-muted text-xs">Max file size</dt>
+              <dd class="text-ink text-[13px] font-medium tabular-nums">
+                {formatBytes(ctx.value.maxFileSize, 0)}
+              </dd>
             </div>
-            <div class="text-theme-text-secondary text-sm">
-              Max file size: {formatFileSize(sessionData.value.user.maxFileSize)}
+            <div>
+              <dt class="text-ink-muted text-xs">Files</dt>
+              <dd class="text-ink text-[13px] font-medium tabular-nums">
+                {ctx.value.uploadCount} / {ctx.value.maxUploads}
+              </dd>
             </div>
-          </div>
-        </Card>
+          </dl>
+        </div>
+      </Surface>
 
-        {/* Advanced Settings */}
-        <Card padding="sm" class="mb-6">
-          <button
-            onClick$={() => showAdvancedSettings.value = !showAdvancedSettings.value}
-            class="text-theme-text-primary hover:text-theme-accent-primary flex w-full items-center justify-between transition-colors"
+      {storagePercent >= 95 && (
+        <Callout tone="warning" title="Storage almost full" class="mb-4">
+          Delete some files to free space, or uploads will start to fail.
+          <Button
+            q:slot="actions"
+            size="sm"
+            variant="secondary"
+            href="/dashboard"
           >
-            <div class="flex items-center gap-2">
-              <Settings class="h-5 w-5" />
-              <span class="font-medium">Advanced Settings</span>
-            </div>
-            {showAdvancedSettings.value ? (
-              <ChevronUp class="h-5 w-5" />
-            ) : (
-              <ChevronDown class="h-5 w-5" />
-            )}
-          </button>
+            Manage files
+          </Button>
+        </Callout>
+      )}
 
-          {showAdvancedSettings.value && (
-            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <FieldLabel>Expiration (days)</FieldLabel>
-                <Input
-                  type="number"
-                  min="1"
-                  max="365"
-                  placeholder="Never expires"
-                  value={expirationDays.value || ''}
-                  onInput$={(e) => {
-                    const value = (e.target as HTMLInputElement).value;
-                    expirationDays.value = value ? parseInt(value) : null;
-                  }}
-                />
+      {/* Drop / select surface */}
+      <div
+        onDragOver$={(event) => {
+          event.preventDefault();
+          dragging.value = true;
+        }}
+        onDragLeave$={() => (dragging.value = false)}
+        onDrop$={(event) => {
+          event.preventDefault();
+          dragging.value = false;
+          addFiles(Array.from(event.dataTransfer?.files ?? []));
+        }}
+        class={`rounded-surface flex flex-col items-center justify-center border border-dashed px-6 py-10 text-center transition-colors duration-150 ${
+          dragging.value
+            ? "border-accent bg-accent-soft"
+            : "border-edge-strong bg-surface-subtle"
+        }`}
+      >
+        <CloudUpload class="text-ink-muted mb-3 h-7 w-7" aria-hidden="true" />
+        <p class="text-ink text-sm font-medium">
+          Drag files here, or choose them from your device
+        </p>
+        <p class="text-ink-muted mt-1 text-[13px]">
+          Multiple files are uploaded one after another.
+        </p>
+        <Button
+          variant="primary"
+          class="mt-4"
+          onClick$={() => inputRef.value?.click()}
+        >
+          Choose files
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          class="sr-only"
+          aria-label="Choose files to upload"
+          onChange$={(_, el) => {
+            const files = Array.from(el.files ?? []);
+            // Reset first so re-picking the same file still fires `change`.
+            el.value = "";
+            addFiles(files);
+          }}
+        />
+      </div>
+
+      {/* Advanced options, disclosed rather than always present */}
+      <div class="mt-4">
+        <button
+          type="button"
+          onClick$={() => (advancedOpen.value = !advancedOpen.value)}
+          aria-expanded={advancedOpen.value}
+          aria-controls="upload-advanced"
+          class="focus-ring rounded-control text-ink-muted hover:text-ink inline-flex items-center gap-1.5 py-1 text-[13px]"
+        >
+          {advancedOpen.value ? (
+            <ChevronUp class="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronDown class="h-4 w-4" aria-hidden="true" />
+          )}
+          Expiration and view limits
+        </button>
+
+        {advancedOpen.value && (
+          <div
+            id="upload-advanced"
+            class="border-edge rounded-surface mt-2 grid gap-4 border p-4 sm:grid-cols-2"
+          >
+            <Field
+              label="Delete after"
+              for="expiration-days"
+              help={
+                ctx.value.defaultExpirationDays
+                  ? `Your default is ${ctx.value.defaultExpirationDays} days. Leave empty to keep files indefinitely.`
+                  : "Leave empty to keep files indefinitely."
+              }
+            >
+              <Input
+                id="expiration-days"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                placeholder="Days"
+                value={expirationDays.value}
+                onInput$={(_, el) => (expirationDays.value = el.value)}
+              />
+            </Field>
+            <Field
+              label="Maximum views"
+              for="max-views"
+              help={
+                ctx.value.defaultMaxViews
+                  ? `Your default is ${ctx.value.defaultMaxViews} views. Leave empty for unlimited.`
+                  : "The link stops working after this many views. Leave empty for unlimited."
+              }
+            >
+              <Input
+                id="max-views"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                placeholder="Unlimited"
+                value={maxViews.value}
+                onInput$={(_, el) => (maxViews.value = el.value)}
+              />
+            </Field>
+            <p class="text-ink-muted text-xs sm:col-span-2">
+              These apply to files still waiting in the queue. Files already
+              uploaded keep the settings they were sent with.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Queue */}
+      {queue.items.length > 0 && (
+        <Section
+          title="Queue"
+          class="mt-6"
+          description={
+            active.value
+              ? `Uploading — ${doneCount.value} of ${queue.items.length} done`
+              : `${doneCount.value} of ${queue.items.length} uploaded${pendingCount.value ? `, ${pendingCount.value} waiting` : ""}`
+          }
+        >
+          <Button
+            q:slot="actions"
+            size="sm"
+            variant="ghost"
+            onClick$={clearFinished}
+            disabled={
+              !queue.items.some(
+                (i) => i.status === "completed" || i.status === "cancelled",
+              )
+            }
+          >
+            Clear finished
+          </Button>
+
+          {active.value && (
+            <div class="mb-3">
+              <div class="text-ink-muted mb-1 flex justify-between text-xs tabular-nums">
+                <span>Overall progress</span>
+                <span>
+                  {formatBytes(sentBytes.value, 1)} of{" "}
+                  {formatBytes(totalBytes.value, 1)}
+                </span>
               </div>
-              <div>
-                <FieldLabel>Max Views</FieldLabel>
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="Unlimited"
-                  value={maxViews.value || ''}
-                  onInput$={(e) => {
-                    const value = (e.target as HTMLInputElement).value;
-                    maxViews.value = value ? parseInt(value) : null;
-                  }}
-                />
-              </div>
+              <ProgressBar
+                label="Overall upload progress"
+                value={sentBytes.value}
+                max={totalBytes.value || 1}
+                valueText={`${formatBytes(sentBytes.value, 1)} of ${formatBytes(totalBytes.value, 1)}`}
+              />
             </div>
           )}
-        </Card>
 
-        {/* Upload Area */}
-        <div class="mb-6">
-          <div
-            class={`card-cute relative overflow-hidden rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
-              isDragOver.value
-                ? 'border-theme-accent-primary bg-theme-accent-primary/10'
-                : 'border-theme-card-border hover:border-theme-accent-primary/50'
-            }`}
-            onDragOver$={handleDragOver}
-            onDragLeave$={handleDragLeave}
-            onDrop$={handleDrop}
-          >
-            <input
-              type="file"
-              multiple
-              onChange$={async (e) => {
-                const input = e.target as HTMLInputElement;
-                if (input.files && input.files.length > 0) {
-                  await handleFiles(input.files);
-                  input.value = ''; // Reset input
-                }
-              }}
-              class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            />
-            
-            <div class="pointer-events-none space-y-4">
-              <div class="text-theme-accent-primary mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20">
-                <Upload class="h-8 w-8" />
-              </div>
-              
-              <div>
-                <h3 class="text-theme-text-primary mb-2 text-lg font-medium">
-                  Drop files here or click to select
-                </h3>
-                <p class="text-theme-text-secondary">
-                  You can upload multiple files at once
-                </p>
-              </div>
+          <Surface flush>
+            <p class="sr-only" aria-live="polite" aria-atomic="true">
+              {queueAnnouncement.value}
+            </p>
+            <ul class="divide-edge divide-y">
+              {queue.items.map((item) => (
+                <QueueRow
+                  key={item.id}
+                  item={item}
+                  onRetry$={$(() => retry(item.id))}
+                  onCancel$={$(() => cancel(item.id))}
+                  onRemove$={$(() => remove(item.id))}
+                />
+              ))}
+            </ul>
+          </Surface>
+
+          {doneCount.value > 0 && !active.value && (
+            <div class="mt-3">
+              <Button variant="secondary" href="/dashboard">
+                Go to Files
+              </Button>
             </div>
+          )}
+        </Section>
+      )}
+    </Page>
+  );
+});
+
+const statusTone: Record<
+  QueueStatus,
+  "success" | "error" | "warning" | "info" | "neutral"
+> = {
+  pending: "neutral",
+  uploading: "info",
+  retrying: "info",
+  completed: "success",
+  failed: "error",
+  cancelled: "neutral",
+};
+
+const statusIcon: Record<QueueStatus, any> = {
+  pending: undefined,
+  uploading: undefined,
+  retrying: undefined,
+  completed: CheckCircle2,
+  failed: AlertCircle,
+  cancelled: Ban,
+};
+
+const QueueRow = component$<{
+  item: QueueItem;
+  onRetry$: any;
+  onCancel$: any;
+  onRemove$: any;
+}>(({ item, onRetry$, onCancel$, onRemove$ }) => {
+  const inFlight = item.status === "uploading" || item.status === "retrying";
+  return (
+    <li class="px-3 py-2.5">
+      <div class="flex items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p class="text-ink min-w-0 flex-1 truncate text-[13px] font-medium">
+              {item.name}
+            </p>
+            <Badge
+              tone={statusTone[item.status]}
+              icon={statusIcon[item.status]}
+            >
+              {STATUS_LABEL[item.status]}
+            </Badge>
           </div>
+
+          <p class="text-ink-muted mt-0.5 text-xs tabular-nums">
+            {inFlight
+              ? `${formatBytes(item.loaded, 1)} of ${formatBytes(item.size, 1)}`
+              : `${formatBytes(item.size, 1)} · ${fileTypeLabel(item.type)}`}
+          </p>
+
+          {inFlight && (
+            <ProgressBar
+              label={`Uploading ${item.name}`}
+              value={item.loaded}
+              max={item.size || 1}
+              size="sm"
+              class="mt-1.5"
+              valueText={`${formatBytes(item.loaded, 1)} of ${formatBytes(item.size, 1)}`}
+            />
+          )}
+
+          {item.status === "failed" && item.error && (
+            <p class="text-danger mt-1 text-xs leading-4">{item.error}</p>
+          )}
+
+          {item.status === "completed" && item.url && (
+            <p class="text-ink-muted mt-1 truncate font-mono text-xs">
+              {item.url}
+            </p>
+          )}
         </div>
 
-        {/* File List */}
-        {files.value.length > 0 && (
-          <Card padding="md">
-            {/* Summary Stats */}
-            <div class="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-theme-bg-secondary/30 p-3 sm:grid-cols-4">
-              <div class="text-center">
-                <p class="text-theme-text-primary text-lg font-semibold">
-                  {files.value.length}
-                </p>
-                <p class="text-theme-text-muted text-xs">Total</p>
-              </div>
-              <div class="text-center">
-                <p class="text-theme-accent-secondary text-lg font-semibold">
-                  {files.value.filter(f => f.status === 'pending').length}
-                </p>
-                <p class="text-theme-text-muted text-xs">Pending</p>
-              </div>
-              <div class="text-center">
-                <p class="text-theme-success text-lg font-semibold">
-                  {files.value.filter(f => f.status === 'success').length}
-                </p>
-                <p class="text-theme-text-muted text-xs">Uploaded</p>
-              </div>
-              <div class="text-center">
-                <p class="text-theme-error text-lg font-semibold">
-                  {files.value.filter(f => f.status === 'error').length}
-                </p>
-                <p class="text-theme-text-muted text-xs">Errors</p>
-              </div>
-            </div>
-
-            <div class="mb-4 flex items-center justify-between">
-              <h3 class="text-theme-text-primary text-lg font-medium">
-                Files ({files.value.length})
-              </h3>
-              <div class="flex gap-2">
-                <Button
-                  size="sm"
-                  pill={false}
-                  onClick$={uploadAll}
-                  disabled={!files.value.some(f => f.status === 'pending')}
-                >
-                  <Upload class="h-4 w-4" />
-                  Upload All
-                </Button>
-                <Button size="sm" pill={false} variant="ghost" onClick$={clearAll}>
-                  <Trash2 class="h-4 w-4" />
-                  Clear All
-                </Button>
-              </div>
-            </div>
-
-            <div class="space-y-3">
-              {files.value.map((fileUpload) => {
-                const IconComponent = getFileTypeIcon(fileUpload.type);
-
-                return (
-                  <div
-                    key={fileUpload.id}
-                    class="border-theme-card-border flex items-center gap-4 rounded-xl border bg-theme-bg-secondary/30 p-4"
-                  >
-                    {/* File Icon/Preview */}
-                    <div class="flex-shrink-0">
-                      {fileUpload.preview ? (
-                        <img 
-                          src={fileUpload.preview} 
-                          alt={fileUpload.name}
-                          width="48"
-                          height="48"
-                          class="h-12 w-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div class="bg-gradient-to-br from-theme-accent-primary/20 to-theme-accent-secondary/20 flex h-12 w-12 items-center justify-center rounded-lg">
-                          <IconComponent class="text-theme-accent-primary h-6 w-6" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Info */}
-                    <div class="min-w-0 flex-1">
-                      <h4 class="text-theme-text-primary truncate font-medium">
-                        {fileUpload.name}
-                      </h4>
-                      {fileUpload.name.includes(' ') && (
-                        <p class="text-theme-text-muted text-xs">
-                          Will be saved as: {cleanFilename(fileUpload.name)}
-                        </p>
-                      )}
-                      <p class="text-theme-text-secondary text-sm">
-                        {formatFileSize(fileUpload.size)} • {fileUpload.type}
-                      </p>
-                      
-                      {/* Status */}
-                      <div class="mt-1.5">
-                        {fileUpload.status === 'error' && fileUpload.error && (
-                          <Badge status="error" icon={AlertCircle}>
-                            {fileUpload.error}
-                          </Badge>
-                        )}
-                        {fileUpload.status === 'uploading' && (
-                          <Badge status="info" icon={Loader}>
-                            Uploading...
-                          </Badge>
-                        )}
-                        {fileUpload.status === 'success' && (
-                          <Badge status="success" icon={CheckCircle}>
-                            Uploaded successfully!
-                          </Badge>
-                        )}
-                        {fileUpload.status === 'pending' && (
-                          <Badge status="neutral" icon={Clock}>
-                            Ready to upload
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div class="flex items-center gap-2">
-                      {fileUpload.status === 'success' && fileUpload.url ? (
-                        <>
-                          <button
-                            onClick$={() => copyUrl(fileUpload.url!)}
-                            class="text-theme-accent-tertiary hover:bg-theme-accent-tertiary/10 rounded-lg p-2 transition-colors"
-                            title="Copy URL"
-                          >
-                            <Copy class="h-4 w-4" />
-                          </button>
-                          <a
-                            href={fileUpload.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-theme-accent-secondary hover:bg-theme-accent-secondary/10 rounded-lg p-2 transition-colors"
-                            title="View file"
-                          >
-                            <Eye class="h-4 w-4" />
-                          </a>
-                        </>
-                      ) : fileUpload.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          pill={false}
-                          onClick$={() => uploadFile(fileUpload)}
-                        >
-                          Upload
-                        </Button>
-                      )}
-                      
-                      <button
-                        onClick$={() => removeFile(fileUpload.id)}
-                        class="text-theme-accent-primary hover:bg-theme-accent-primary/10 rounded-lg p-2 transition-colors"
-                        title="Remove"
-                      >
-                        <X class="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {/* Quick Links */}
-        <Card padding="md" class="mt-6">
-          <h3 class="text-theme-text-primary mb-4 font-medium">Quick Actions</h3>
-          <div class="flex flex-wrap gap-3">
-            <Button href="/dashboard/uploads" variant="ghost" size="sm">
-              <FileIcon class="h-4 w-4" />
-              View All Files
+        <div class="flex shrink-0 items-center gap-1">
+          {item.status === "completed" && item.url && (
+            <>
+              <CopyButton
+                value={item.url}
+                label="Copy link"
+                variant="secondary"
+              />
+              <IconButton
+                size="sm"
+                variant="outline"
+                label={`Open ${item.name}`}
+                href={item.url}
+                external
+              >
+                <ExternalLink class="h-4 w-4" />
+              </IconButton>
+            </>
+          )}
+          {item.status === "failed" && !item.validationError && (
+            <Button size="sm" variant="secondary" onClick$={onRetry$}>
+              <RotateCcw class="h-4 w-4" aria-hidden="true" />
+              Retry
             </Button>
-            <Button href="/dashboard" variant="ghost" size="sm">
-              <Settings class="h-4 w-4" />
-              Dashboard
+          )}
+          {inFlight ? (
+            <Button size="sm" variant="secondary" onClick$={onCancel$}>
+              Cancel
             </Button>
-          </div>
-        </Card>
-
-        {/* Instructions */}
-        <Card padding="md" class="mt-6">
-          <h3 class="text-theme-text-primary mb-4 flex items-center gap-2 font-medium">
-            <Sparkle class="h-5 w-5" />
-            How to Upload
-          </h3>
-          <div class="text-theme-text-secondary mb-4 space-y-2 text-sm">
-            <p>• Drag and drop files directly onto the upload area</p>
-            <p>• Click the upload area to select files from your computer</p>
-            <p>• Set expiration dates and view limits in Advanced Settings</p>
-            <p>• Click "Upload" for individual files or "Upload All" for batch uploads</p>
-            <p>• Files are uploaded to your account using your API key</p>
-            <p>• Supported formats depend on your account settings</p>
-          </div>
-
-          <Callout tone="info" icon={Sparkle} title="Pro Tip">
-            Your files are uploaded directly to the same API endpoint used by
-            ShareX and other tools. URLs and deletion keys will be generated
-            automatically!
-          </Callout>
-        </Card>
+          ) : (
+            <IconButton
+              size="sm"
+              label={`Remove ${item.name} from the queue`}
+              onClick$={onRemove$}
+            >
+              <X class="h-4 w-4" />
+            </IconButton>
+          )}
+        </div>
       </div>
-    </>
+    </li>
   );
 });
 
 export const head: DocumentHead = {
-  title: "Upload Files~ - twink.forsale",
+  title: "Upload - twink.forsale",
   meta: [
     {
       name: "description",
-      content: "Upload files with drag and drop support, expiration dates and view limits! (◕‿◕)♡",
+      content: "Upload files with expiration and view limits.",
     },
   ],
 };

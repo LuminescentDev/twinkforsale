@@ -3,47 +3,71 @@ import { Copy, Check } from "lucide-icons-qwik";
 import { cn } from "~/lib/utils";
 
 export interface CopyButtonProps {
-  /** Text copied to the clipboard on click. */
   value: string;
-  /** Optional visible label; icon-only when omitted. */
+  /** Visible label. Keep "Copy link" spelled out on file rows. */
   label?: string;
+  /** Accessible name when there is no visible label. */
+  title?: string;
   size?: "sm" | "md";
+  variant?: "ghost" | "secondary";
   class?: string;
 }
 
 /**
- * Copy-to-clipboard button with a transient "Copied!" confirmation. Used
- * everywhere a short URL / key / snippet needs copying, so the interaction
- * is consistent instead of every page rolling its own.
+ * Copy to clipboard with a transient confirmation. The label stays in place
+ * while confirming, so the row does not reflow.
  */
 export const CopyButton = component$<CopyButtonProps>(
-  ({ value, label, size = "sm", class: className }) => {
+  ({
+    value,
+    label,
+    title,
+    size = "sm",
+    variant = "ghost",
+    class: className,
+  }) => {
     const copied = useSignal(false);
+    const failed = useSignal(false);
+
     const copy = $(async () => {
       try {
         await navigator.clipboard.writeText(value);
         copied.value = true;
-        setTimeout(() => (copied.value = false), 1500);
+        failed.value = false;
+        setTimeout(() => (copied.value = false), 1600);
       } catch {
-        /* clipboard unavailable — ignore */
+        failed.value = true;
+        setTimeout(() => (failed.value = false), 3000);
       }
     });
+
     const Icon = copied.value ? Check : Copy;
+    const accessibleName = title ?? (label ? undefined : "Copy to clipboard");
+
     return (
       <button
         type="button"
         onClick$={copy}
+        aria-label={accessibleName}
+        title={accessibleName}
         class={cn(
-          "inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors duration-200",
-          size === "sm" ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
-          copied.value
-            ? "text-theme-success"
-            : "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/30",
+          "focus-ring rounded-control inline-flex items-center justify-center gap-1.5 border font-medium whitespace-nowrap transition-colors duration-150",
+          size === "sm" ? "h-8 text-[13px]" : "h-9 text-sm",
+          label ? "px-2.5" : size === "sm" ? "w-8" : "w-9",
+          variant === "secondary"
+            ? "border-edge bg-surface text-ink hover:bg-surface-hover"
+            : "text-ink-muted hover:bg-surface-hover hover:text-ink border-transparent",
+          copied.value && "text-success",
+          failed.value && "text-danger",
           className,
         )}
       >
-        <Icon class={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
-        {label && <span>{copied.value ? "Copied!" : label}</span>}
+        <Icon class="h-4 w-4 shrink-0" aria-hidden="true" />
+        {label && (
+          <span aria-live="polite">
+            {copied.value ? "Copied" : failed.value ? "Copy failed" : label}
+          </span>
+        )}
       </button>
     );
   },

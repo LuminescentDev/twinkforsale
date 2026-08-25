@@ -1,230 +1,925 @@
-import { component$, useContext } from "@builder.io/qwik";
-import { routeLoader$ } from "@builder.io/qwik-city";
+import {
+  component$,
+  $,
+  useContext,
+  useSignal,
+  useComputed$,
+  useStore,
+} from "@builder.io/qwik";
+import { routeLoader$, routeAction$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
-  Folder,
-  Eye,
-  HardDrive,
-  Key,
-  Flower2,
-  Rocket,
-  TrendingUp,
+  FolderOpen,
+  SearchX,
   ExternalLink,
+  BarChart3,
+  Trash2,
+  EllipsisVertical,
+  List,
+  LayoutGrid,
+  Eye,
+  Download,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
-import { AnalyticsChart } from "~/components/charts/analytics-chart";
 import { FileTypeIcon } from "~/components/file-type-icon";
-import { api, serverAuth } from "~/lib/api-client";
+import { api, serverAuth, type UploadListItem } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
 import {
-  Button,
-  Callout,
-  CopyButton,
-  EmptyState,
-  IconButton,
+  setUploadsViewMode,
+  getServerUploadsViewMode,
+} from "~/lib/cookie-utils";
+import {
+  fileKind,
+  fileKindLabels,
+  fileTypeLabel,
+  formatRelativeDate,
+  formatAbsoluteDate,
+  describeExpiry,
+  type FileKind,
+} from "~/lib/file-kinds";
+import { useToast } from "~/lib/toast-store";
+import {
+  Page,
   PageHeader,
-  Panel,
-  Section,
-  StatCard,
+  Surface,
+  Button,
+  IconButton,
+  CopyButton,
+  SearchField,
+  CollectionToolbar,
+  SelectionBar,
+  SegmentedControl,
+  Select,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  SortHeader,
+  Tr,
+  Td,
+  TdMeta,
+  Checkbox,
+  EmptyState,
+  Callout,
+  Badge,
+  Meter,
+  DropdownMenu,
+  MenuItem,
+  Dialog,
 } from "~/components/ui";
 
-export const useUserData = routeLoader$(async (requestEvent) => {
+export const useDeleteUploads = routeAction$(async (data, requestEvent) => {
   const auth = serverAuth(requestEvent);
+  const user = await getCurrentUser(auth);
+  if (!user) {
+    return { ok: false as const, error: "Not signed in." };
+  }
 
+  const raw = data.ids as string[] | string;
+  const ids = (Array.isArray(raw) ? raw : [raw]).filter(Boolean);
+  if (!ids.length) {
+    return { ok: false as const, error: "No files selected." };
+  }
+
+  const failed: string[] = [];
+  for (const id of ids) {
+    try {
+      await api.dashboard.deleteUpload(id, auth);
+    } catch {
+      failed.push(id);
+    }
+  }
+
+  return {
+    ok: true as const,
+    deleted: ids.filter((id) => !failed.includes(id)),
+    failed,
+  };
+});
+
+export const useFiles = routeLoader$(async (requestEvent) => {
+  const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
   if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Pull dashboard data from the backend in parallel. Each call degrades
-  // gracefully so a single failing endpoint doesn't blank the whole page.
-  const [summary, uploadsRes, apiKeysRes, analyticsOverview] =
-    await Promise.all([
-      api.dashboard.summary(auth).catch(() => null),
-      api.dashboard.uploads(auth).catch(() => ({ uploads: [] })),
-      api.apiKeys.list(auth).catch(() => ({ apiKeys: [] })),
-      api.analytics.overview(auth).catch(() => null),
-    ]);
-
-  const uploads = (uploadsRes.uploads ?? []).slice(0, 10);
+  // The collection endpoints require an approved account, so an unapproved
+  // user is not shown a network error for something that is working correctly.
+  const [uploadsRes, summary] = user.isApproved
+    ? await Promise.all([
+        api.dashboard.uploads(auth).then(
+          (r) => ({ uploads: r.uploads ?? [], failed: false }),
+          () => ({ uploads: [] as UploadListItem[], failed: true }),
+        ),
+        api.dashboard.summary(auth).catch(() => null),
+      ])
+    : [{ uploads: [] as UploadListItem[], failed: false }, null];
 
   return {
-    user: {
-      name: user.name,
-      isApproved: user.isApproved,
-      isAdmin: user.isAdmin,
-      apiKeys: apiKeysRes.apiKeys ?? [],
-      uploads,
-    },
-    stats: {
-      totalUploads: summary?.totalUploads ?? uploads.length,
-      totalViews: summary?.totalViews ?? 0,
-      storageUsed: summary?.storageUsed ?? 0,
-      maxStorage: summary?.storageLimit ?? 0,
-    },
-    analyticsData: analyticsOverview?.userAnalytics ?? [],
+    uploads: uploadsRes.uploads,
+    loadFailed: uploadsRes.failed,
+    isApproved: user.isApproved,
+    // Set when a guarded route bounced the user back here.
+    approvalError: requestEvent.url.searchParams.get("error"),
+    storageUsed: summary?.storageUsed ?? 0,
+    storageLimit: summary?.storageLimit ?? 0,
     origin: requestEvent.url.origin,
+    viewMode:
+      getServerUploadsViewMode(
+        requestEvent.request.headers.get("cookie") || undefined,
+      ) || "list",
   };
 });
 
+type SortKey = "date" | "name" | "size" | "views" | "downloads";
+
 export default component$(() => {
-  const userData = useUserData();
-  const imagePreviewStore = useContext(ImagePreviewContext);
-  const uploads = userData.value.user.uploads;
+  const data = useFiles();
+  const deleteAction = useDeleteUploads();
+  const imagePreview = useContext(ImagePreviewContext);
+  const toast = useToast();
+
+  const search = useSignal("");
+  const kindFilter = useSignal<FileKind | "all">("all");
+  const sortKey = useSignal<SortKey>("date");
+  const sortDir = useSignal<"asc" | "desc">("desc");
+  const viewMode = useSignal(data.value.viewMode);
+
+  const selection = useStore<{ ids: string[] }>({ ids: [] });
+  const deleteOpen = useSignal(false);
+  const deleteBusy = useSignal(false);
+  /** Ids removed locally after a successful delete, so the list updates at once. */
+  const removed = useStore<{ ids: string[] }>({ ids: [] });
+  const partialFailure = useSignal<number>(0);
+
+  const allFiles = useComputed$(() =>
+    data.value.uploads.filter((u) => !removed.ids.includes(u.id)),
+  );
+
+  const visible = useComputed$(() => {
+    const query = search.value.trim().toLowerCase();
+    const kind = kindFilter.value;
+    let list = allFiles.value;
+
+    if (kind !== "all")
+      list = list.filter((u) => fileKind(u.mimeType) === kind);
+    if (query) {
+      list = list.filter(
+        (u) =>
+          u.originalName.toLowerCase().includes(query) ||
+          u.shortCode.toLowerCase().includes(query) ||
+          u.mimeType.toLowerCase().includes(query),
+      );
+    }
+
+    const dir = sortDir.value === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      switch (sortKey.value) {
+        case "name":
+          return a.originalName.localeCompare(b.originalName) * dir;
+        case "size":
+          return (a.size - b.size) * dir;
+        case "views":
+          return (a.views - b.views) * dir;
+        case "downloads":
+          return (a.downloads - b.downloads) * dir;
+        default:
+          return (
+            (new Date(a.createdAt).getTime() -
+              new Date(b.createdAt).getTime()) *
+            dir
+          );
+      }
+    });
+  });
+
+  const isFiltered = useComputed$(
+    () => search.value.trim().length > 0 || kindFilter.value !== "all",
+  );
+
+  const selectedFiles = useComputed$(() =>
+    allFiles.value.filter((u) => selection.ids.includes(u.id)),
+  );
+
+  const toggleSort = $((key: SortKey) => {
+    if (sortKey.value === key) {
+      sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
+    } else {
+      sortKey.value = key;
+      // Text reads best A→Z; numbers and dates read best largest/newest first.
+      sortDir.value = key === "name" ? "asc" : "desc";
+    }
+  });
+
+  const toggleOne = $((id: string, checked: boolean) => {
+    if (checked) {
+      if (!selection.ids.includes(id)) selection.ids.push(id);
+    } else {
+      selection.ids = selection.ids.filter((x) => x !== id);
+    }
+  });
+
+  const toggleAllVisible = $(() => {
+    const visibleIds = visible.value.map((u) => u.id);
+    const allSelected = visibleIds.every((id) => selection.ids.includes(id));
+    selection.ids = allSelected
+      ? selection.ids.filter((id) => !visibleIds.includes(id))
+      : Array.from(new Set([...selection.ids, ...visibleIds]));
+  });
+
+  const copySelectedLinks = $(async () => {
+    const links = selectedFiles.value
+      .map((u) => `${data.value.origin}/f/${u.shortCode}`)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(links);
+      toast.success(
+        `Copied ${selectedFiles.value.length} link${selectedFiles.value.length === 1 ? "" : "s"}`,
+      );
+    } catch {
+      toast.error(
+        "Could not copy to the clipboard",
+        "Your browser blocked clipboard access. Copy a link from its row instead.",
+      );
+    }
+  });
+
+  const confirmDelete = $(async () => {
+    deleteBusy.value = true;
+    partialFailure.value = 0;
+    const result = await deleteAction.submit({ ids: [...selection.ids] });
+    deleteBusy.value = false;
+
+    if (!result.value.ok) {
+      toast.error("Could not delete", result.value.error);
+      return;
+    }
+
+    const { deleted, failed } = result.value;
+    removed.ids = [...removed.ids, ...deleted];
+    // Anything that failed stays selected so it can be retried directly.
+    selection.ids = failed;
+    deleteOpen.value = false;
+
+    if (failed.length === 0) {
+      toast.success(
+        `Deleted ${deleted.length} file${deleted.length === 1 ? "" : "s"}`,
+      );
+    } else {
+      partialFailure.value = failed.length;
+      toast.error(
+        `${failed.length} of ${deleted.length + failed.length} files could not be deleted`,
+        "They are still selected. Try again, or delete them one at a time.",
+      );
+    }
+  });
+
+  const openImage = $((upload: UploadListItem) => {
+    if (upload.mimeType.startsWith("image/")) {
+      imagePreview.openPreview(`/f/${upload.shortCode}`, upload.originalName);
+    }
+  });
+
+  const hasSelection = selection.ids.length > 0;
+  const visibleIds = visible.value.map((u) => u.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 &&
+    visibleIds.every((id) => selection.ids.includes(id));
 
   return (
-    <>
-      <PageHeader
-        align="left"
-        title={`Welcome back, ${userData.value.user.name || "cutie"}!`}
-        subtitle="Your cute dashboard is ready~ Manage uploads, API keys, and more! (◕‿◕)♡"
-      >
-        <div q:slot="actions" class="flex flex-wrap gap-2">
-          <Button href="/upload">
-            <Rocket class="h-4 w-4" />
-            Upload a file
-          </Button>
-        </div>
+    <Page>
+      <PageHeader title="Files">
+        {data.value.storageLimit > 0 && (
+          <Meter
+            q:slot="actions"
+            label="Storage used"
+            used={formatBytes(data.value.storageUsed, 1)}
+            total={formatBytes(data.value.storageLimit, 0)}
+            percent={(data.value.storageUsed / data.value.storageLimit) * 100}
+            class="w-48"
+          />
+        )}
       </PageHeader>
 
-      {!userData.value.user.isApproved && (
-        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
-          Your account is awaiting admin approval. You'll be able to upload files
-          and create API keys once approved.
+      {!data.value.isApproved && (
+        <Callout tone="warning" title="Account pending approval" class="mb-4">
+          {data.value.approvalError === "upload_not_approved"
+            ? "Uploading needs an approved account. You can sign in and configure everything else in the meantime."
+            : data.value.approvalError === "bio_not_approved"
+              ? "Bio pages need an approved account. You can sign in and configure everything else in the meantime."
+              : "You can sign in and configure your account, but uploads, bio pages and API keys stay disabled until an administrator approves it."}
         </Callout>
       )}
 
-      {/* Stats */}
-      <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-4">
-        <StatCard
-          icon={Folder}
-          accent={0}
-          label="Total Uploads"
-          value={userData.value.stats.totalUploads}
-        />
-        <StatCard
-          icon={Eye}
-          accent={1}
-          pulse
-          label="Total Views"
-          value={userData.value.stats.totalViews}
-        />
-        <StatCard
-          icon={HardDrive}
-          accent={2}
-          pulse
-          label="Storage Used"
-          value={formatBytes(userData.value.stats.storageUsed)}
-        />
-        <StatCard
-          icon={Key}
-          accent={3}
-          pulse
-          label="API Keys"
-          value={userData.value.user.apiKeys.length}
-        />
+      {data.value.loadFailed && (
+        <Callout tone="danger" title="Could not load your files" class="mb-4">
+          The server did not respond. Reload the page to try again — nothing has
+          been deleted.
+          <Button
+            q:slot="actions"
+            size="sm"
+            variant="secondary"
+            onClick$={() => location.reload()}
+          >
+            Reload
+          </Button>
+        </Callout>
+      )}
+
+      {partialFailure.value > 0 && (
+        <Callout tone="danger" title="Some files were not deleted" class="mb-4">
+          {partialFailure.value} file
+          {partialFailure.value === 1 ? "" : "s"} could not be deleted and
+          {partialFailure.value === 1 ? " remains" : " remain"} selected below.
+        </Callout>
+      )}
+
+      {/* Toolbar, or the selection bar while a selection exists. */}
+      <div class="mb-3">
+        {hasSelection ? (
+          <SelectionBar
+            count={selection.ids.length}
+            total={allFiles.value.length}
+            allSelected={selection.ids.length === allFiles.value.length}
+            onSelectAll$={$(() => {
+              selection.ids =
+                selection.ids.length === allFiles.value.length
+                  ? []
+                  : allFiles.value.map((u) => u.id);
+            })}
+            onClear$={$(() => (selection.ids = []))}
+          >
+            <Button size="sm" variant="secondary" onClick$={copySelectedLinks}>
+              Copy links
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick$={() => (deleteOpen.value = true)}
+              class="text-danger hover:text-danger"
+            >
+              <Trash2 class="h-4 w-4" aria-hidden="true" />
+              Delete
+            </Button>
+          </SelectionBar>
+        ) : (
+          <CollectionToolbar>
+            <SearchField
+              value={search}
+              label="Search files"
+              placeholder="Search by name, code or type"
+              class="min-w-[11rem] flex-1"
+              resultSummary={`${visible.value.length} of ${allFiles.value.length} files shown`}
+            />
+
+            <div class="w-[8.5rem] shrink-0">
+              <label class="sr-only" for="kind-filter">
+                Filter by type
+              </label>
+              <Select
+                id="kind-filter"
+                value={kindFilter.value}
+                onChange$={(_, el) =>
+                  (kindFilter.value = el.value as FileKind | "all")
+                }
+              >
+                <option value="all">All types</option>
+                {(Object.keys(fileKindLabels) as FileKind[]).map((k) => (
+                  <option key={k} value={k}>
+                    {fileKindLabels[k]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div class="w-[10.5rem] shrink-0">
+              <label class="sr-only" for="sort-order">
+                Sort by
+              </label>
+              <Select
+                id="sort-order"
+                value={`${sortKey.value}:${sortDir.value}`}
+                onChange$={(_, el) => {
+                  const [key, dir] = el.value.split(":");
+                  sortKey.value = key as SortKey;
+                  sortDir.value = dir as "asc" | "desc";
+                }}
+              >
+                <option value="date:desc">Newest first</option>
+                <option value="date:asc">Oldest first</option>
+                <option value="name:asc">Name A–Z</option>
+                <option value="name:desc">Name Z–A</option>
+                <option value="size:desc">Largest first</option>
+                <option value="views:desc">Most viewed</option>
+                <option value="downloads:desc">Most downloaded</option>
+              </Select>
+            </div>
+
+            <div class="ml-auto flex shrink-0 items-center gap-4">
+              <SegmentedControl
+                label="File view"
+                value={viewMode}
+                onChange$={$((v: string) =>
+                  setUploadsViewMode(v as "grid" | "list"),
+                )}
+                size="sm"
+                options={[
+                  { value: "list", label: "List", icon: List, iconOnly: true },
+                  {
+                    value: "grid",
+                    label: "Grid",
+                    icon: LayoutGrid,
+                    iconOnly: true,
+                  },
+                ]}
+              />
+            </div>
+          </CollectionToolbar>
+        )}
       </div>
 
-      {/* Analytics */}
-      <Section title="Your Analytics — Last 7 Days" icon={TrendingUp}>
-        <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-          <AnalyticsChart
-            data={userData.value.analyticsData || []}
-            metric="totalViews"
-            title="Total Views"
-            color="var(--theme-accent-primary)"
-          />
-          <AnalyticsChart
-            data={userData.value.analyticsData || []}
-            metric="uniqueViews"
-            title="Unique Visitors"
-            color="var(--theme-accent-secondary)"
-          />
-          <AnalyticsChart
-            data={userData.value.analyticsData || []}
-            metric="uploadsCount"
-            title="New Uploads"
-            color="var(--theme-accent-tertiary)"
-          />
-        </div>
-      </Section>
-
-      {/* Recent Uploads */}
-      <Panel title="Recent Uploads" icon={Folder} flush>
-        <Button q:slot="actions" href="/dashboard/uploads" variant="glass" size="sm">
-          View all files
-        </Button>
-        {uploads.length > 0 ? (
-          <div class="divide-theme-card-border/60 divide-y">
-            {uploads.map((upload) => (
-              <div
-                key={upload.id}
-                class="hover:bg-theme-bg-tertiary/20 flex items-center gap-3 px-4 py-3 transition-colors sm:px-6"
-              >
-                <FileTypeIcon
-                  upload={upload}
-                  size="sm"
-                  onClick$={() => {
-                    if (upload.mimeType.startsWith("image/")) {
-                      imagePreviewStore.openPreview(
-                        `/f/${upload.shortCode}`,
-                        upload.originalName,
-                      );
-                    }
-                  }}
-                />
-                <div class="min-w-0 flex-1">
-                  <p class="text-theme-text-primary truncate text-sm font-medium">
-                    {upload.originalName}
-                  </p>
-                  <p class="text-theme-text-muted text-xs">
-                    {upload.views} views •{" "}
-                    {new Date(upload.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div class="flex items-center gap-1">
-                  <CopyButton
-                    value={`${userData.value.origin}/f/${upload.shortCode}`}
-                    label="Copy"
-                  />
-                  <IconButton
-                    href={`/f/${upload.shortCode}`}
-                    external
-                    size="sm"
-                    title="Open file"
-                  >
-                    <ExternalLink class="h-4 w-4" />
-                  </IconButton>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
+      {/* Collection */}
+      {allFiles.value.length === 0 ? (
+        <Surface flush>
           <EmptyState
-            icon={Flower2}
-            title="No files yet~"
-            description="Upload via ShareX or API to see your files here!"
-            class="px-4 sm:px-6"
+            icon={FolderOpen}
+            title={
+              data.value.loadFailed
+                ? "Files unavailable"
+                : data.value.isApproved
+                  ? "No files yet"
+                  : "Uploads not available yet"
+            }
+            description={
+              data.value.loadFailed
+                ? "We could not reach the server, so your files could not be listed."
+                : data.value.isApproved
+                  ? "Upload a file from here, or set up ShareX to send screenshots straight from your desktop."
+                  : "Once an administrator approves your account, the files you upload appear here."
+            }
           >
-            <Button href="/setup/sharex">
-              <Rocket class="h-4 w-4" />
-              Setup ShareX to get started
+            {!data.value.loadFailed && data.value.isApproved && (
+              <>
+                <Button variant="primary" href="/upload">
+                  Upload a file
+                </Button>
+                <Button variant="secondary" href="/setup/sharex">
+                  Set up ShareX
+                </Button>
+              </>
+            )}
+          </EmptyState>
+        </Surface>
+      ) : visible.value.length === 0 ? (
+        <Surface flush>
+          <EmptyState
+            icon={SearchX}
+            title="No files match"
+            description={
+              search.value.trim()
+                ? `Nothing matches “${search.value.trim()}”${kindFilter.value !== "all" ? ` in ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()}` : ""}. ${allFiles.value.length} files are hidden by the current search and filter.`
+                : `No ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()} in your ${allFiles.value.length} files.`
+            }
+          >
+            <Button
+              variant="secondary"
+              onClick$={() => {
+                search.value = "";
+                kindFilter.value = "all";
+              }}
+            >
+              Clear search and filters
             </Button>
           </EmptyState>
-        )}
-      </Panel>
-    </>
+        </Surface>
+      ) : (
+        <>
+          {isFiltered.value && (
+            <p class="text-ink-muted mb-2 text-xs" aria-live="polite">
+              Showing {visible.value.length} of {allFiles.value.length} files
+            </p>
+          )}
+
+          {viewMode.value === "grid" ? (
+            <GridView
+              files={visible.value}
+              origin={data.value.origin}
+              selectedIds={selection.ids}
+              onToggle$={toggleOne}
+              onPreview$={openImage}
+            />
+          ) : (
+            <>
+              {/* Desktop table */}
+              <Surface flush class="hidden overflow-hidden md:block">
+                <Table label="Your files" minWidth="880px">
+                  <Thead>
+                    <Tr hover={false}>
+                      <Th class="w-9 pr-0">
+                        <Checkbox
+                          checked={allVisibleSelected}
+                          indeterminate={
+                            !allVisibleSelected &&
+                            visibleIds.some((id) => selection.ids.includes(id))
+                          }
+                          label="Select all shown files"
+                          onChange$={toggleAllVisible}
+                        />
+                      </Th>
+                      <SortHeader
+                        active={sortKey.value === "name"}
+                        direction={sortDir.value}
+                        onClick$={() => toggleSort("name")}
+                      >
+                        File
+                      </SortHeader>
+                      <SortHeader
+                        class="w-24"
+                        active={sortKey.value === "size"}
+                        direction={sortDir.value}
+                        onClick$={() => toggleSort("size")}
+                      >
+                        Size
+                      </SortHeader>
+                      <SortHeader
+                        class="w-28"
+                        active={sortKey.value === "views"}
+                        direction={sortDir.value}
+                        onClick$={() => toggleSort("views")}
+                      >
+                        Activity
+                      </SortHeader>
+                      <SortHeader
+                        class="w-28"
+                        active={sortKey.value === "date"}
+                        direction={sortDir.value}
+                        onClick$={() => toggleSort("date")}
+                      >
+                        Uploaded
+                      </SortHeader>
+                      <Th class="w-36">Limits</Th>
+                      <Th class="w-44 text-right">Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {visible.value.map((upload) => {
+                      const selected = selection.ids.includes(upload.id);
+                      const expiry = describeExpiry(upload.expiresAt);
+                      return (
+                        <Tr key={upload.id} selected={selected}>
+                          <Td class="pr-0">
+                            <Checkbox
+                              checked={selected}
+                              label={`Select ${upload.originalName}`}
+                              onChange$={(checked) =>
+                                toggleOne(upload.id, checked)
+                              }
+                            />
+                          </Td>
+                          <Td>
+                            <div class="flex min-w-0 items-center gap-2.5">
+                              <FileTypeIcon
+                                upload={upload}
+                                size="sm"
+                                onClick$={$(() => openImage(upload))}
+                              />
+                              <div class="min-w-0">
+                                <p
+                                  class="text-ink truncate font-medium"
+                                  title={upload.originalName}
+                                >
+                                  {upload.originalName}
+                                </p>
+                                <p class="text-ink-muted truncate text-xs">
+                                  {fileTypeLabel(upload.mimeType)} ·{" "}
+                                  <span class="font-mono">
+                                    /{upload.shortCode}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </Td>
+                          <TdMeta>{formatBytes(upload.size, 1)}</TdMeta>
+                          <TdMeta>
+                            <span class="flex items-center gap-2.5">
+                              <span
+                                class="flex items-center gap-1"
+                                title={`${upload.views} views`}
+                              >
+                                <Eye class="h-3 w-3" aria-hidden="true" />
+                                {upload.views}
+                              </span>
+                              <span
+                                class="flex items-center gap-1"
+                                title={`${upload.downloads} downloads`}
+                              >
+                                <Download class="h-3 w-3" aria-hidden="true" />
+                                {upload.downloads}
+                              </span>
+                            </span>
+                          </TdMeta>
+                          <TdMeta>
+                            <span title={formatAbsoluteDate(upload.createdAt)}>
+                              {formatRelativeDate(upload.createdAt)}
+                            </span>
+                          </TdMeta>
+                          <Td>
+                            <div class="flex flex-wrap gap-1">
+                              {expiry && (
+                                <Badge
+                                  tone={
+                                    expiry === "Expired" ? "error" : "warning"
+                                  }
+                                >
+                                  {expiry}
+                                </Badge>
+                              )}
+                              {upload.maxViews !== null && (
+                                <Badge
+                                  tone={
+                                    upload.views >= upload.maxViews
+                                      ? "error"
+                                      : "neutral"
+                                  }
+                                >
+                                  {upload.views}/{upload.maxViews} views
+                                </Badge>
+                              )}
+                              {!expiry && upload.maxViews === null && (
+                                <span class="text-ink-muted text-xs">None</span>
+                              )}
+                            </div>
+                          </Td>
+                          <Td class="text-right">
+                            <div class="flex items-center justify-end gap-1">
+                              <CopyButton
+                                value={`${data.value.origin}/f/${upload.shortCode}`}
+                                label="Copy link"
+                                variant="secondary"
+                              />
+                              <IconButton
+                                size="sm"
+                                variant="outline"
+                                label={`Open ${upload.originalName}`}
+                                href={`/f/${upload.shortCode}`}
+                                external
+                              >
+                                <ExternalLink class="h-4 w-4" />
+                              </IconButton>
+                              <RowMenu
+                                upload={upload}
+                                onDelete$={$(() => {
+                                  selection.ids = [upload.id];
+                                  deleteOpen.value = true;
+                                })}
+                              />
+                            </div>
+                          </Td>
+                        </Tr>
+                      );
+                    })}
+                  </Tbody>
+                </Table>
+              </Surface>
+
+              {/* Compact rows below md */}
+              <Surface flush class="overflow-hidden md:hidden">
+                <ul class="divide-edge divide-y">
+                  {visible.value.map((upload) => {
+                    const selected = selection.ids.includes(upload.id);
+                    const expiry = describeExpiry(upload.expiresAt);
+                    return (
+                      <li
+                        key={upload.id}
+                        class={selected ? "bg-accent-soft" : undefined}
+                      >
+                        <div class="flex flex-wrap items-start gap-x-2.5 gap-y-2 px-3 py-2.5">
+                          <Checkbox
+                            checked={selected}
+                            label={`Select ${upload.originalName}`}
+                            onChange$={(checked) =>
+                              toggleOne(upload.id, checked)
+                            }
+                            class="mt-2.5"
+                          />
+                          <FileTypeIcon
+                            upload={upload}
+                            size="sm"
+                            onClick$={$(() => openImage(upload))}
+                          />
+                          <div class="min-w-[9rem] flex-1">
+                            <p class="text-ink truncate text-[13px] font-medium">
+                              {upload.originalName}
+                            </p>
+                            <p class="text-ink-muted mt-0.5 text-xs">
+                              {formatBytes(upload.size, 1)} ·{" "}
+                              {formatRelativeDate(upload.createdAt)}
+                            </p>
+                            <p class="text-ink-muted mt-0.5 flex items-center gap-2.5 text-xs">
+                              <span class="flex items-center gap-1">
+                                <Eye class="h-3 w-3" aria-hidden="true" />
+                                {upload.views}
+                              </span>
+                              <span class="flex items-center gap-1">
+                                <Download class="h-3 w-3" aria-hidden="true" />
+                                {upload.downloads}
+                              </span>
+                              {expiry && (
+                                <span
+                                  class={
+                                    expiry === "Expired"
+                                      ? "text-danger"
+                                      : "text-warning"
+                                  }
+                                >
+                                  {expiry}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div class="ml-auto flex shrink-0 items-center gap-1">
+                            <CopyButton
+                              value={`${data.value.origin}/f/${upload.shortCode}`}
+                              title={`Copy link to ${upload.originalName}`}
+                              variant="secondary"
+                            />
+                            <IconButton
+                              size="sm"
+                              variant="outline"
+                              label={`Open ${upload.originalName}`}
+                              href={`/f/${upload.shortCode}`}
+                              external
+                            >
+                              <ExternalLink class="h-4 w-4" />
+                            </IconButton>
+                            <RowMenu
+                              upload={upload}
+                              onDelete$={$(() => {
+                                selection.ids = [upload.id];
+                                deleteOpen.value = true;
+                              })}
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Surface>
+            </>
+          )}
+        </>
+      )}
+
+      <Dialog
+        open={deleteOpen}
+        title={
+          selection.ids.length === 1
+            ? "Delete this file?"
+            : `Delete ${selection.ids.length} files?`
+        }
+        size="sm"
+      >
+        <p class="text-ink-muted text-[13px] leading-5">
+          {selection.ids.length === 1
+            ? "This file and its link stop working immediately. This cannot be undone."
+            : `These ${selection.ids.length} files and their links stop working immediately. This cannot be undone.`}
+        </p>
+        <ul class="border-edge rounded-surface bg-surface-subtle mt-3 max-h-40 overflow-y-auto border px-3 py-2">
+          {selectedFiles.value.slice(0, 50).map((u) => (
+            <li key={u.id} class="text-ink truncate py-0.5 text-[13px]">
+              {u.originalName}
+            </li>
+          ))}
+          {selectedFiles.value.length > 50 && (
+            <li class="text-ink-muted py-0.5 text-xs">
+              and {selectedFiles.value.length - 50} more
+            </li>
+          )}
+        </ul>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (deleteOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          q:slot="footer"
+          variant="danger"
+          loading={deleteBusy.value}
+          onClick$={confirmDelete}
+        >
+          Delete{" "}
+          {selection.ids.length === 1
+            ? "file"
+            : `${selection.ids.length} files`}
+        </Button>
+      </Dialog>
+    </Page>
   );
 });
 
+/** Overflow actions for a file row. Delete lives here, clearly labelled. */
+const RowMenu = component$<{
+  upload: UploadListItem;
+  onDelete$: any;
+}>(({ upload, onDelete$ }) => (
+  <DropdownMenu
+    triggerLabel={`More actions for ${upload.originalName}`}
+    triggerClass="border-edge bg-surface hover:bg-surface-hover text-ink h-8 w-8 justify-center border"
+  >
+    <EllipsisVertical q:slot="trigger" class="h-4 w-4" />
+    <MenuItem
+      href={`/dashboard/analytics/${upload.shortCode}`}
+      icon={BarChart3}
+    >
+      View analytics
+    </MenuItem>
+    <MenuItem href={`/f/${upload.shortCode}`} external icon={ExternalLink}>
+      Open in new tab
+    </MenuItem>
+    <MenuItem onClick$={onDelete$} icon={Trash2} tone="danger">
+      Delete file
+    </MenuItem>
+  </DropdownMenu>
+));
+
+/** Thumbnail-led view for recognising images at a glance. */
+const GridView = component$<{
+  files: UploadListItem[];
+  origin: string;
+  selectedIds: string[];
+  onToggle$: any;
+  onPreview$: any;
+}>(({ files, origin, selectedIds, onToggle$, onPreview$ }) => (
+  <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+    {files.map((upload) => {
+      const selected = selectedIds.includes(upload.id);
+      return (
+        <li
+          key={upload.id}
+          class={`border-edge rounded-surface bg-surface overflow-hidden border ${
+            selected ? "ring-accent ring-2" : ""
+          }`}
+        >
+          <div class="relative">
+            <FileTypeIcon
+              upload={upload}
+              size="lg"
+              onClick$={$(() => onPreview$(upload))}
+            />
+            <span class="bg-surface/90 rounded-control absolute top-1.5 left-1.5 p-0.5">
+              <Checkbox
+                checked={selected}
+                label={`Select ${upload.originalName}`}
+                onChange$={(checked) => onToggle$(upload.id, checked)}
+              />
+            </span>
+          </div>
+          <div class="px-2.5 py-2">
+            <p
+              class="text-ink truncate text-[13px] font-medium"
+              title={upload.originalName}
+            >
+              {upload.originalName}
+            </p>
+            <p class="text-ink-muted mt-0.5 truncate text-xs">
+              {formatBytes(upload.size, 1)} · {upload.views} views ·{" "}
+              {formatRelativeDate(upload.createdAt)}
+            </p>
+            <div class="mt-1.5 flex items-center gap-1">
+              <CopyButton
+                value={`${origin}/f/${upload.shortCode}`}
+                label="Copy link"
+                variant="secondary"
+                class="flex-1"
+              />
+              <IconButton
+                size="sm"
+                variant="outline"
+                label={`Open ${upload.originalName}`}
+                href={`/f/${upload.shortCode}`}
+                external
+              >
+                <ExternalLink class="h-4 w-4" />
+              </IconButton>
+            </div>
+          </div>
+        </li>
+      );
+    })}
+  </ul>
+));
+
 export const head: DocumentHead = {
-  title: "Dashboard - twink.forsale",
+  title: "Files - twink.forsale",
   meta: [
     {
       name: "description",
-      content:
-        "Your cute dashboard! Manage uploads, API keys, and all your cute files~ uwu",
+      content: "Find, copy and manage the files you have uploaded.",
     },
   ],
 };

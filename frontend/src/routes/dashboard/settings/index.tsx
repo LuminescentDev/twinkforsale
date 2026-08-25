@@ -1,53 +1,36 @@
-import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useSignal, useVisibleTask$, $ } from "@builder.io/qwik";
 import {
   routeLoader$,
-  Form,
   routeAction$,
+  Form,
   z,
   zod$,
+  type DocumentHead,
 } from "@builder.io/qwik-city";
-import { themes, type ThemeName } from "~/lib/theme-store";
-import {
-  Palette,
-  Sparkles,
-  Sun,
-  Moon,
-  Heart,
-  Zap,
-  Eye,
-  Settings as SettingsIcon,
-  Trash2,
-  AlertTriangle,
-  Globe,
-  CheckCircle,
-  CircleX,
-  Save,
-  Snowflake,
-  Star,
-  Circle,
-  CircleOff,
-  PartyPopper,
-} from "lucide-icons-qwik";
+import { Upload, Palette, Key, UserCog } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { setThemePreference } from "~/lib/cookie-utils";
-import { ParticleConfigPanel } from "~/components/ui/particle-config-panel";
-import {
-  Badge,
-  Button,
-  Callout,
-  FieldLabel,
-  Input,
-  PageContainer,
-  PageHeader,
-  Panel,
-  Select,
-} from "~/components/ui";
+import { useToast } from "~/lib/toast-store";
 import {
   useGlobalParticle,
   updateGlobalParticleConfig,
-  themeParticleConfigs,
 } from "~/lib/global-particle-store";
+import { ParticleConfigPanel } from "~/components/ui/particle-config-panel";
+import {
+  Page,
+  PageHeader,
+  Section,
+  Surface,
+  Button,
+  Field,
+  Input,
+  Select,
+  Callout,
+  ThemeToggle,
+  Dialog,
+  Divider,
+} from "~/components/ui";
+
 export const useUserLoader = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
@@ -58,9 +41,9 @@ export const useUserLoader = routeLoader$(async (requestEvent) => {
   const settings = await api.settings.get(auth).catch(() => null);
   return {
     user: {
-      id: user.id,
       name: user.name,
       email: user.email,
+      isAdmin: user.isAdmin,
       uploadDomainId: settings?.uploadDomainId ?? null,
       customSubdomain: settings?.customSubdomain ?? null,
       defaultExpirationDays: settings?.defaultExpirationDays ?? null,
@@ -89,20 +72,30 @@ export const useUpdateSettingsAction = routeAction$(
         },
         serverAuth(requestEvent),
       );
-      return { success: true, message: "Settings updated successfully" };
+      return { success: true, message: "Upload defaults saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to update settings",
+          error instanceof Error
+            ? error.message
+            : "Could not save your settings.",
       });
     }
   },
   zod$({
     uploadDomainId: z.string().optional(),
     customSubdomain: z.string().optional(),
-    defaultExpirationDays: z.string().optional().transform((val) => val === "" ? undefined : Number(val)).pipe(z.number().min(1).max(365).optional()),
-    defaultMaxViews: z.string().optional().transform((val) => val === "" ? undefined : Number(val)).pipe(z.number().min(1).optional()),
+    defaultExpirationDays: z
+      .string()
+      .optional()
+      .transform((val) => (val === "" ? undefined : Number(val)))
+      .pipe(z.number().min(1).max(365).optional()),
+    defaultMaxViews: z
+      .string()
+      .optional()
+      .transform((val) => (val === "" ? undefined : Number(val)))
+      .pipe(z.number().min(1).optional()),
   }),
 );
 
@@ -113,42 +106,24 @@ export const useUpdateParticleConfigAction = routeAction$(
         JSON.stringify(values.config),
         serverAuth(requestEvent),
       );
-      return { success: true, message: "Particle settings saved successfully" };
+      return { success: true, message: "Particle settings saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
           error instanceof Error
             ? error.message
-            : "Failed to save particle settings",
+            : "Could not save your particle settings.",
       });
     }
   },
-  zod$({
-    config: z.object({
-      type: z.string(),
-      amount: z.number(),
-      speed: z.number(),
-      direction: z.string(),
-      colors: z.array(z.string()),
-      size: z.object({
-        min: z.number(),
-        max: z.number(),
-      }),
-      opacity: z.object({
-        min: z.number(),
-        max: z.number(),
-      }),
-      enabled: z.boolean(),
-    }),
-  }),
 );
 
 export const useDeleteAccountAction = routeAction$(
   async (values, requestEvent) => {
     if (values.confirmationText !== "DELETE MY ACCOUNT") {
       return requestEvent.fail(400, {
-        message: "Please type 'DELETE MY ACCOUNT' to confirm deletion",
+        message: "Type DELETE MY ACCOUNT exactly to confirm.",
       });
     }
 
@@ -160,580 +135,353 @@ export const useDeleteAccountAction = routeAction$(
         message:
           error instanceof Error
             ? error.message
-            : "Failed to delete account. Please contact support.",
+            : "Could not delete the account. Contact an administrator.",
       });
     }
 
-    // Backend owns session teardown; send the user home.
+    // The backend owns session teardown; send the user home.
     throw requestEvent.redirect(302, "/");
   },
   zod$({
-    confirmationText: z.string().min(1, "Confirmation text is required"),
+    confirmationText: z.string().min(1, "Confirmation is required"),
   }),
 );
 
+const SECTIONS = [
+  { id: "uploads", label: "Upload defaults", icon: Upload },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "keys", label: "API keys", icon: Key },
+  { id: "account", label: "Account", icon: UserCog },
+];
+
 export default component$(() => {
-  const userData = useUserLoader();
-  const uploadDomains = useUploadDomainsLoader();
+  const data = useUserLoader();
+  const domains = useUploadDomainsLoader();
   const updateAction = useUpdateSettingsAction();
-  const updateParticleAction = useUpdateParticleConfigAction();
-  const deleteAccountAction = useDeleteAccountAction();
+  const particleAction = useUpdateParticleConfigAction();
+  const deleteAction = useDeleteAccountAction();
   const globalParticle = useGlobalParticle();
+  const toast = useToast();
 
-  // Set default to first available domain if no domain is selected
-  const getDefaultDomainId = () => {
-    if (userData.value.user.uploadDomainId) {
-      console.log("userData.value.user.uploadDomainId", userData.value.user.uploadDomainId);
-      return userData.value.user.uploadDomainId;
-    }
-    // Find the default domain first, otherwise use the first available domain
-    const defaultDomain = uploadDomains.value.find((d) => d.isDefault);
-    if (defaultDomain) {
-      return defaultDomain.id;
-    }
-    return uploadDomains.value.length > 0 ? uploadDomains.value[0].id : "";
-  };
-  const selectedDomainId = useSignal(getDefaultDomainId());
-  const customSubdomain = useSignal(userData.value.user.customSubdomain || "");
-  const defaultExpirationDays = useSignal(
-    userData.value.user.defaultExpirationDays || "",
-  );
-  const defaultMaxViews = useSignal(userData.value.user.defaultMaxViews || "");
-  const currentThemeDisplay = useSignal<ThemeName>("dark");
+  const active = useSignal("uploads");
+  const deleteOpen = useSignal(false);
+  const confirmationText = useSignal("");
 
-  // Initialize particle config from database or default
-  const getInitialParticleConfig = () => {
-    if (userData.value.user.globalParticleConfig) {
-      try {
-        const parsed = JSON.parse(userData.value.user.globalParticleConfig);
-        return { ...themeParticleConfigs.hearts, ...parsed };
-      } catch (e) {
-        console.warn("Failed to parse user particle config:", e);
-      }
-    }
-    return { ...themeParticleConfigs.hearts, enabled: true };
-  };
+  const particleConfig = useSignal({ ...globalParticle.config });
 
-  const particleConfigSignal = useSignal(getInitialParticleConfig());
-
-  // Sync particle settings with database on page load
+  // Particle changes take effect immediately, like the theme; the explicit
+  // save only persists them to the account.
   // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(async () => {
-    // Update global particle store with database settings
-    await updateGlobalParticleConfig(
-      globalParticle,
-      particleConfigSignal.value,
-    );
+  useVisibleTask$(({ track }) => {
+    const next = track(() => particleConfig.value);
+    updateGlobalParticleConfig(globalParticle, next);
+  });
 
-    // Check if localStorage has different settings than database
-    try {
-      const localSettings = localStorage.getItem("global-particle-config");
-      if (localSettings && !userData.value.user.globalParticleConfig) {
-        // User has local settings but no database settings - save local to database
-        const parsed = JSON.parse(localSettings);
-        const mergedConfig = { ...themeParticleConfigs.hearts, ...parsed };
-        particleConfigSignal.value = mergedConfig;
-        await updateGlobalParticleConfig(globalParticle, mergedConfig);
-        updateParticleAction.submit({ config: mergedConfig });
-      }
-    } catch (e) {
-      console.warn("Failed to sync particle settings:", e);
+  const saveParticles = $(async () => {
+    const result = await particleAction.submit({
+      config: particleConfig.value,
+    });
+    if (result.value.failed) {
+      toast.error("Could not save", result.value.message);
+    } else {
+      toast.success("Particle settings saved");
     }
   });
 
-  // Update current theme display from DOM
-  // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(() => {
-    if (typeof document !== "undefined") {
-      const updateCurrentTheme = () => {
-        const themeVariant = document.documentElement.getAttribute(
-          "data-theme-variant",
-        ) as ThemeName;
-        if (themeVariant) {
-          currentThemeDisplay.value = themeVariant;
-        }
-      };
+  const selectedDomain =
+    data.value.user.uploadDomainId ||
+    domains.value.find((d) => d.isDefault)?.id ||
+    domains.value[0]?.id ||
+    "";
 
-      // Update immediately
-      updateCurrentTheme();
-
-      // Set up observer for changes
-      const observer = new MutationObserver(updateCurrentTheme);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["data-theme-variant"],
-      });
-
-      return () => observer.disconnect();
-    }
-  });
-
-  const themeOptions = [
-    {
-      name: "auto" as ThemeName,
-      label: "Auto",
-      description:
-        "Automatically switches between light and dark based on your system preference",
-      icon: Sparkles,
-      gradient: "from-slate-500 to-slate-600",
-      preview: "Follows your system settings like a good kitty~ (=^･ω･^=)",
-    },
-    {
-      name: "dark" as ThemeName,
-      label: "Dark",
-      description:
-        "The classic dark theme - perfect for late night file sharing sessions",
-      icon: Moon,
-      gradient: "from-slate-800 to-slate-900",
-      preview: "Sleek, dark, and mysterious~ Perfect for femboy ninjas!",
-    },
-    {
-      name: "light" as ThemeName,
-      label: "Light",
-      description: "Clean and bright theme for daytime productivity",
-      icon: Sun,
-      gradient: "from-yellow-400 to-orange-500",
-      preview: "Bright and cheerful like a sunny day!",
-    },
-    {
-      name: "pastel" as ThemeName,
-      label: "Pastel",
-      description: "Soft, dreamy colors that are easy on the eyes",
-      icon: Heart,
-      gradient: "from-pink-300 to-purple-400",
-      preview: "Soft and dreamy like cotton candy clouds~ (´｡• ᵕ •｡`) ♡",
-    },
-    {
-      name: "neon" as ThemeName,
-      label: "Neon",
-      description: "High-contrast cyberpunk aesthetic with glowing effects",
-      icon: Zap,
-      gradient: "from-pink-500 to-violet-600",
-      preview:
-        "Cyberpunk vibes with extra sparkle! Perfect for hacker femboys!",
-    },
-    {
-      name: "valentine" as ThemeName,
-      label: "Valentine",
-      description:
-        "Romantic pink theme perfect for love letters and cute files",
-      icon: Heart,
-      gradient: "from-rose-400 to-pink-600",
-      preview:
-        "Romantic and lovely~ Perfect for sharing files with your crush!",
-    },
-  ];
-
-  const getCurrentDomainPreview = () => {
-    const selectedDomain = uploadDomains.value.find(
-      (d) => d.id === selectedDomainId.value,
-    );
-    if (!selectedDomain) return "No domain selected";
-
-    const subdomain = customSubdomain.value.trim();
-    if (subdomain && selectedDomain.supportsSubdomains) {
-      return `${subdomain}.${selectedDomain.domain}`;
-    }
-    return selectedDomain.domain;
-  };
-
-  const selectedDomain = uploadDomains.value.find(
-    (d) => d.id === selectedDomainId.value,
-  );
   return (
-    <PageContainer width="narrow">
-      <PageHeader
-        align="left"
-        title="Settings~"
-        icon={SettingsIcon}
-        subtitle="Configure your upload preferences, domain settings, and themes! (◕‿◕)♡"
-      />
+    <Page>
+      <PageHeader title="Settings" />
 
-      {/* Upload Domain Settings */}
-      <Panel title="Upload Domain Settings~" icon={Globe} class="mb-6 sm:mb-8">
-        <Form action={updateAction}>
-          <div class="space-y-4 sm:space-y-6">
-            <div>
-              <FieldLabel>Upload Domain</FieldLabel>
-              <Select
-                name="uploadDomainId"
-                value={selectedDomainId.value}
-                onChange$={(event) => {
-                  selectedDomainId.value = (
-                    event.target as HTMLSelectElement
-                  ).value;
-                }}
-              >
-                {uploadDomains.value.length === 0 && (
-                  <option value="">No domains available</option>
+      <div class="flex flex-col gap-6 md:flex-row md:gap-8">
+        <nav aria-label="Settings sections" class="shrink-0 md:w-48 md:pt-0.5">
+          <ul class="border-edge -mx-4 flex gap-1 overflow-x-auto border-b px-4 pb-2 md:mx-0 md:flex-col md:border-b-0 md:px-0 md:pb-0">
+            {SECTIONS.map((section, index) => {
+              const isActive = active.value === section.id;
+              return (
+                <li key={section.id} class="shrink-0 md:shrink">
+                  <button
+                    type="button"
+                    aria-current={isActive ? "true" : undefined}
+                    onClick$={() => (active.value = SECTIONS[index].id)}
+                    class={`focus-ring rounded-control flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] transition-colors duration-150 ${
+                      isActive
+                        ? "bg-accent-soft text-accent-text font-medium"
+                        : "text-ink-muted hover:bg-surface-hover hover:text-ink"
+                    }`}
+                  >
+                    <section.icon class="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span class="truncate">{section.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div class="max-w-2xl min-w-0 flex-1">
+          {active.value === "uploads" && (
+            <Section
+              title="Upload defaults"
+              description="Applied to new uploads. You can still override them for an individual upload."
+            >
+              <Form action={updateAction}>
+                <Surface>
+                  <div class="grid gap-4">
+                    <Field
+                      label="Upload domain"
+                      for="upload-domain"
+                      help="The domain your file links use."
+                    >
+                      <Select
+                        id="upload-domain"
+                        name="uploadDomainId"
+                        value={selectedDomain}
+                      >
+                        {domains.value.length === 0 && (
+                          <option value="">No domains available</option>
+                        )}
+                        {domains.value.map((domain) => (
+                          <option key={domain.id} value={domain.id}>
+                            {`${domain.domain}${domain.isDefault ? " (default)" : ""}`}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field
+                      label="Custom subdomain"
+                      for="custom-subdomain"
+                      help="Optional. Your links become yourname.domain — only works on domains that allow subdomains."
+                    >
+                      <Input
+                        id="custom-subdomain"
+                        name="customSubdomain"
+                        value={data.value.user.customSubdomain ?? ""}
+                        placeholder="yourname"
+                        maxLength={40}
+                      />
+                    </Field>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                      <Field
+                        label="Delete files after"
+                        for="default-expiration"
+                        help="Days. Empty keeps files indefinitely."
+                      >
+                        <Input
+                          id="default-expiration"
+                          name="defaultExpirationDays"
+                          type="number"
+                          min="1"
+                          max="365"
+                          inputMode="numeric"
+                          placeholder="Never"
+                          value={data.value.user.defaultExpirationDays ?? ""}
+                        />
+                      </Field>
+                      <Field
+                        label="Default view limit"
+                        for="default-max-views"
+                        help="A file stops being served after this many views. Empty means unlimited."
+                      >
+                        <Input
+                          id="default-max-views"
+                          name="defaultMaxViews"
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          placeholder="Unlimited"
+                          value={data.value.user.defaultMaxViews ?? ""}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                </Surface>
+
+                <div class="mt-3 flex items-center gap-3">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    loading={updateAction.isRunning}
+                  >
+                    Save upload defaults
+                  </Button>
+                  {updateAction.value?.success && (
+                    <span class="text-success text-[13px]" aria-live="polite">
+                      Saved
+                    </span>
+                  )}
+                </div>
+
+                {updateAction.value?.failed && (
+                  <Callout tone="danger" class="mt-3">
+                    {updateAction.value.message}
+                  </Callout>
                 )}
-                {uploadDomains.value.map((domain) => (
-                  <option key={domain.id} value={domain.id} selected={domain.id === selectedDomainId.value}>
-                    {`${domain.name} (${domain.domain})${domain.isDefault ? " - Default" : ""}`}
-                  </option>
-                ))}
-              </Select>
-              <p class="text-theme-text-muted mt-1.5 text-xs">
-                Choose the base domain for your file uploads~
-              </p>
-            </div>
+              </Form>
+            </Section>
+          )}
 
-            {selectedDomain?.supportsSubdomains && (
-              <div>
-                <FieldLabel>Custom Subdomain (Optional)</FieldLabel>
-                <Input
-                  type="text"
-                  name="customSubdomain"
-                  value={customSubdomain.value}
-                  placeholder="files, cdn, cute, etc..."
-                  onInput$={(event) => {
-                    customSubdomain.value = (
-                      event.target as HTMLInputElement
-                    ).value;
-                  }}
-                />
-                <p class="text-theme-text-muted mt-1.5 text-xs">
-                  Add a custom subdomain to your uploads (e.g., "files" →
-                  files.{selectedDomain.domain})~
+          {active.value === "appearance" && (
+            <div class="grid gap-6">
+              <Section
+                title="Theme"
+                description="Applies immediately and is remembered on this device."
+              >
+                <ThemeToggle variant="list" />
+              </Section>
+
+              <Divider />
+
+              <Section
+                title="Particles"
+                description="Applies immediately. Save to keep it on your account."
+              >
+                <Surface>
+                  <ParticleConfigPanel config={particleConfig} />
+                </Surface>
+                <div class="mt-3 flex items-center gap-3">
+                  <Button
+                    variant="primary"
+                    loading={particleAction.isRunning}
+                    onClick$={saveParticles}
+                  >
+                    Save particle settings
+                  </Button>
+                </div>
+              </Section>
+            </div>
+          )}
+
+          {active.value === "keys" && (
+            <Section
+              title="API keys"
+              description="Keys let other tools upload on your behalf."
+            >
+              <Surface>
+                <p class="text-ink-muted text-[13px] leading-5">
+                  API keys are managed on their own page, where you can see when
+                  each was last used and revoke individual keys.
                 </p>
-              </div>
-            )}
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <Button variant="primary" href="/dashboard/api-keys">
+                    Manage API keys
+                  </Button>
+                  <Button variant="secondary" href="/setup/sharex">
+                    ShareX setup
+                  </Button>
+                </div>
+              </Surface>
+            </Section>
+          )}
 
-            {/* File Expiration Settings */}
-            <div>
-              <FieldLabel>Default File Expiration (Days)</FieldLabel>
-              <Input
-                type="number"
-                name="defaultExpirationDays"
-                value={defaultExpirationDays.value}
-                placeholder="Never expires (leave empty)"
-                min="1"
-                max="365"
-                onInput$={(event) => {
-                  defaultExpirationDays.value = (
-                    event.target as HTMLInputElement
-                  ).value;
-                }}
-              />
-              <p class="text-theme-text-muted mt-1.5 text-xs">
-                Files will automatically delete after this many days. Leave
-                empty for no expiration~
-              </p>
+          {active.value === "account" && (
+            <div class="grid gap-6">
+              <Section title="Account">
+                <Surface>
+                  <dl class="divide-edge divide-y">
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 py-1.5">
+                      <dt class="text-ink-muted text-[13px]">Name</dt>
+                      <dd class="text-ink text-[13px]">
+                        {data.value.user.name || "Not set"}
+                      </dd>
+                    </div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 py-1.5">
+                      <dt class="text-ink-muted text-[13px]">Email</dt>
+                      <dd class="text-ink text-[13px]">
+                        {data.value.user.email}
+                      </dd>
+                    </div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 py-1.5">
+                      <dt class="text-ink-muted text-[13px]">Role</dt>
+                      <dd class="text-ink text-[13px]">
+                        {data.value.user.isAdmin ? "Administrator" : "Member"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p class="text-ink-muted mt-3 text-xs">
+                    Your name and email come from Discord and update when you
+                    sign in again.
+                  </p>
+                </Surface>
+              </Section>
+
+              <Divider />
+
+              <Section
+                title="Delete account"
+                description="Removes your account, every file you have uploaded, your short links and your bio page."
+              >
+                <Button
+                  variant="secondary"
+                  class="text-danger hover:text-danger"
+                  onClick$={() => (deleteOpen.value = true)}
+                >
+                  Delete my account
+                </Button>
+              </Section>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* View Limits Settings */}
-            <div>
-              <FieldLabel>Default Max Views</FieldLabel>
-              <Input
-                type="number"
-                name="defaultMaxViews"
-                value={defaultMaxViews.value}
-                placeholder="Unlimited views (leave empty)"
-                min="1"
-                onInput$={(event) => {
-                  defaultMaxViews.value = (
-                    event.target as HTMLInputElement
-                  ).value;
-                }}
-              />
-              <p class="text-theme-text-muted mt-1.5 text-xs">
-                Files will automatically delete after this many views. Leave
-                empty for unlimited views~
-              </p>
-            </div>
-
-            {/* Preview */}
-            <Callout tone="accent" icon={Eye} title="Upload URL Preview~">
-              <div class="text-theme-text-primary bg-theme-bg-secondary/40 border-theme-card-border rounded-lg border p-3 font-mono text-sm break-all">
-                {getCurrentDomainPreview()}/f/cute-filename-123
-              </div>
-              <p class="mt-2 text-xs">
-                This is how your upload URLs will look~ (◕‿◕)♡
-              </p>
-            </Callout>
-
-            <Button type="submit" block>
-              <Save class="h-4 w-4" />
-              Save Settings~
+      <Dialog open={deleteOpen} title="Delete your account?" size="sm">
+        <p class="text-ink-muted text-[13px] leading-5">
+          Every file you have uploaded stops working immediately, along with
+          your short links and bio page. Nothing can be recovered afterwards.
+        </p>
+        <Form action={deleteAction} class="mt-4">
+          <Field
+            label="Type DELETE MY ACCOUNT to confirm"
+            for="delete-confirmation"
+            error={
+              deleteAction.value?.failed
+                ? deleteAction.value.message
+                : undefined
+            }
+          >
+            <Input
+              id="delete-confirmation"
+              name="confirmationText"
+              autoComplete="off"
+              value={confirmationText.value}
+              onInput$={(_, el) => (confirmationText.value = el.value)}
+            />
+          </Field>
+          <div class="mt-4 flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick$={() => (deleteOpen.value = false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              loading={deleteAction.isRunning}
+              disabled={confirmationText.value !== "DELETE MY ACCOUNT"}
+            >
+              Delete account
             </Button>
           </div>
         </Form>
-
-        {updateAction.value?.success && (
-          <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
-            {updateAction.value.message}~
-          </Callout>
-        )}
-
-        {updateAction.value?.failed && (
-          <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
-            {updateAction.value.message}~
-          </Callout>
-        )}
-      </Panel>
-
-      {/* Theme Settings */}
-      <Panel title="Theme Settings~" icon={Palette} class="mb-6 sm:mb-8">
-        {/* Theme Gallery */}
-        <div>
-          <h3 class="text-theme-text-primary mb-4 flex items-center gap-2 text-base font-medium sm:text-lg">
-            <Eye class="h-4 w-4" />
-            Theme Gallery
-          </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {themeOptions.map((option) => {
-              const IconComponent = option.icon;
-              const isActive = currentThemeDisplay.value === option.name;
-              const themeName = option.name;
-
-              return (
-                <div
-                  key={option.name}
-                  class={`glass group cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 ${
-                    isActive
-                      ? "border-theme-accent-primary/60 from-theme-accent-primary/20 to-theme-accent-secondary/20 bg-gradient-to-br"
-                      : "border-theme-card-border hover:border-theme-accent-primary/40"
-                  }`}
-                  onClick$={() => {
-                    // Apply theme changes directly like the toggle
-                    if (typeof document !== "undefined") {
-                      (async () => {
-                        // Save to cookie
-                        setThemePreference(themeName);
-
-                        // Apply theme immediately
-                        const root = document.documentElement;
-                        let effectiveTheme = themeName;
-                        if (themeName === "auto") {
-                          effectiveTheme = window.matchMedia(
-                            "(prefers-color-scheme: dark)",
-                          ).matches
-                            ? "dark"
-                            : "light";
-                        }
-
-                        const themeColors =
-                          themes[effectiveTheme as keyof typeof themes];
-                        Object.entries(themeColors).forEach(([key, value]) => {
-                          const cssVarName = `--theme-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
-                          root.style.setProperty(cssVarName, value);
-                        });
-                        root.setAttribute("data-theme", effectiveTheme);
-                        root.setAttribute("data-theme-variant", themeName);
-                      })();
-                    }
-                  }}
-                >
-                  <div class="flex items-start gap-3">
-                    <div
-                      class={`h-10 w-10 rounded-full bg-gradient-to-r ${option.gradient} flex flex-shrink-0 items-center justify-center`}
-                    >
-                      <IconComponent class="h-5 w-5 text-white" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="mb-2 flex items-center gap-2">
-                        <h4 class="text-theme-text-primary text-sm font-medium">
-                          {option.label}
-                        </h4>
-                        {isActive && <Badge status="accent">Active</Badge>}
-                      </div>
-                      <p class="text-theme-text-secondary mb-2 text-xs">
-                        {option.description}
-                      </p>
-                      <div class="text-theme-text-muted text-xs italic">
-                        {option.preview}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Color Swatches */}
-                  <div class="mt-3 flex gap-1">
-                    <div
-                      class="h-4 w-4 rounded-full border border-white/20"
-                      style={`background: ${themes[option.name].accentPrimary}`}
-                    />
-                    <div
-                      class="h-4 w-4 rounded-full border border-white/20"
-                      style={`background: ${themes[option.name].accentSecondary}`}
-                    />
-                    <div
-                      class="h-4 w-4 rounded-full border border-white/20"
-                      style={`background: ${themes[option.name].accentTertiary}`}
-                    />
-                    <div
-                      class="h-4 w-4 rounded-full border border-white/20"
-                      style={`background: ${themes[option.name].accentQuaternary}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Theme Tips */}
-        <Callout tone="info" icon={SettingsIcon} title="Theme Tips" class="mt-6">
-          <ul class="space-y-1">
-            <li>
-              • Your theme preference is saved automatically and syncs across
-              devices
-            </li>
-            <li>
-              • The "Auto" theme respects your system's dark/light mode setting
-            </li>
-            <li>• Click on any theme to switch to it instantly</li>
-            <li>
-              • All themes are designed to be accessible and easy on the eyes
-            </li>
-          </ul>
-        </Callout>
-      </Panel>
-
-      {/* Particle Settings */}
-      <Panel
-        title="Background Particles~"
-        icon={Sparkles}
-        description="Control the animated particles that appear in the background of the site~"
-        class="mb-6 sm:mb-8"
-      >
-        {/* Quick Presets */}
-        <div class="mb-6">
-          <label class="text-theme-text-secondary mb-3 block text-sm font-medium">
-            Quick Presets~
-          </label>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {" "}
-            {Object.keys(themeParticleConfigs).map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick$={async () => {
-                  const config = themeParticleConfigs[name];
-                  // Update global particle store immediately for visual feedback
-                  await updateGlobalParticleConfig(globalParticle, config);
-                  particleConfigSignal.value = config;
-
-                  // Save to database in the background
-                  updateParticleAction.submit({ config });
-                }}
-                class={`glass rounded-lg p-3 text-center capitalize transition-all hover:scale-105 ${
-                  particleConfigSignal.value.type ===
-                    themeParticleConfigs[name].type &&
-                  particleConfigSignal.value.enabled ===
-                    themeParticleConfigs[name].enabled
-                    ? "ring-theme-accent-primary bg-theme-accent-primary/10 ring-2"
-                    : ""
-                }`}
-              >
-                <div class="flex items-center justify-center gap-1.5 text-sm font-medium capitalize">
-                  {(() => {
-                    const preset: Record<
-                      string,
-                      { icon: any; label: string }
-                    > = {
-                      disabled: { icon: CircleOff, label: "Off" },
-                      hearts: { icon: Heart, label: "Hearts" },
-                      snow: { icon: Snowflake, label: "Snow" },
-                      stars: { icon: Star, label: "Stars" },
-                      bubbles: { icon: Circle, label: "Bubbles" },
-                      confetti: { icon: PartyPopper, label: "Confetti" },
-                    };
-                    const entry = preset[name];
-                    if (!entry) return name;
-                    const Icon = entry.icon;
-                    return (
-                      <>
-                        <Icon class="h-4 w-4" />
-                        {entry.label}
-                      </>
-                    );
-                  })()}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>{" "}
-        {/* Advanced Configuration */}
-        <div>
-          <ParticleConfigPanel
-            config={particleConfigSignal}
-            previewEnabled={false}
-          />
-
-          {/* Save advanced settings button */}
-          <Button
-            type="button"
-            block
-            class="mt-4"
-            onClick$={async () => {
-              await updateGlobalParticleConfig(
-                globalParticle,
-                particleConfigSignal.value,
-              );
-              updateParticleAction.submit({
-                config: particleConfigSignal.value,
-              });
-            }}
-          >
-            <Save class="h-4 w-4" />
-            Save Advanced Settings~
-          </Button>
-        </div>
-
-        {/* Save note */}
-        <Callout tone="info" icon={Sparkles} class="mt-4">
-          Your particle preferences are saved to your account and will sync
-          across all your devices~
-        </Callout>
-
-        {/* Particle save status */}
-        {updateParticleAction.value?.success && (
-          <Callout tone="success" icon={CheckCircle} class="mt-4">
-            {updateParticleAction.value.message}~
-          </Callout>
-        )}
-        {updateParticleAction.value?.failed && (
-          <Callout tone="danger" icon={CircleX} class="mt-4">
-            {updateParticleAction.value.message}~
-          </Callout>
-        )}
-      </Panel>
-
-      {/* Account Deletion - Danger Zone */}
-      <div class="card-static border-theme-error/40 overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <h2 class="text-theme-error mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
-          <AlertTriangle class="h-5 w-5" />
-          Danger Zone
-        </h2>
-        <Callout tone="danger" icon={AlertTriangle} class="mb-6">
-          This action is permanent and cannot be undone. All your files, data,
-          and account information will be permanently deleted.
-        </Callout>
-
-        <Form action={deleteAccountAction} class="space-y-4">
-          <div>
-            <FieldLabel class="!text-theme-error">
-              Type "DELETE MY ACCOUNT" to confirm deletion:
-            </FieldLabel>
-            <Input
-              type="text"
-              name="confirmationText"
-              placeholder="Type DELETE MY ACCOUNT here..."
-              required
-            />
-          </div>
-
-          <Button type="submit" variant="danger" block>
-            <Trash2 class="h-4 w-4" />
-            Delete My Account Forever
-          </Button>
-        </Form>
-
-        {deleteAccountAction.value?.failed && (
-          <Callout tone="danger" icon={CircleX} class="mt-4">
-            {deleteAccountAction.value.message}
-          </Callout>
-        )}
-      </div>
-    </PageContainer>
+      </Dialog>
+    </Page>
   );
 });
+
+export const head: DocumentHead = {
+  title: "Settings - twink.forsale",
+  meta: [
+    {
+      name: "description",
+      content: "Upload defaults, appearance, API keys and account settings.",
+    },
+  ],
+};

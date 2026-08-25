@@ -1,5 +1,6 @@
 import { component$, $, type Signal } from "@builder.io/qwik";
-import { Palette, RotateCcw } from "lucide-icons-qwik";
+import { RotateCcw } from "lucide-icons-qwik";
+import { Switch } from "./switch";
 
 export type GradientType = "linear" | "radial" | "conic";
 export type GradientDirection =
@@ -118,39 +119,18 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
 
     return (
       <div class="space-y-4">
-        {/* Enable/Disable Toggle */}
-        <div class="flex items-center justify-between">
-          <label class="text-theme-text-secondary flex items-center gap-2 text-sm font-medium">
-            <Palette class="h-4 w-4" />
-            Gradient Background
-          </label>
-          <button
-            type="button"
-            onClick$={() => {
-              config.value = {
-                ...config.value,
-                enabled: !config.value.enabled,
-              };
-            }}
-            class={`focus:ring-theme-accent-primary relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-              config.value.enabled
-                ? "bg-theme-accent-primary"
-                : "bg-theme-card-border"
-            }`}
-          >
-            <span
-              class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                config.value.enabled ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-        </div>
+        <Switch
+          checked={config.value.enabled}
+          label="Gradient background"
+          help="Blends between colours instead of using one flat colour."
+          onChange$={(enabled) => (config.value = { ...config.value, enabled })}
+        />
 
         {config.value.enabled && (
           <>
             {/* Gradient Type */}
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
+              <label class="text-ink mb-2 block text-sm font-medium">
                 Gradient Type
               </label>
               <div class="grid grid-cols-3 gap-2">
@@ -165,9 +145,9 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                           type,
                         };
                       }}
-                      class={`glass rounded-lg p-3 text-center text-sm capitalize transition-all hover:scale-105 ${
+                      class={`focus-ring border-edge bg-surface hover:bg-surface-hover rounded-control border p-2 text-center text-[13px] capitalize transition-colors duration-150 ${
                         config.value.type === type
-                          ? "ring-theme-accent-primary bg-theme-accent-primary/10 ring-2"
+                          ? "ring-accent bg-accent-soft ring-2"
                           : ""
                       }`}
                     >
@@ -180,7 +160,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
             {/* Direction (only for linear gradients) */}
             {config.value.type === "linear" && (
               <div>
-                <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
+                <label class="text-ink mb-2 block text-sm font-medium">
                   Direction
                 </label>{" "}
                 <select
@@ -192,7 +172,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                         .value as GradientDirection,
                     };
                   }}
-                  class="glass focus:ring-theme-accent-primary/50 w-full rounded-xl bg-transparent px-3 py-2 text-sm transition-all focus:ring-2 focus:outline-none"
+                  class="focus-ring border-edge bg-surface text-ink rounded-control h-9 w-full border px-2.5 text-sm transition-colors duration-150"
                 >
                   {directions.map((dir) => (
                     <option key={dir.value} value={dir.value}>
@@ -204,7 +184,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
             )}
             {/* Gradient Presets */}
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
+              <label class="text-ink mb-2 block text-sm font-medium">
                 Quick Presets
               </label>
               <div class="grid grid-cols-2 gap-2">
@@ -220,7 +200,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                         type: "linear",
                       };
                     }}
-                    class="glass rounded-lg p-3 text-left text-sm transition-all hover:scale-105"
+                    class="focus-ring border-edge bg-surface hover:bg-surface-hover rounded-control border p-2 text-left text-[13px] transition-colors duration-150"
                     style={{
                       background: `linear-gradient(${preset.direction}, ${preset.colors.join(", ")})`,
                     }}
@@ -235,7 +215,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
             {/* Color Stops */}
             <div>
               <div class="mb-2 flex items-center justify-between">
-                <label class="text-theme-text-secondary text-sm font-medium">
+                <label class="text-ink text-sm font-medium">
                   Colors ({config.value.colors.length}/5)
                 </label>
                 <div class="flex gap-2">
@@ -243,7 +223,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                     type="button"
                     onClick$={addColor}
                     disabled={config.value.colors.length >= 5}
-                    class="glass hover:bg-theme-accent-primary/20 rounded-lg px-2 py-1 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                    class="focus-ring border-edge bg-surface text-ink hover:bg-surface-hover rounded-control border px-2 py-1 text-xs transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     Add Color
                   </button>
@@ -257,7 +237,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                         type: "linear",
                       };
                     }}
-                    class="glass hover:bg-theme-accent-primary/20 flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-all"
+                    class="focus-ring border-edge bg-surface text-ink hover:bg-surface-hover rounded-control flex items-center gap-1 border px-2 py-1 text-xs transition-colors duration-150"
                   >
                     <RotateCcw class="h-3 w-3" />
                     Reset
@@ -277,7 +257,7 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                           (e.target as HTMLInputElement).value,
                         );
                       }}
-                      class="border-theme-card-border h-10 w-12 cursor-pointer rounded-lg border-2 bg-transparent"
+                      class="border-edge rounded-control h-10 w-12 cursor-pointer border-2 bg-transparent"
                     />
                     <input
                       type="text"
@@ -288,14 +268,14 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
                           (e.target as HTMLInputElement).value,
                         );
                       }}
-                      class="glass focus:ring-theme-accent-primary/50 flex-1 rounded-lg px-3 py-2 text-sm transition-all focus:ring-2 focus:outline-none"
+                      class="focus-ring border-edge bg-surface text-ink rounded-control h-9 flex-1 border px-2.5 font-mono text-[13px] transition-colors duration-150"
                       placeholder="#ffffff"
                     />
                     {config.value.colors.length > 2 && (
                       <button
                         type="button"
                         onClick$={() => removeColor(index)}
-                        class="glass flex h-10 w-10 items-center justify-center rounded-lg text-theme-error transition-all hover:bg-theme-error/20"
+                        class="focus-ring border-edge text-danger hover:bg-danger-soft rounded-control flex h-9 w-9 items-center justify-center border transition-colors duration-150"
                       >
                         ×
                       </button>
@@ -306,11 +286,11 @@ export const GradientConfigPanel = component$<GradientConfigPanelProps>(
             </div>{" "}
             {/* Preview */}
             <div>
-              <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
+              <label class="text-ink mb-2 block text-sm font-medium">
                 Preview
               </label>
               <div
-                class="border-theme-card-border h-20 rounded-xl border-2"
+                class="border-edge rounded-surface h-20 border-2"
                 style={{
                   background: generateGradientCSS(config.value),
                 }}

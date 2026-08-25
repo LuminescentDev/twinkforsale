@@ -1,7 +1,4 @@
-import {
-  component$,
-  type QRL,
-} from "@builder.io/qwik";
+import { component$, type QRL } from "@builder.io/qwik";
 import { Music } from "lucide-icons-qwik";
 import {
   ParticleBackground,
@@ -51,7 +48,8 @@ export interface BioPageDisplayProps {
 }
 
 export const BioPageDisplay = component$<BioPageDisplayProps>(
-  ({ bioData, isPreview = false, onLinkClick, class: className = "" }) => {    const activeLinks = bioData.bioLinks.filter((link) => link.isActive);
+  ({ bioData, isPreview = false, onLinkClick, class: className = "" }) => {
+    const activeLinks = bioData.bioLinks.filter((link) => link.isActive);
 
     // Parse particle configuration
     const parseParticleConfig = (): ParticleConfig | null => {
@@ -121,15 +119,17 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
           />
         )}{" "}
         {/* Main content - centered */}
-        <div class="flex items-center justify-center p-6">
+        <div class="flex flex-1 items-center justify-center p-4 sm:p-6">
           <div
-            class="bio-content relative z-10 mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/20 p-8 text-center shadow-2xl backdrop-blur-sm"
+            class="bio-content relative z-10 mx-auto w-full max-w-xl rounded-[20px] border border-white/15 bg-black/25 p-6 text-center shadow-2xl backdrop-blur-md sm:p-8"
             style={{ backgroundColor: `${bioData.backgroundColor}15` }}
-          >            {/* Profile Image */}
+          >
+            {" "}
+            {/* Profile Image */}
             {bioData.profileImage ? (
               <img
                 src={bioData.profileImage}
-                alt="Profile"
+                alt={`${bioData.displayName || "User"} profile`}
                 class="profile-image mx-auto mb-6 h-32 w-32 rounded-full border-4 border-white/20 object-cover shadow-lg"
                 width="128"
                 height="128"
@@ -144,9 +144,10 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
             {/* Display Name */}
             <h1 class="display-name mb-4 text-4xl font-bold tracking-tight">
               {bioData.displayName || "Your Name"}
-            </h1>{" "}            {/* Description */}
+            </h1>{" "}
+            {/* Description */}
             {bioData.description ? (
-              <Markdown 
+              <Markdown
                 content={bioData.description}
                 class="bio-description mx-auto mb-8 max-w-md text-lg leading-relaxed opacity-90"
               />
@@ -164,7 +165,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
                   {activeLinks.map((link) => (
                     <div key={link.id} class="group relative">
                       <button
-                        class="bio-link-circle flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-2 transition-all duration-300 hover:scale-110 hover:shadow-lg active:scale-95"
+                        class="bio-link-circle flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-2 transition-[background-color,border-color,opacity] duration-150 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current active:opacity-75"
                         style={{
                           backgroundColor: `${bioData.accentColor}20`,
                           borderColor: bioData.accentColor,
@@ -197,7 +198,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
                       </button>
 
                       {/* Tooltip */}
-                      <div class="tooltip absolute -bottom-10 left-1/2 z-10 -translate-x-1/2 transform rounded-lg bg-black/80 px-2 py-1 text-xs text-white opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100">
+                      <div class="tooltip pointer-events-none absolute -bottom-10 left-1/2 z-10 -translate-x-1/2 transform rounded-md bg-black/85 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
                         {link.title}
                         <div class="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 transform bg-black/80"></div>
                       </div>
@@ -246,13 +247,14 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
                 ) : (
                   <div class="spotify-embed mx-auto max-w-sm">
                     <iframe
+                      title={`Spotify ${spotifyEmbed.type}`}
                       src={`https://open.spotify.com/embed/${spotifyEmbed.type}/${spotifyEmbed.id}?utm_source=generator&theme=0`}
                       width="100%"
                       height="152"
                       allowFullscreen
                       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                       loading="lazy"
-                      class="rounded-2xl"
+                      class="rounded-xl"
                     />
                   </div>
                 )}
@@ -282,7 +284,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-sm opacity-50 transition-opacity hover:opacity-75"
+              class="rounded-md border border-current/20 bg-black/15 px-3 py-1.5 text-xs opacity-65 transition-opacity duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
               style={{ color: bioData.textColor }}
             >
               Powered by twink.forsale

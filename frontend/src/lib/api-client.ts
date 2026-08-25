@@ -176,6 +176,8 @@ export interface UploadListItem {
   downloads: number;
   createdAt: string;
   expiresAt: string | null;
+  /** View limit after which the file stops being served. Null = unlimited. */
+  maxViews: number | null;
 }
 
 export interface ShortLinkListItem {

@@ -14,7 +14,7 @@ export interface PageContainerProps {
 
 const widthMap: Record<NonNullable<PageContainerProps["width"]>, string> = {
   wide: "",
-  narrow: "mx-auto max-w-4xl",
+  narrow: "mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8",
 };
 
 /**

@@ -1,14 +1,13 @@
 import {
-  Home,
   Folder,
   Upload,
   Link2,
-  Link as LinkIcon,
-  Share,
-  TrendingUp,
-  Key,
+  IdCard,
+  MessageSquare,
+  BarChart3,
   Settings,
   Wrench,
+  Shield,
   Users,
   Globe,
   Bell,
@@ -20,63 +19,43 @@ export interface NavItem {
   href: string;
   label: string;
   icon: any;
-  /** Only mark active on an exact pathname match (used for section roots). */
+  /** Match only on an exact pathname (used for section roots). */
   exact?: boolean;
 }
 
-export interface NavGroup {
-  title: string;
-  items: NavItem[];
-}
-
 /**
- * Single source of truth for the signed-in navigation. Rendered by the
- * dashboard sidebar (desktop) and the top-nav mobile menu so the two never
- * drift apart. Grouped so the ~9 destinations are scannable instead of being
- * crammed into one flat bar.
+ * Durable destinations in the signed-in application. Files is the home; Upload
+ * is the shell's dedicated action rather than a list entry, so it is never
+ * duplicated as a second equally prominent call to action inside a page.
  */
-export const dashboardNav: NavGroup[] = [
-  {
-    title: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: Home, exact: true }],
-  },
-  {
-    title: "Content",
-    items: [
-      { href: "/dashboard/uploads", label: "Files", icon: Folder },
-      { href: "/upload", label: "Upload", icon: Upload },
-      { href: "/dashboard/links", label: "Short Links", icon: Link2 },
-    ],
-  },
-  {
-    title: "Sharing",
-    items: [
-      { href: "/dashboard/bio", label: "Bio Page", icon: LinkIcon },
-      { href: "/dashboard/embed", label: "Discord Embeds", icon: Share },
-    ],
-  },
-  {
-    title: "Insights",
-    items: [
-      { href: "/dashboard/analytics", label: "Analytics", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "Account",
-    items: [
-      { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
-      { href: "/dashboard/settings", label: "Settings", icon: Settings },
-      { href: "/setup/sharex", label: "ShareX Setup", icon: Wrench },
-    ],
-  },
+export const primaryNav: NavItem[] = [
+  { href: "/dashboard", label: "Files", icon: Folder, exact: true },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/links", label: "Short Links", icon: Link2 },
+  { href: "/dashboard/bio", label: "Bio", icon: IdCard },
+  { href: "/dashboard/embed", label: "Embeds", icon: MessageSquare },
 ];
 
-/**
- * Admin sub-navigation. Rendered as its own group at the bottom of the sidebar
- * only for admins, so admin tools are reachable from every signed-in page
- * (dashboard, upload, ShareX and the admin section itself) instead of hiding
- * behind a single "Admin Panel" link.
- */
+/** Configuration, reached less often than the primary destinations. */
+export const secondaryNav: NavItem[] = [
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/setup/sharex", label: "ShareX Setup", icon: Wrench },
+];
+
+/** The single Admin entry. Admin sections live in the admin route's own rail. */
+export const adminEntry: NavItem = {
+  href: "/dashboard/admin",
+  label: "Admin",
+  icon: Shield,
+};
+
+export const uploadAction: NavItem = {
+  href: "/upload",
+  label: "Upload",
+  icon: Upload,
+};
+
+/** Sections within Admin, rendered as local navigation on admin routes. */
 export const adminNav: NavItem[] = [
   { href: "/dashboard/admin", label: "Users", icon: Users, exact: true },
   { href: "/dashboard/admin/domains", label: "Domains", icon: Globe },
@@ -89,30 +68,46 @@ export const adminNav: NavItem[] = [
   },
 ];
 
+function normalize(path: string): string {
+  return path.replace(/\/+$/, "") || "/";
+}
+
 /**
- * Active-state test shared by every nav surface. Section roots (`exact`)
- * match only their own path; everything else also matches nested routes
- * (e.g. `/dashboard/analytics/<code>` keeps Analytics highlighted).
+ * Active-state test shared by every navigation surface. Section roots (`exact`)
+ * match only their own path; everything else also matches nested routes, so
+ * `/dashboard/analytics/<code>` keeps Analytics selected.
  */
 export function isNavItemActive(pathname: string, item: NavItem): boolean {
-  const path = pathname.replace(/\/$/, "") || "/";
-  const href = item.href.replace(/\/$/, "") || "/";
+  const path = normalize(pathname);
+  const href = normalize(item.href);
+  if (
+    href === "/dashboard/settings" &&
+    path === "/dashboard/api-keys"
+  ) {
+    return true;
+  }
   if (item.exact) return path === href;
   return path === href || path.startsWith(href + "/");
 }
 
-/**
- * Human labels for individual path segments, used to build the top-bar
- * breadcrumb trail. Segments not listed here (e.g. a dynamic short code)
- * fall back to their raw value.
- */
+/** True when the shell should show the Admin entry as the current section. */
+export function isAdminSection(pathname: string): boolean {
+  const path = normalize(pathname);
+  return path === "/dashboard/admin" || path.startsWith("/dashboard/admin/");
+}
+
+export interface Crumb {
+  label: string;
+  /** Omitted for the final (current) crumb. */
+  href?: string;
+}
+
 const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  uploads: "Files",
-  links: "Short Links",
-  bio: "Bio Page",
-  embed: "Discord Embeds",
+  dashboard: "Files",
   analytics: "Analytics",
+  links: "Short Links",
+  bio: "Bio",
+  embed: "Embeds",
   "api-keys": "API Keys",
   settings: "Settings",
   admin: "Admin",
@@ -126,36 +121,40 @@ const SEGMENT_LABELS: Record<string, string> = {
   sharex: "ShareX Setup",
 };
 
-export interface Crumb {
-  label: string;
-  /** Omitted for the final (current) crumb. */
-  href?: string;
-}
-
 /**
- * Turn a pathname into an ordered breadcrumb trail for the app top bar.
- * The last crumb is the current page (no href). A dynamic trailing segment
- * (short code / id) is shortened so it never blows out the bar.
+ * Breadcrumbs for nested views only. A top-level destination is already named
+ * by the selected navigation item, so it returns an empty trail and the shell
+ * renders nothing.
  */
 export function resolveBreadcrumbs(pathname: string): Crumb[] {
-  const segments = pathname.replace(/^\/|\/$/g, "").split("/").filter(Boolean);
+  const segments = normalize(pathname).replace(/^\//, "").split("/").filter(Boolean);
+  if (segments.length < 2) return [];
+
+  if (
+    segments.length === 2 &&
+    segments[0] === "dashboard" &&
+    segments[1] === "api-keys"
+  ) {
+    return [
+      { label: "Settings", href: "/dashboard/settings" },
+      { label: "API Keys" },
+    ];
+  }
+
+  // `/dashboard/<section>` is a top-level destination, not a nested view.
+  if (segments.length === 2 && segments[0] === "dashboard") return [];
+  if (segments[0] === "setup") return [];
+
   const crumbs: Crumb[] = [];
   let acc = "";
   segments.forEach((seg, i) => {
     acc += `/${seg}`;
+    // The rail already names the application root, so it is noise in a trail.
+    if (i === 0 && seg === "dashboard") return;
     const isLast = i === segments.length - 1;
-    let label = SEGMENT_LABELS[seg];
-    if (!label) {
-      // Dynamic segment (e.g. a short code) — trim so it stays compact.
-      label = seg.length > 16 ? `${seg.slice(0, 16)}…` : seg;
-    }
+    const label =
+      SEGMENT_LABELS[seg] ?? (seg.length > 18 ? `${seg.slice(0, 18)}…` : seg);
     crumbs.push({ label, href: isLast ? undefined : acc });
   });
   return crumbs;
-}
-
-/** The current page's title = the label of the last breadcrumb. */
-export function resolvePageTitle(pathname: string): string {
-  const crumbs = resolveBreadcrumbs(pathname);
-  return crumbs.length ? crumbs[crumbs.length - 1].label : "Dashboard";
 }

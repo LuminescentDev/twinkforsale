@@ -1,19 +1,30 @@
-import { component$, useSignal, $ } from "@builder.io/qwik";
+import { component$, useSignal, useStore, $ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import { Key, Trash2, Rocket, CheckCircle } from "lucide-icons-qwik";
-import { api, serverAuth } from "~/lib/api-client";
+import { Key, Trash2 } from "lucide-icons-qwik";
+import { api, serverAuth, type ApiKeyListItem } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { useToast } from "~/lib/toast-store";
+import { formatRelativeDate, formatAbsoluteDate } from "~/lib/file-kinds";
 import {
-  Badge,
-  Button,
-  Callout,
-  CopyButton,
-  EmptyState,
-  IconButton,
-  Input,
+  Page,
   PageHeader,
-  Panel,
+  Surface,
+  Button,
+  IconButton,
+  CopyButton,
+  Field,
+  Input,
+  Callout,
+  EmptyState,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
 
 export const useApiKeys = routeLoader$(async (requestEvent) => {
@@ -27,13 +38,7 @@ export const useApiKeys = routeLoader$(async (requestEvent) => {
     .list(auth)
     .catch(() => ({ apiKeys: [] }));
 
-  return {
-    user,
-    // The backend only returns a masked key for security; the full key is
-    // shown once at creation time. Alias it as `key` for the existing view.
-    apiKeys: apiKeys.map((k) => ({ ...k, key: k.maskedKey })),
-    origin: requestEvent.url.origin,
-  };
+  return { apiKeys, isApproved: user.isApproved };
 });
 
 export const createApiKey = server$(async function (name: string) {
@@ -50,230 +55,238 @@ export const deleteApiKey = server$(async function (keyId: string) {
 });
 
 export default component$(() => {
-  const apiKeysData = useApiKeys();
-  const newKeyName = useSignal("");
-  const isCreating = useSignal(false);
-  const showNewKey = useSignal<{ key: string; name: string } | null>(null);
-  // Local, reactive copy of the list so we can update it without a full page
-  // reload (a reload would discard the one-time full-key display).
-  const keys = useSignal(apiKeysData.value.apiKeys);
+  const data = useApiKeys();
+  const toast = useToast();
 
-  const handleCreateApiKey = $(async () => {
-    if (!newKeyName.value.trim()) return;
-
-    isCreating.value = true;
-    try {
-      const newKey = await createApiKey(newKeyName.value.trim());
-      showNewKey.value = { key: newKey.key, name: newKey.name };
-      // Prepend the new key (keeping its full value in memory so "Copy Full
-      // Key" works until the next navigation reloads masked values).
-      keys.value = [
-        {
-          id: newKey.id,
-          name: newKey.name,
-          key: newKey.key,
-          maskedKey: newKey.key,
-          createdAt: newKey.createdAt,
-          lastUsed: null,
-        },
-        ...keys.value,
-      ];
-      newKeyName.value = "";
-    } catch (error) {
-      console.error("Failed to create API key:", error);
-      alert("Failed to create API key");
-    } finally {
-      isCreating.value = false;
-    }
+  const keys = useStore<{ items: ApiKeyListItem[] }>({
+    items: [...data.value.apiKeys],
   });
 
-  const handleDeleteApiKey = $(async (keyId: string, keyName: string) => {
-    if (!confirm(`Are you sure you want to delete the API key "${keyName}"?`)) {
+  const name = useSignal("");
+  const nameError = useSignal("");
+  const creating = useSignal(false);
+  /** The full key, shown once. The server only ever returns it at creation. */
+  const revealed = useSignal<{ key: string; name: string } | null>(null);
+
+  const pendingDelete = useSignal<ApiKeyListItem | null>(null);
+  const deleteOpen = useSignal(false);
+  const deleteBusy = useSignal(false);
+
+  const create = $(async () => {
+    nameError.value = "";
+    if (!name.value.trim()) {
+      nameError.value = "Give the key a name so you can recognise it later.";
       return;
     }
 
+    creating.value = true;
     try {
-      await deleteApiKey(keyId);
-      keys.value = keys.value.filter((k) => k.id !== keyId);
+      const created = await createApiKey(name.value.trim());
+      revealed.value = { key: created.key, name: created.name };
+      keys.items = [
+        {
+          id: created.id,
+          name: created.name,
+          maskedKey: `${created.key.slice(0, 8)}…${created.key.slice(-4)}`,
+          createdAt: created.createdAt,
+          lastUsed: null,
+        },
+        ...keys.items,
+      ];
+      name.value = "";
     } catch (error) {
-      console.error("Failed to delete API key:", error);
-      alert("Failed to delete API key");
+      toast.error(
+        "Could not create the key",
+        error instanceof Error ? error.message : "Try again in a moment.",
+      );
+    } finally {
+      creating.value = false;
+    }
+  });
+
+  const confirmDelete = $(async () => {
+    const target = pendingDelete.value;
+    if (!target) return;
+    deleteBusy.value = true;
+    try {
+      await deleteApiKey(target.id);
+      keys.items = keys.items.filter((k) => k.id !== target.id);
+      deleteOpen.value = false;
+      toast.success(`Revoked “${target.name}”`);
+    } catch (error) {
+      toast.error(
+        "Could not revoke the key",
+        error instanceof Error ? error.message : "Try again in a moment.",
+      );
+    } finally {
+      deleteBusy.value = false;
     }
   });
 
   return (
-    <>
+    <Page width="narrow">
       <PageHeader
-        align="left"
-        title="API Keys Manager"
-        icon={Key}
-        subtitle="Create and manage API keys for ShareX integration~ Keep them safe and secure! (◕‿◕)♡"
+        title="API keys"
+        description="An API key lets a tool such as ShareX upload on your behalf. Each key works until you revoke it."
       />
 
-      {/* Account Status Check */}
-      {!apiKeysData.value.user.isApproved && (
-        <Callout tone="warning" title="Account Pending Approval" class="mb-6 sm:mb-8">
-          You cannot create API keys until your account is approved by an
-          administrator. Please wait for approval before proceeding.
+      {!data.value.isApproved && (
+        <Callout tone="warning" title="Account pending approval" class="mb-4">
+          You can create keys once an administrator approves your account.
         </Callout>
       )}
 
-      {/* Create New API Key */}
-      {apiKeysData.value.user.isApproved && (
-        <Panel title="Create New API Key" icon={Key} class="mb-6 sm:mb-8">
-          <div class="flex flex-col gap-3 sm:flex-row sm:gap-4">
-            <Input
-              type="text"
-              placeholder="API Key Name (e.g., ShareX, Development) uwu"
-              class="flex-1"
-              value={newKeyName.value}
-              onInput$={(e) => {
-                newKeyName.value = (e.target as HTMLInputElement).value;
-              }}
-              onKeyDown$={(e) => {
-                if (e.key === "Enter") handleCreateApiKey();
-              }}
-            />
-            <Button
-              onClick$={handleCreateApiKey}
-              disabled={!newKeyName.value.trim() || isCreating.value}
-            >
-              {isCreating.value ? (
-                "Creating..."
-              ) : (
-                <>
-                  <Rocket class="h-4 w-4" />
-                  Create API Key
-                </>
-              )}
-            </Button>
-          </div>
-        </Panel>
-      )}
-
-      {/* New Key Display (one-time) */}
-      {showNewKey.value && (
+      {revealed.value && (
         <Callout
           tone="success"
-          icon={CheckCircle}
-          title="API Key Created!"
-          class="mb-6 sm:mb-8"
+          title={`“${revealed.value.name}” created`}
+          class="mb-4"
         >
-          <p class="mb-3">
-            Save this API key now~ For security reasons, it won't be shown
-            again! (◕‿◕)♡
-          </p>
-          <div class="bg-theme-bg-secondary/40 border-theme-card-border flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0 flex-1">
-              <p class="text-theme-text-muted mb-1 text-xs">
-                {showNewKey.value.name}
-              </p>
-              <p class="text-theme-text-primary font-mono text-xs break-all sm:text-sm">
-                {showNewKey.value.key}
-              </p>
-            </div>
-            <CopyButton value={showNewKey.value.key} label="Copy" size="md" />
+          Copy it now — this is the only time the full key is shown. If you lose
+          it, revoke the key and create a new one.
+          <div class="border-edge bg-surface rounded-control mt-2 flex items-center gap-2 border px-2 py-1.5">
+            <code class="text-ink min-w-0 flex-1 truncate font-mono text-xs">
+              {revealed.value.key}
+            </code>
+            <CopyButton
+              value={revealed.value.key}
+              label="Copy key"
+              variant="secondary"
+            />
           </div>
           <Button
-            variant="ghost"
+            q:slot="actions"
             size="sm"
-            class="mt-3"
-            onClick$={() => (showNewKey.value = null)}
+            variant="ghost"
+            onClick$={() => (revealed.value = null)}
           >
-            I've saved it safely
+            Dismiss
           </Button>
         </Callout>
       )}
 
-      {/* API Keys List */}
-      <Panel title="Your API Keys" icon={Key} flush>
-        {keys.value.length === 0 ? (
+      <Surface class="mb-5">
+        <div class="flex flex-wrap items-end gap-3">
+          <Field
+            label="Key name"
+            for="key-name"
+            error={nameError.value}
+            help="Something you will recognise, e.g. “ShareX on my laptop”."
+            class="min-w-[14rem] flex-1"
+          >
+            <Input
+              id="key-name"
+              value={name.value}
+              maxLength={64}
+              placeholder="ShareX desktop"
+              onInput$={(_, el) => {
+                name.value = el.value;
+                nameError.value = "";
+              }}
+            />
+          </Field>
+          <Button
+            variant="primary"
+            loading={creating.value}
+            disabled={!data.value.isApproved}
+            onClick$={create}
+            class={nameError.value ? "mb-[1.65rem]" : "mb-[1.65rem]"}
+          >
+            Create key
+          </Button>
+        </div>
+      </Surface>
+
+      {keys.items.length === 0 ? (
+        <Surface flush>
           <EmptyState
             icon={Key}
-            title="No API Keys Yet!"
-            description="Create your first API key to start using the API or configure ShareX~ (◕‿◕)♡"
-            class="px-4 sm:px-6"
+            title="No API keys yet"
+            description="Create one to connect ShareX or your own scripts."
           />
-        ) : (
-          <div class="divide-theme-card-border/60 divide-y">
-            {keys.value.map((apiKey) => (
-              <div
-                key={apiKey.id}
-                class="hover:bg-theme-bg-tertiary/20 flex flex-col gap-3 px-4 py-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-6"
-              >
-                <div class="min-w-0 flex-1">
-                  <h3 class="text-theme-text-primary mb-1 flex items-center gap-1.5 font-medium">
-                    <Key class="h-4 w-4 flex-shrink-0" />
-                    <span class="truncate">{apiKey.name}</span>
-                  </h3>
-                  <div class="mb-2 flex flex-wrap items-center gap-1.5">
-                    <Badge status="neutral">
-                      Created {new Date(apiKey.createdAt).toLocaleDateString()}
-                    </Badge>
-                    {apiKey.lastUsed && (
-                      <Badge status="neutral">
-                        Used {new Date(apiKey.lastUsed).toLocaleDateString()}
-                      </Badge>
-                    )}
-                  </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <code class="bg-theme-bg-tertiary/30 text-theme-accent-tertiary rounded-lg px-2 py-1 font-mono text-xs break-all">
-                      {apiKey.key.substring(0, 8)}...
-                      {apiKey.key.substring(apiKey.key.length - 4)}
-                    </code>
-                    <CopyButton value={apiKey.key} label="Copy full key" />
-                  </div>
-                </div>
-                <IconButton
-                  variant="danger"
-                  title="Delete API Key"
-                  class="self-end sm:self-auto"
-                  onClick$={() => handleDeleteApiKey(apiKey.id, apiKey.name)}
-                >
-                  <Trash2 class="h-5 w-5" />
-                </IconButton>
-              </div>
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      {/* ShareX Integration Info */}
-      {apiKeysData.value.user.isApproved && (
-        <Callout tone="accent" title="ShareX Integration" class="mt-6 sm:mt-8">
-          <p class="mb-3">
-            Use your API key to configure ShareX for automatic uploads~ Visit
-            the{" "}
-            <a
-              href="/dashboard/embed"
-              class="text-theme-accent-secondary hover:text-theme-accent-tertiary font-medium underline"
-            >
-              Setup page
-            </a>{" "}
-            to download ShareX configuration files! (◕‿◕)♡
-          </p>
-          <div class="bg-theme-bg-secondary/40 border-theme-card-border flex items-center justify-between gap-2 rounded-xl border p-3">
-            <div class="min-w-0">
-              <p class="text-theme-text-muted text-xs">API Endpoint</p>
-              <code class="text-theme-accent-quaternary font-mono text-xs break-all sm:text-sm">
-                {apiKeysData.value.origin}/upload
-              </code>
-            </div>
-            <CopyButton value={`${apiKeysData.value.origin}/upload`} />
-          </div>
-        </Callout>
+        </Surface>
+      ) : (
+        <Surface flush class="overflow-hidden">
+          <Table label="Your API keys" minWidth="600px">
+            <Thead>
+              <Tr hover={false}>
+                <Th>Name</Th>
+                <Th class="w-44">Key</Th>
+                <Th class="w-28">Created</Th>
+                <Th class="w-32">Last used</Th>
+                <Th class="w-20 text-right">Revoke</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {keys.items.map((key) => (
+                <Tr key={key.id}>
+                  <Td class="font-medium">{key.name}</Td>
+                  <TdMeta class="font-mono">{key.maskedKey}</TdMeta>
+                  <TdMeta title={formatAbsoluteDate(key.createdAt)}>
+                    {formatRelativeDate(key.createdAt)}
+                  </TdMeta>
+                  <TdMeta
+                    title={
+                      key.lastUsed
+                        ? formatAbsoluteDate(key.lastUsed)
+                        : undefined
+                    }
+                  >
+                    {key.lastUsed ? formatRelativeDate(key.lastUsed) : "Never"}
+                  </TdMeta>
+                  <Td class="text-right">
+                    <IconButton
+                      size="sm"
+                      variant="danger"
+                      label={`Revoke ${key.name}`}
+                      onClick$={() => {
+                        pendingDelete.value = key;
+                        deleteOpen.value = true;
+                      }}
+                    >
+                      <Trash2 class="h-4 w-4" />
+                    </IconButton>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Surface>
       )}
-    </>
+
+      <Dialog open={deleteOpen} title="Revoke this API key?" size="sm">
+        <p class="text-ink-muted text-[13px] leading-5">
+          <span class="text-ink font-medium">{pendingDelete.value?.name}</span>{" "}
+          stops working immediately. Anything using it — ShareX, scripts,
+          integrations — will fail to upload until you give it a new key. This
+          cannot be undone.
+        </p>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (deleteOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          q:slot="footer"
+          variant="danger"
+          loading={deleteBusy.value}
+          onClick$={confirmDelete}
+        >
+          Revoke key
+        </Button>
+      </Dialog>
+    </Page>
   );
 });
 
 export const head: DocumentHead = {
-  title: "API Keys - twink.forsale",
+  title: "API keys - twink.forsale",
   meta: [
     {
       name: "description",
-      content:
-        "Create and manage API keys for ShareX integration and programmatic access.",
+      content: "Create and revoke API keys for uploading from other tools.",
     },
   ],
 };

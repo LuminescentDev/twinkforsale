@@ -1,39 +1,42 @@
-import { $, component$ } from "@builder.io/qwik";
+import { component$, useSignal, useComputed$, $ } from "@builder.io/qwik";
 import {
   routeLoader$,
   routeAction$,
   type DocumentHead,
 } from "@builder.io/qwik-city";
-import {
-  AlertTriangle,
-  Info,
-  RefreshCw,
-  Trash,
-  Trash2,
-  Play,
-  CheckCircle,
-  OctagonX,
-  Clock,
-  User,
-} from "lucide-icons-qwik";
-import { formatDate } from "~/lib/utils";
-import { useAlert } from "~/lib/use-alert";
+import { Bell, SearchX, Trash2, ServerCrash } from "lucide-icons-qwik";
 import { api, serverAuth, type EventDto } from "~/lib/api-client";
-import { getCurrentUser } from "~/lib/auth-client";
-import { Callout, EmptyState, PageHeader } from "~/components/ui";
+import {
+  formatRelativeDate,
+  formatAbsoluteDate,
+  normalizeSeverity,
+  severityLabel,
+  type Severity,
+} from "~/lib/file-kinds";
+import { useToast } from "~/lib/toast-store";
+import {
+  PageHeader,
+  Surface,
+  Button,
+  IconButton,
+  Badge,
+  Select,
+  SearchField,
+  CollectionToolbar,
+  SummaryList,
+  EmptyState,
+  Dialog,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
+  type BadgeTone,
+} from "~/components/ui";
 
-export const useAdminCheck = routeLoader$(async (requestEvent) => {
-  const user = await getCurrentUser(serverAuth(requestEvent));
-  if (!user) {
-    throw requestEvent.redirect(302, "/");
-  }
-  if (!user.isAdmin) {
-    throw requestEvent.redirect(302, "/dashboard");
-  }
-  return { isAdmin: true };
-});
-
-// Delete every event matching a predicate via the events API.
+/** Best-effort bulk delete: one failure does not abort the rest. */
 async function deleteEventsWhere(
   cookie: string | null,
   predicate: (e: EventDto) => boolean,
@@ -41,625 +44,462 @@ async function deleteEventsWhere(
   const { events } = await api.admin.events({ cookie }).catch(() => ({
     events: [] as EventDto[],
   }));
-  const targets = events.filter(predicate);
   let deleted = 0;
-  for (const event of targets) {
+  for (const event of events.filter(predicate)) {
     try {
       await api.admin.deleteEvent(event.id, { cookie });
       deleted++;
     } catch {
-      // best-effort bulk delete
+      // Counted as not deleted; the summary reflects what actually happened.
     }
   }
   return deleted;
 }
 
-// The backend has no aggregate system-check endpoint yet; treat as a no-op.
-export const useTriggerSystemCheck = routeAction$(async () => {
-  return {
-    success: true,
-    message: "System check triggered",
-    error: undefined as string | undefined,
-  };
+export const useDeleteEvent = routeAction$(async (data, requestEvent) => {
+  const eventId = data.eventId as string;
+  if (!eventId) return { success: false, error: "No event selected." };
+  try {
+    await api.admin.deleteEvent(eventId, serverAuth(requestEvent));
+    return { success: true, deleted: 1 };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "The delete failed.",
+    };
+  }
 });
 
-// Cleanup old events (30+ days), preserving CRITICAL/ERROR.
-export const useCleanupEvents = routeAction$(async (data, requestEvent) => {
+/** Removes INFO and WARNING events older than 30 days. */
+export const useCleanupEvents = routeAction$(async (_data, requestEvent) => {
   try {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const deletedCount = await deleteEventsWhere(
+    const deleted = await deleteEventsWhere(
       requestEvent.request.headers.get("cookie"),
       (e) =>
         new Date(e.createdAt).getTime() < cutoff &&
-        e.severity !== "CRITICAL" &&
-        e.severity !== "ERROR",
+        normalizeSeverity(e.severity) !== "critical" &&
+        normalizeSeverity(e.severity) !== "error",
     );
-    return { success: true, message: `Cleaned up ${deletedCount} old events` };
+    return { success: true, deleted };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to cleanup events",
-    };
-  }
-});
-
-export const useDeleteEvent = routeAction$(async (data, requestEvent) => {
-  const eventId = data.eventId as string;
-  if (!eventId) {
-    return { success: false, error: "Event ID is required" };
-  }
-  try {
-    await api.admin.deleteEvent(eventId, serverAuth(requestEvent));
-    return { success: true, message: "Event deleted successfully" };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete event",
-    };
-  }
-});
-
-export const useClearAllEvents = routeAction$(async (data, requestEvent) => {
-  try {
-    const deletedCount = await deleteEventsWhere(
-      requestEvent.request.headers.get("cookie"),
-      () => true,
-    );
-    return { success: true, message: `Cleared ${deletedCount} events` };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to clear events",
+      error: error instanceof Error ? error.message : "The cleanup failed.",
     };
   }
 });
 
 export const useClearNonCriticalEvents = routeAction$(
-  async (data, requestEvent) => {
+  async (_data, requestEvent) => {
     try {
-      const deletedCount = await deleteEventsWhere(
+      const deleted = await deleteEventsWhere(
         requestEvent.request.headers.get("cookie"),
-        (e) => e.severity === "INFO" || e.severity === "WARNING",
+        (e) =>
+          normalizeSeverity(e.severity) === "info" ||
+          normalizeSeverity(e.severity) === "warning",
       );
-      return {
-        success: true,
-        message: `Cleared ${deletedCount} non-critical events`,
-      };
+      return { success: true, deleted };
     } catch (error) {
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to clear events",
+        error: error instanceof Error ? error.message : "The clear failed.",
       };
     }
   },
 );
 
+export const useClearAllEvents = routeAction$(async (_data, requestEvent) => {
+  try {
+    const deleted = await deleteEventsWhere(
+      requestEvent.request.headers.get("cookie"),
+      () => true,
+    );
+    return { success: true, deleted };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "The clear failed.",
+    };
+  }
+});
+
 export const useSystemEventsData = routeLoader$(async (requestEvent) => {
   try {
     const { events } = await api.admin.events(serverAuth(requestEvent));
 
-    // Parse JSON metadata and compute 24h severity stats client-side.
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    const stats = { CRITICAL: 0, ERROR: 0, WARNING: 0, INFO: 0 };
+    const stats = { critical: 0, error: 0, warning: 0, info: 0, other: 0 };
     for (const e of events) {
-      if (new Date(e.createdAt).getTime() >= cutoff && e.severity in stats) {
-        stats[e.severity as keyof typeof stats]++;
+      if (new Date(e.createdAt).getTime() >= cutoff) {
+        stats[normalizeSeverity(e.severity)]++;
       }
     }
 
-    const mapped = events.map((e) => ({
-      ...e,
-      user: null as { email: string } | null,
-      cpuUsage: null as number | null,
-      memoryUsage: null as number | null,
-      diskUsage: null as number | null,
-      metadata: e.metadata
-        ? (() => {
-            try {
-              return JSON.parse(e.metadata as string);
-            } catch {
-              return e.metadata;
-            }
-          })()
-        : null,
-    }));
-
+    return { events, stats, failed: false };
+  } catch {
     return {
-      events: mapped,
-      stats,
-      monitoring: { isRunning: false },
-      lastUpdated: new Date(),
-    };
-  } catch (error) {
-    console.error("System events data error:", error);
-    return {
-      error: "Failed to load system events data",
-      lastUpdated: new Date(),
+      events: [] as EventDto[],
+      stats: { critical: 0, error: 0, warning: 0, info: 0, other: 0 },
+      failed: true,
     };
   }
 });
 
+const severityTone: Record<Severity, BadgeTone> = {
+  critical: "error",
+  error: "error",
+  warning: "warning",
+  info: "info",
+  other: "neutral",
+};
+
 export default component$(() => {
-  const eventsData = useSystemEventsData();
-  const triggerSystemCheckAction = useTriggerSystemCheck();
-  const cleanupEventsAction = useCleanupEvents();
-  const deleteEventAction = useDeleteEvent();
-  const clearAllEventsAction = useClearAllEvents();
-  const clearNonCriticalEventsAction = useClearNonCriticalEvents();
-  const { success, error, confirmAsync } = useAlert();
+  const data = useSystemEventsData();
+  const deleteEvent = useDeleteEvent();
+  const cleanup = useCleanupEvents();
+  const clearNonCritical = useClearNonCriticalEvents();
+  const clearAll = useClearAllEvents();
+  const toast = useToast();
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "CRITICAL":
-        return "text-theme-error bg-theme-error/15";
-      case "ERROR":
-        return "text-theme-warning bg-theme-warning/15";
-      case "WARNING":
-        return "text-theme-warning bg-theme-warning/15";
-      case "INFO":
-        return "text-theme-info bg-theme-info/15";
-      default:
-        return "text-theme-text-muted bg-theme-bg-tertiary/40";
-    }
-  };
+  const search = useSignal("");
+  const severityFilter = useSignal("all");
+  const removed = useSignal<string[]>([]);
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case "CRITICAL":
-        return <OctagonX class="h-4 w-4" />;
-      case "ERROR":
-        return <AlertTriangle class="h-4 w-4" />;
-      case "WARNING":
-        return <AlertTriangle class="h-4 w-4" />;
-      case "INFO":
-        return <Info class="h-4 w-4" />;
-      default:
-        return <Info class="h-4 w-4" />;
-    }
-  };
-  const triggerSystemCheck = $(async () => {
-    const result = await triggerSystemCheckAction.submit();
-    if (result.value?.success) {
-      await success(
-        "System Check Complete",
-        result.value.message || "System check completed successfully",
-      );
-      window.location.reload();
-    } else {
-      await error(
-        "System Check Failed",
-        result.value?.error || "Failed to trigger system check",
+  const bulkAction = useSignal<"cleanup" | "non-critical" | "all" | null>(null);
+  const bulkOpen = useSignal(false);
+  const bulkBusy = useSignal(false);
+
+  const events = useComputed$(() =>
+    data.value.events.filter((e) => !removed.value.includes(e.id)),
+  );
+
+  const visible = useComputed$(() => {
+    const query = search.value.trim().toLowerCase();
+    let list = events.value;
+    if (severityFilter.value !== "all") {
+      list = list.filter(
+        (e) => normalizeSeverity(e.severity) === severityFilter.value,
       );
     }
+    if (query) {
+      list = list.filter(
+        (e) =>
+          e.title.toLowerCase().includes(query) ||
+          e.message.toLowerCase().includes(query) ||
+          e.type.toLowerCase().includes(query),
+      );
+    }
+    return list;
   });
-  const cleanupEvents = $(async () => {
-    const confirmed = await confirmAsync(
-      "Cleanup Old Events",
-      "Are you sure you want to cleanup old system events? This will delete events older than 30 days (except CRITICAL and ERROR events).",
-    );
 
-    if (!confirmed) {
-      return;
-    }
-
-    const result = await cleanupEventsAction.submit();
-    if (result.value?.success) {
-      await success(
-        "Cleanup Complete",
-        result.value.message || "Old events cleaned up successfully",
-      );
-      window.location.reload();
+  const removeOne = $(async (event: EventDto) => {
+    const result = await deleteEvent.submit({ eventId: event.id });
+    if (result.value.success) {
+      removed.value = [...removed.value, event.id];
     } else {
-      await error(
-        "Cleanup Failed",
-        result.value?.error || "Failed to cleanup events",
-      );
-    }
-  });
-  const deleteEvent = $(async (eventId: string) => {
-    const confirmed = await confirmAsync(
-      "Delete Event",
-      "Are you sure you want to delete this event? This action cannot be undone.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const result = await deleteEventAction.submit({ eventId });
-
-    if (result.value?.success) {
-      await success(
-        "Event Deleted",
-        result.value.message || "Event deleted successfully",
-      );
-      window.location.reload();
-    } else {
-      await error(
-        "Delete Failed",
-        result.value?.error || "Failed to delete event",
-      );
+      toast.error("Could not delete the event", result.value.error);
     }
   });
 
-  const clearAllEvents = $(async () => {
-    const confirmed = await confirmAsync(
-      "Clear All Events",
-      "Are you sure you want to clear ALL system events? This action cannot be undone and will delete all events including critical ones.",
-    );
+  const BULK_COPY = {
+    cleanup: {
+      title: "Delete old routine events?",
+      body: "Removes informational and warning events older than 30 days. Errors and critical events are kept.",
+      confirm: "Delete old events",
+    },
+    "non-critical": {
+      title: "Delete all routine events?",
+      body: "Removes every informational and warning event, regardless of age. Errors and critical events are kept.",
+      confirm: "Delete routine events",
+    },
+    all: {
+      title: "Delete the entire event log?",
+      body: "Removes every event, including errors and critical events. Nothing is kept, and this cannot be undone.",
+      confirm: "Delete everything",
+    },
+  } as const;
 
-    if (!confirmed) {
-      return;
-    }
+  const runBulk = $(async () => {
+    const which = bulkAction.value;
+    if (!which) return;
+    bulkBusy.value = true;
+    const result =
+      which === "cleanup"
+        ? await cleanup.submit({})
+        : which === "non-critical"
+          ? await clearNonCritical.submit({})
+          : await clearAll.submit({});
+    bulkBusy.value = false;
+    bulkOpen.value = false;
 
-    const result = await clearAllEventsAction.submit();
-    if (result.value?.success) {
-      await success(
-        "Events Cleared",
-        result.value.message || "All events cleared successfully",
-      );
-      window.location.reload();
+    if (result.value.success) {
+      const count = result.value.deleted ?? 0;
+      toast.success(`Deleted ${count} event${count === 1 ? "" : "s"}`);
+      // The list is reloaded by the action's navigation; clear local removals.
+      removed.value = [];
     } else {
-      await error(
-        "Clear Failed",
-        result.value?.error || "Failed to clear all events",
-      );
+      toast.error("Could not delete the events", result.value.error);
     }
   });
 
-  const clearNonCriticalEvents = $(async () => {
-    const confirmed = await confirmAsync(
-      "Clear Non-Critical Events",
-      "Are you sure you want to clear all non-critical events? This will delete all INFO and WARNING events.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const result = await clearNonCriticalEventsAction.submit();
-    if (result.value?.success) {
-      await success(
-        "Non-Critical Events Cleared",
-        result.value.message || "Non-critical events cleared successfully",
-      );
-      window.location.reload();
-    } else {
-      await error(
-        "Clear Failed",
-        result.value?.error || "Failed to clear non-critical events",
-      );
-    }
+  const openBulk = $((which: "cleanup" | "non-critical" | "all") => {
+    bulkAction.value = which;
+    bulkOpen.value = true;
   });
-
-  if (eventsData.value.error) {
-    return (
-      <div>
-        <PageHeader
-          align="left"
-          title="System Events Management"
-          icon={Clock}
-          subtitle="Monitor and manage system events and alerts~"
-        />
-        <Callout tone="danger" icon={AlertTriangle} title="Failed to Load System Events">
-          {eventsData.value.error}
-        </Callout>
-      </div>
-    );
-  }
-
-  const data = eventsData.value;
 
   return (
-    <div>
-      <div>
-        {/* Header */}
-        <div class="mb-6">
-          <PageHeader
-            align="left"
-            title="System Events Management"
-            icon={Clock}
-            subtitle="Monitor and manage system events and alerts~"
+    <>
+      <PageHeader
+        title="Events"
+        description="System activity from the last retention window, newest first."
+      >
+        <div q:slot="actions" class="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick$={() => openBulk("cleanup")}>
+            Delete old routine events
+          </Button>
+          <Button
+            variant="secondary"
+            class="text-danger hover:text-danger"
+            onClick$={() => openBulk("all")}
+          >
+            Clear log
+          </Button>
+        </div>
+      </PageHeader>
+
+      {data.value.failed && (
+        <Surface flush>
+          <EmptyState
+            icon={ServerCrash}
+            title="Events unavailable"
+            description="The server did not respond. Reload the page to try again."
+          >
+            <Button variant="secondary" onClick$={() => location.reload()}>
+              Reload
+            </Button>
+          </EmptyState>
+        </Surface>
+      )}
+
+      {!data.value.failed && (
+        <>
+          <SummaryList
+            label="Severity in the last 24 hours"
+            class="mb-4"
+            items={[
+              {
+                label: "Critical",
+                value: data.value.stats.critical,
+                note: "last 24h",
+              },
+              {
+                label: "Errors",
+                value: data.value.stats.error,
+                note: "last 24h",
+              },
+              {
+                label: "Warnings",
+                value: data.value.stats.warning,
+                note: "last 24h",
+              },
+              {
+                label: "Informational",
+                value: data.value.stats.info,
+                note: "last 24h",
+              },
+            ]}
           />
 
-          {/* Mobile Action Buttons */}
-          <div class="block space-y-3 sm:hidden">
-            <button
-              onClick$={triggerSystemCheck}
-              class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+          <CollectionToolbar class="mb-3">
+            <SearchField
+              value={search}
+              label="Search events"
+              placeholder="Title, message or type"
+              class="min-w-[11rem] flex-1"
+              resultSummary={`${visible.value.length} of ${events.value.length} events shown`}
+            />
+            <div class="w-[10rem] shrink-0">
+              <label class="sr-only" for="severity-filter">
+                Filter by severity
+              </label>
+              <Select
+                id="severity-filter"
+                value={severityFilter.value}
+                onChange$={(_, el) => (severityFilter.value = el.value)}
+              >
+                <option value="all">All severities</option>
+                <option value="critical">Critical</option>
+                <option value="error">Error</option>
+                <option value="warning">Warning</option>
+                <option value="info">Informational</option>
+              </Select>
+            </div>
+            <Button
+              variant="ghost"
+              class="ml-auto"
+              onClick$={() => openBulk("non-critical")}
             >
-              <Play class="h-4 w-4" />
-              Trigger System Check
-            </button>
+              Delete routine events
+            </Button>
+          </CollectionToolbar>
 
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                onClick$={cleanupEvents}
-                class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-                title="Cleanup old events (30+ days)"
-              >
-                <Trash class="h-4 w-4 text-theme-text-muted" />
-                Cleanup
-              </button>
-              <button
-                onClick$={clearNonCriticalEvents}
-                class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-                title="Clear INFO and WARNING events"
-              >
-                <Trash2 class="h-4 w-4 text-theme-info" />
-                Clear Safe
-              </button>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                onClick$={clearAllEvents}
-                class="flex items-center justify-center gap-2 rounded-2xl bg-theme-error px-3 py-3 text-xs font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-lg active:scale-95"
-                title="Clear ALL events (including critical)"
-              >
-                <Trash class="h-4 w-4" />
-                Clear All
-              </button>
-              <button
-                onClick$={() => window.location.reload()}
-                class="card-cute flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-              >
-                <RefreshCw class="h-4 w-4 text-theme-success" />
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop Action Buttons */}
-          <div class="hidden items-center justify-end gap-3 sm:flex">
-            <button
-              onClick$={triggerSystemCheck}
-              class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
-            >
-              <Play class="h-4 w-4" />
-              Trigger Check
-            </button>
-            <div class="flex items-center gap-2">
-              <button
-                onClick$={cleanupEvents}
-                class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-                title="Cleanup old events (30+ days)"
-              >
-                <Trash class="h-4 w-4 text-theme-text-muted" />
-                Cleanup Old
-              </button>
-              <button
-                onClick$={clearNonCriticalEvents}
-                class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-                title="Clear INFO and WARNING events"
-              >
-                <Trash2 class="h-4 w-4 text-theme-info" />
-                Clear Safe
-              </button>
-              <button
-                onClick$={clearAllEvents}
-                class="flex items-center gap-2 rounded-2xl bg-theme-error px-5 py-3 text-sm font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-lg active:scale-95"
-                title="Clear ALL events (including critical)"
-              >
-                <Trash class="h-4 w-4" />
-                Clear All
-              </button>
-            </div>
-            <button
-              onClick$={() => window.location.reload()}
-              class="card-cute flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
-            >
-              <RefreshCw class="h-4 w-4 text-theme-success" />
-              Refresh
-            </button>
-          </div>
-        </div>{" "}
-        {/* Monitoring Status */}
-        <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
-            <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
-              <Clock class="h-4 w-4 sm:h-5 sm:w-5" />
-              Monitoring Status
-            </h3>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div class="flex items-center justify-between">
-                <span class="text-theme-text-secondary text-sm sm:text-base">
-                  Monitoring Service
-                </span>
-                <div class="flex items-center gap-2">
-                  {data.monitoring?.isRunning ? (
-                    <>
-                      <CheckCircle class="h-3 w-3 text-theme-success sm:h-4 sm:w-4" />
-                      <span class="text-sm font-medium text-theme-success sm:text-base">
-                        Running
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <OctagonX class="h-3 w-3 text-theme-error sm:h-4 sm:w-4" />
-                      <span class="text-sm font-medium text-theme-error sm:text-base">
-                        Stopped
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-theme-text-secondary text-sm sm:text-base">
-                  Last Updated
-                </span>
-                <span class="text-sm font-medium sm:text-base">
-                  {data.lastUpdated?.toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>{" "}
-        {/* Event Statistics */}
-        <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
-            <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
-              <Info class="h-4 w-4 sm:h-5 sm:w-5" />
-              Event Statistics (Last 24h)
-            </h3>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-theme-error sm:text-2xl">
-                  {data.stats?.CRITICAL || 0}
-                </div>
-                <div class="text-xs text-theme-text-muted sm:text-sm">Critical</div>
-              </div>
-              <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-theme-warning sm:text-2xl">
-                  {data.stats?.ERROR || 0}
-                </div>
-                <div class="text-xs text-theme-text-muted sm:text-sm">Errors</div>
-              </div>
-              <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-theme-warning sm:text-2xl">
-                  {data.stats?.WARNING || 0}
-                </div>
-                <div class="text-xs text-theme-text-muted sm:text-sm">Warnings</div>
-              </div>
-              <div class="rounded-xl p-3 text-center">
-                <div class="text-xl font-bold text-theme-info sm:text-2xl">
-                  {data.stats?.INFO || 0}
-                </div>
-                <div class="text-xs text-theme-text-muted sm:text-sm">Info</div>
-              </div>
-            </div>
-          </div>
-        </div>{" "}
-        {/* Events List */}
-        <div class="mb-6">
-          <div class="card-cute rounded-2xl p-4 sm:rounded-2xl sm:p-6">
-            <h3 class="text-gradient-cute mb-4 flex items-center gap-2 text-base font-bold sm:text-lg">
-              <AlertTriangle class="h-4 w-4 sm:h-5 sm:w-5" />
-              Recent Events
-            </h3>
-            {data.events && data.events.length > 0 ? (
-              <div class="max-h-80 space-y-3 overflow-y-auto sm:max-h-96">
-                {data.events.map((event, index) => (
-                  <div
-                    key={index}
-                    class="border-theme-card-border rounded-lg border p-3 sm:p-4"
-                  >
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div class="flex flex-1 items-start gap-2 sm:gap-3">
-                        <span
-                          class={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getSeverityColor(event.severity)}`}
-                        >
-                          {getSeverityIcon(event.severity)}
-                          <span class="hidden sm:inline">{event.severity}</span>
-                        </span>
-                        <div class="min-w-0 flex-1">
-                          <div class="text-theme-text-primary text-sm font-medium break-words sm:text-base">
-                            {event.title}
-                          </div>
-                          <div class="text-theme-text-secondary mt-1 text-xs break-words sm:text-sm">
-                            {event.message}
-                          </div>
-                          {event.user && (
-                            <div class="text-theme-text-secondary mt-2 flex items-center gap-2 text-xs">
-                              <User class="h-3 w-3 flex-shrink-0" />
-                              <span class="truncate">{event.user.email}</span>
-                            </div>
-                          )}
-                          {event.metadata && (
-                            <details class="mt-2">
-                              <summary class="text-theme-text-secondary hover:text-theme-text-primary cursor-pointer text-xs">
-                                View metadata
-                              </summary>
-                              <pre class="mt-2 max-w-full overflow-x-auto rounded bg-theme-bg-tertiary/40 p-2 text-xs">
-                                {JSON.stringify(event.metadata, null, 2)}
-                              </pre>
-                            </details>
-                          )}
-                          {(event.cpuUsage ||
-                            event.memoryUsage ||
-                            event.diskUsage) && (
-                            <div class="mt-2 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-                              {event.cpuUsage && (
-                                <div>
-                                  <span class="text-theme-text-secondary">
-                                    CPU:
-                                  </span>
-                                  <span class="ml-1 font-medium">
-                                    {event.cpuUsage.toFixed(1)}%
-                                  </span>
-                                </div>
-                              )}
-                              {event.memoryUsage && (
-                                <div>
-                                  <span class="text-theme-text-secondary">
-                                    Memory:
-                                  </span>
-                                  <span class="ml-1 font-medium">
-                                    {event.memoryUsage.toFixed(1)}%
-                                  </span>
-                                </div>
-                              )}
-                              {event.diskUsage && (
-                                <div>
-                                  <span class="text-theme-text-secondary">
-                                    Disk:
-                                  </span>
-                                  <span class="ml-1 font-medium">
-                                    {event.diskUsage.toFixed(1)}%
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div class="flex items-center justify-between gap-3 sm:items-start sm:justify-end">
-                        <div class="text-theme-text-secondary text-xs sm:text-right sm:text-sm">
-                          <div class="font-medium">
-                            {formatDate(new Date(event.createdAt))}
-                          </div>
-                          <div class="text-xs opacity-75">{event.type}</div>
-                        </div>
-                        <button
-                          onClick$={() => deleteEvent(event.id)}
-                          class="flex-shrink-0 rounded p-2 text-theme-error transition-colors hover:bg-theme-error/10"
-                          title="Delete this event"
-                        >
-                          <Trash2 class="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
+          {visible.value.length === 0 ? (
+            <Surface flush>
               <EmptyState
-                icon={CheckCircle}
-                title="No Events Found"
-                description="System is running smoothly with no events to report!"
-              />
-            )}
-          </div>
-        </div>{" "}
-        {/* Footer */}
-        <div class="px-4 text-center text-xs text-theme-text-muted sm:text-sm">
-          <p>Last updated: {data.lastUpdated?.toLocaleString()}</p>
-          <p class="mt-1">
-            System events are automatically monitored every 5 minutes
-          </p>
-        </div>
-      </div>
-    </div>
+                icon={events.value.length === 0 ? Bell : SearchX}
+                title={
+                  events.value.length === 0
+                    ? "No events recorded"
+                    : "No events match"
+                }
+                description={
+                  events.value.length === 0
+                    ? "System activity will appear here as it happens."
+                    : `${events.value.length} events are hidden by the current search and filter.`
+                }
+              >
+                {events.value.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick$={() => {
+                      search.value = "";
+                      severityFilter.value = "all";
+                    }}
+                  >
+                    Clear search and filter
+                  </Button>
+                )}
+              </EmptyState>
+            </Surface>
+          ) : (
+            <>
+              <Surface flush class="hidden overflow-hidden md:block">
+                <Table label="System events" minWidth="820px">
+                  <Thead>
+                    <Tr hover={false}>
+                      <Th class="w-28">Severity</Th>
+                      <Th class="w-40">Type</Th>
+                      <Th>Event</Th>
+                      <Th class="w-32">When</Th>
+                      <Th class="w-16 text-right">Delete</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {visible.value.map((event) => (
+                      <Tr key={event.id}>
+                        <Td>
+                          <Badge
+                            tone={
+                              severityTone[normalizeSeverity(event.severity)]
+                            }
+                          >
+                            {severityLabel[normalizeSeverity(event.severity)]}
+                          </Badge>
+                        </Td>
+                        <TdMeta class="font-mono">{event.type}</TdMeta>
+                        <Td class="max-w-0">
+                          <p class="text-ink truncate font-medium">
+                            {event.title}
+                          </p>
+                          <p
+                            class="text-ink-muted truncate text-xs"
+                            title={event.message}
+                          >
+                            {event.message}
+                          </p>
+                        </Td>
+                        <TdMeta title={formatAbsoluteDate(event.createdAt)}>
+                          {formatRelativeDate(event.createdAt)}
+                        </TdMeta>
+                        <Td class="text-right">
+                          <IconButton
+                            size="sm"
+                            variant="danger"
+                            label={`Delete event: ${event.title}`}
+                            onClick$={() => removeOne(event)}
+                          >
+                            <Trash2 class="h-4 w-4" />
+                          </IconButton>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Surface>
+
+              <Surface flush class="overflow-hidden md:hidden">
+                <ul class="divide-edge divide-y">
+                  {visible.value.map((event) => (
+                    <li
+                      key={event.id}
+                      class="flex items-start gap-2.5 px-3 py-2.5"
+                    >
+                      <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <Badge
+                            tone={
+                              severityTone[normalizeSeverity(event.severity)]
+                            }
+                          >
+                            {severityLabel[normalizeSeverity(event.severity)]}
+                          </Badge>
+                          <span class="text-ink-muted text-xs">
+                            {formatRelativeDate(event.createdAt)}
+                          </span>
+                        </div>
+                        <p class="text-ink mt-1 text-[13px] font-medium">
+                          {event.title}
+                        </p>
+                        <p class="text-ink-muted line-clamp-2 text-xs">
+                          {event.message}
+                        </p>
+                      </div>
+                      <IconButton
+                        size="sm"
+                        variant="danger"
+                        label={`Delete event: ${event.title}`}
+                        onClick$={() => removeOne(event)}
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </IconButton>
+                    </li>
+                  ))}
+                </ul>
+              </Surface>
+            </>
+          )}
+        </>
+      )}
+
+      <Dialog
+        open={bulkOpen}
+        title={bulkAction.value ? BULK_COPY[bulkAction.value].title : ""}
+        size="sm"
+      >
+        <p class="text-ink-muted text-[13px] leading-5">
+          {bulkAction.value ? BULK_COPY[bulkAction.value].body : ""}
+        </p>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (bulkOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          q:slot="footer"
+          variant="danger"
+          loading={bulkBusy.value}
+          onClick$={runBulk}
+        >
+          {bulkAction.value ? BULK_COPY[bulkAction.value].confirm : "Delete"}
+        </Button>
+      </Dialog>
+    </>
   );
 });
 
 export const head: DocumentHead = {
-  title: "System Events - Admin - twink.forsale",
-  meta: [
-    {
-      name: "description",
-      content: "System events monitoring and management for twink.forsale",
-    },
-  ],
+  title: "Events - Admin - twink.forsale",
 };

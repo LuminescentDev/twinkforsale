@@ -2,42 +2,46 @@ import { component$, Slot } from "@builder.io/qwik";
 import { cn } from "~/lib/utils";
 
 export interface EmptyStateProps {
-  /** Lucide icon component (preferred). */
   icon?: any;
-  /** Or a decorative emoji when an icon doesn't fit the vibe. */
-  emoji?: string;
+  /** Says which of the empty cases this is — nothing yet, or nothing matching. */
   title: string;
   description?: string;
+  /** `inline` for an empty region inside a surface; `page` for a whole view. */
+  size?: "inline" | "page";
   class?: string;
 }
 
 /**
- * Consistent empty/zero-state block with optional action (via default slot).
- * Replaces ad-hoc "no files yet" centered blocks.
+ * Distinguishes an empty collection from a filter with no matches, a load
+ * failure, or an unavailable feature. Actions go in the default slot.
  */
 export const EmptyState = component$<EmptyStateProps>(
-  ({ icon: Icon, emoji, title, description, class: className }) => {
-    return (
-      <div class={cn("flex flex-col items-center py-12 text-center", className)}>
-        {emoji ? (
-          <div class="mb-4 text-5xl sm:text-6xl">{emoji}</div>
-        ) : (
-          Icon && (
-            <div class="from-theme-accent-primary/20 to-theme-accent-secondary/20 mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br">
-              <Icon class="text-theme-accent-primary h-8 w-8" />
-            </div>
-          )
-        )}
-        <h3 class="text-theme-text-primary text-lg font-semibold">{title}</h3>
-        {description && (
-          <p class="text-theme-text-secondary mt-2 max-w-md text-sm">
-            {description}
-          </p>
-        )}
-        <div class="mt-6 empty:hidden">
-          <Slot />
-        </div>
+  ({ icon: Icon, title, description, size = "page", class: className }) => (
+    <div
+      class={cn(
+        "flex flex-col items-center px-4 text-center",
+        size === "page" ? "py-14" : "py-9",
+        className,
+      )}
+    >
+      {Icon && (
+        <Icon
+          aria-hidden="true"
+          class={cn(
+            "text-ink-muted mb-3",
+            size === "page" ? "h-7 w-7" : "h-6 w-6",
+          )}
+        />
+      )}
+      <p class="text-ink text-[15px] font-semibold">{title}</p>
+      {description && (
+        <p class="text-ink-muted mt-1.5 max-w-sm text-[13px] leading-5">
+          {description}
+        </p>
+      )}
+      <div class="mt-4 flex flex-wrap justify-center gap-2 empty:hidden">
+        <Slot />
       </div>
-    );
-  },
+    </div>
+  ),
 );

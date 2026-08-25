@@ -1,29 +1,37 @@
-import { component$, useSignal, $, useComputed$ } from "@builder.io/qwik";
-import type { QRL, Signal } from "@builder.io/qwik";
+import { component$, useSignal, useComputed$, $ } from "@builder.io/qwik";
+import type { Signal } from "@builder.io/qwik";
 import {
   routeLoader$,
-  Form,
   routeAction$,
+  usePreventNavigate$,
   z,
   zod$,
+  type DocumentHead,
 } from "@builder.io/qwik-city";
-import { ColorPicker, Toggle } from "@luminescent/ui-qwik";
-import {
-  Share,
-  Settings,
-  Save,
-  CheckCircle,
-  CircleX,
-  Info,
-  Code,
-  Image as ImageIcon,
-  Eye,
-} from "lucide-icons-qwik";
+import { Image as ImageIcon, FileText, Palette, Tags } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
-import { Button, Callout, PageHeader, Panel } from "~/components/ui";
+import { useToast } from "~/lib/toast-store";
+import { EditorLayout } from "~/components/layout/editor-layout";
+import {
+  Page,
+  PageHeader,
+  Section,
+  Surface,
+  PreviewPane,
+  Button,
+  Field,
+  Input,
+  Textarea,
+  Switch,
+  Callout,
+  SaveIndicator,
+  CopyButton,
+  LocalNav,
+  type SaveState,
+} from "~/components/ui";
 
-export const useUserLoader = routeLoader$(async (requestEvent) => {
+export const useEmbedSettings = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
   const user = await getCurrentUser(auth);
   if (!user) {
@@ -32,21 +40,17 @@ export const useUserLoader = routeLoader$(async (requestEvent) => {
 
   const settings = await api.settings.get(auth).catch(() => null);
   return {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      embedTitle: settings?.embedTitle ?? null,
-      embedDescription: settings?.embedDescription ?? null,
-      embedColor: settings?.embedColor ?? null,
-      embedAuthor: settings?.embedAuthor ?? null,
-      embedFooter: settings?.embedFooter ?? null,
-      showFileInfo: Boolean(settings?.showFileInfo),
-      showUploadDate: Boolean(settings?.showUploadDate),
-      showUserStats: Boolean(settings?.showUserStats),
-      customDomain: settings?.customDomain ?? null,
-      useCustomWords: Boolean(settings?.useCustomWords),
-    },
+    name: user.name,
+    embedTitle: settings?.embedTitle ?? "",
+    embedDescription: settings?.embedDescription ?? "",
+    embedColor: settings?.embedColor ?? "#db2777",
+    embedAuthor: settings?.embedAuthor ?? "",
+    embedFooter: settings?.embedFooter ?? "",
+    showFileInfo: Boolean(settings?.showFileInfo),
+    showUploadDate: Boolean(settings?.showUploadDate),
+    showUserStats: Boolean(settings?.showUserStats),
+    customDomain: settings?.customDomain ?? "",
+    useCustomWords: Boolean(settings?.useCustomWords),
   };
 });
 
@@ -55,7 +59,7 @@ export const useUpdateEmbedSettings = routeAction$(
     const auth = serverAuth(requestEvent);
     try {
       // Embed appearance lives on the embed endpoint; `useCustomWords` is a
-      // general setting, so persist it via the settings endpoint.
+      // general setting, so it goes through the settings endpoint.
       await api.settings.updateEmbed(
         {
           embedTitle: values.embedTitle || null,
@@ -73,14 +77,14 @@ export const useUpdateEmbedSettings = routeAction$(
       await api.settings
         .update({ useCustomWords: Boolean(values.useCustomWords) }, auth)
         .catch(() => undefined);
-      return { success: true, message: "Embed settings updated successfully" };
+      return { success: true, message: "Embed settings saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
           error instanceof Error
             ? error.message
-            : "Failed to update embed settings",
+            : "Could not save your embed settings.",
       });
     }
   },
@@ -93,53 +97,44 @@ export const useUpdateEmbedSettings = routeAction$(
       .optional(),
     embedAuthor: z.string().optional(),
     embedFooter: z.string().optional(),
-    showFileInfo: z.preprocess(
-      (val) => val === "on" || val === true,
-      z.boolean().default(false),
-    ),
-    showUploadDate: z.preprocess(
-      (val) => val === "on" || val === true,
-      z.boolean().default(false),
-    ),
-    showUserStats: z.preprocess(
-      (val) => val === "on" || val === true,
-      z.boolean().default(false),
-    ),
+    showFileInfo: z.boolean().optional(),
+    showUploadDate: z.boolean().optional(),
+    showUserStats: z.boolean().optional(),
     customDomain: z.string().optional(),
-    useCustomWords: z.preprocess(
-      (val) => val === "on" || val === true,
-      z.boolean().default(false),
-    ),
+    useCustomWords: z.boolean().optional(),
   }),
 );
 
-// Placeholders users can drop into any of the text fields. Kept in one place so
-// the chip row below stays in sync with the example values used for the preview.
-const PLACEHOLDERS = [
-  "filename",
-  "filesize",
-  "filetype",
-  "uploaddate",
-  "views",
-  "username",
-  "totalfiles",
-  "totalstorage",
-  "totalviews",
-] as const;
+/** Tokens the backend substitutes when it renders an embed. */
+const PLACEHOLDERS: { token: string; meaning: string }[] = [
+  { token: "{filename}", meaning: "the file's name" },
+  { token: "{filesize}", meaning: "its size" },
+  { token: "{filetype}", meaning: "its type" },
+  { token: "{uploaddate}", meaning: "when it was uploaded" },
+  { token: "{views}", meaning: "how many times it has been seen" },
+  { token: "{username}", meaning: "your display name" },
+];
 
-// Small row of clickable tokens that append into the field the chips belong to.
-// Inserting beats making people memorise the `{token}` syntax from a hint blob.
-const PlaceholderChips = component$<{ onInsert$: QRL<(token: string) => void> }>(
-  ({ onInsert$ }) => (
-    <div class="mt-2 flex flex-wrap gap-1.5 pl-1">
-      {PLACEHOLDERS.map((token) => (
+const SECTIONS = [
+  { href: "#embed-content", label: "Content", icon: FileText },
+  { href: "#embed-appearance", label: "Appearance", icon: Palette },
+  { href: "#embed-metadata", label: "Metadata", icon: Tags },
+];
+
+/** Chips that append a placeholder token to the field they belong to. */
+const PlaceholderRow = component$<{ field: Signal<string>; ids: string }>(
+  ({ field, ids }) => (
+    <div class="mt-1.5 flex flex-wrap items-center gap-1" id={ids}>
+      <span class="text-ink-muted mr-0.5 text-xs">Insert:</span>
+      {PLACEHOLDERS.map((p) => (
         <button
-          key={token}
+          key={p.token}
           type="button"
-          onClick$={() => onInsert$(`{${token}}`)}
-          class="glass text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-accent-primary/15 rounded-full px-2.5 py-1 font-mono text-[11px] transition-all duration-200"
+          title={`Inserts ${p.meaning}`}
+          onClick$={() => (field.value = `${field.value}${p.token}`)}
+          class="focus-ring border-edge bg-surface-subtle text-ink-muted hover:bg-surface-hover hover:text-ink rounded-full border px-1.5 py-0.5 font-mono text-[11px] transition-colors duration-150"
         >
-          {`{${token}}`}
+          {p.token}
         </button>
       ))}
     </div>
@@ -147,41 +142,72 @@ const PlaceholderChips = component$<{ onInsert$: QRL<(token: string) => void> }>
 );
 
 export default component$(() => {
-  const userData = useUserLoader();
-  const updateAction = useUpdateEmbedSettings();
-  const user = userData.value.user;
+  const data = useEmbedSettings();
+  const action = useUpdateEmbedSettings();
+  const toast = useToast();
 
-  // Reactive form state — everything the preview reads lives in a signal so the
-  // preview stays in lockstep without hand-rolled regenerate calls.
-  const showFileInfo = useSignal(user.showFileInfo);
-  const showUploadDate = useSignal(user.showUploadDate);
-  const showUserStats = useSignal(user.showUserStats);
-  const useCustomWords = useSignal(user.useCustomWords);
+  const mode = useSignal("edit");
+  const activeSection = useSignal(SECTIONS[0].href);
 
-  const titleValue = useSignal(user.embedTitle || "");
-  const descriptionValue = useSignal(user.embedDescription || "");
-  const colorValue = useSignal(user.embedColor || "#8B5CF6");
-  const authorValue = useSignal(user.embedAuthor || "");
-  const footerValue = useSignal(user.embedFooter || "");
+  const title = useSignal(data.value.embedTitle);
+  const description = useSignal(data.value.embedDescription);
+  const color = useSignal(data.value.embedColor || "#db2777");
+  const author = useSignal(data.value.embedAuthor);
+  const footer = useSignal(data.value.embedFooter);
+  const showFileInfo = useSignal(data.value.showFileInfo);
+  const showUploadDate = useSignal(data.value.showUploadDate);
+  const showUserStats = useSignal(data.value.showUserStats);
+  const customDomain = useSignal(data.value.customDomain);
+  const useCustomWords = useSignal(data.value.useCustomWords);
 
-  const showJson = useSignal(false);
+  const saveState = useSignal<SaveState>("idle");
 
-  const inputClasses =
-    "w-full px-3 sm:px-4 py-2 sm:py-3 glass rounded-full placeholder:theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-sm sm:text-base text-theme-primary";
-  const toggleClasses =
-    "flex gap-2 items-center p-3 glass rounded-full hover:bg-theme-accent-primary/10 transition-all duration-300 cursor-pointer";
+  usePreventNavigate$((target) => {
+    const hasUnsavedChanges =
+      saveState.value === "dirty" ||
+      saveState.value === "saving" ||
+      saveState.value === "error";
+    if (!hasUnsavedChanges) return false;
+    if (target !== undefined) {
+      return !window.confirm(
+        "You have unsaved embed changes. Leave without saving them?",
+      );
+    }
+    return true;
+  });
 
-  // Helper to append a placeholder token to a given field signal.
-  const insertInto = (field: Signal<string>) =>
-    $((token: string) => {
-      field.value = `${field.value}${token}`;
+  const markDirty = $(() => {
+    if (saveState.value !== "saving") saveState.value = "dirty";
+  });
+
+  const save = $(async () => {
+    saveState.value = "saving";
+    const result = await action.submit({
+      embedTitle: title.value,
+      embedDescription: description.value,
+      embedColor: color.value,
+      embedAuthor: author.value,
+      embedFooter: footer.value,
+      showFileInfo: showFileInfo.value,
+      showUploadDate: showUploadDate.value,
+      showUserStats: showUserStats.value,
+      customDomain: customDomain.value,
+      useCustomWords: useCustomWords.value,
     });
+    if (result.value.failed) {
+      saveState.value = "error";
+      toast.error("Could not save", result.value.message);
+    } else {
+      saveState.value = "saved";
+      toast.success("Embed settings saved");
+    }
+  });
 
-  // Derived preview model — resolves placeholders to example values and folds in
-  // the optional file-info / upload-date / user-stats blocks.
+  // The preview resolves placeholders against representative sample values so
+  // the effect of a change is visible immediately, from local state only.
   const preview = useComputed$(() => {
-    const name = user.name || "User";
-    const values: Record<string, string> = {
+    const name = data.value.name || "You";
+    const sample: Record<string, string> = {
       filename: "example-image.png",
       filesize: "2.34 MB",
       filetype: "image/png",
@@ -193,307 +219,337 @@ export default component$(() => {
       totalviews: "5,432",
     };
     const fill = (s: string) =>
-      s.replace(/\{(\w+)\}/g, (m, key) => values[key] ?? m);
+      s.replace(/\{(\w+)\}/g, (match, key) => sample[key] ?? match);
 
-    const descLines = [fill(descriptionValue.value || "Uploaded via twink.forsale")];
+    const lines = [fill(description.value || "Uploaded via twink.forsale")];
     if (showFileInfo.value) {
-      descLines.push("", "📁 example-image.png", "📏 2.34 MB • image/png");
+      lines.push("", "example-image.png", "2.34 MB · image/png");
     }
     if (showUploadDate.value) {
-      descLines.push("📅 Uploaded " + values.uploaddate);
+      lines.push(`Uploaded ${sample.uploaddate}`);
     }
 
-    const footer = showUserStats.value
-      ? "📁 127 files   💾 2.1 GB   👁️ 5,432 views"
-      : fill(footerValue.value || "twink.forsale");
-
     return {
-      title: fill(titleValue.value || "File Upload"),
-      author: fill(authorValue.value || name),
-      description: descLines,
-      footer,
-      color: colorValue.value || "#8B5CF6",
+      title: fill(title.value || "File upload"),
+      author: fill(author.value || name),
+      description: lines,
+      footer: showUserStats.value
+        ? "127 files · 2.1 GB · 5,432 views"
+        : fill(footer.value || customDomain.value || "twink.forsale"),
+      color: /^#[0-9A-Fa-f]{6}$/.test(color.value) ? color.value : "#db2777",
     };
   });
 
-  // JSON view of the same model, for people who want the literal embed payload.
   const previewJson = useComputed$(() => {
     const p = preview.value;
-    const payload = {
-      type: "rich",
-      title: p.title,
-      description: p.description.join("\n"),
-      color: parseInt(p.color.slice(1), 16),
-      author: { name: p.author },
-      footer: { text: p.footer },
-      image: { url: "https://twink.forsale/f/abc123" },
-    };
-    return JSON.stringify(payload, null, 2);
+    return JSON.stringify(
+      {
+        type: "rich",
+        title: p.title,
+        description: p.description.join("\n"),
+        color: parseInt(p.color.slice(1), 16),
+        author: { name: p.author },
+        footer: { text: p.footer },
+        image: { url: "https://twink.forsale/f/abc123" },
+      },
+      null,
+      2,
+    );
   });
 
   return (
-    <div>
+    <Page>
       <PageHeader
-        align="left"
-        title="Discord Embed Settings~"
-        icon={Share}
-        subtitle="Customize how your cute uploads appear when shared on Discord and other platforms! (◕‿◕)♡"
-      />
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-        {/* Settings Form */}
-        <Panel title="Embed Configuration~" icon={Settings}>
-          <Form action={updateAction}>
-            <div class="space-y-4 sm:space-y-6">
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Embed Title~
-                </label>
-                <input
-                  type="text"
-                  name="embedTitle"
-                  bind:value={titleValue}
-                  placeholder="File Upload~"
-                  class={inputClasses}
-                />
-                <PlaceholderChips onInsert$={insertInto(titleValue)} />
+        title="Discord embeds"
+        description="How your file links look when someone posts them in Discord."
+      >
+        <div q:slot="actions" class="flex items-center gap-3">
+          <SaveIndicator state={saveState.value} />
+          <Button
+            variant="primary"
+            loading={saveState.value === "saving"}
+            disabled={saveState.value === "idle" || saveState.value === "saved"}
+            onClick$={save}
+          >
+            Save changes
+          </Button>
+        </div>
+      </PageHeader>
+
+      <EditorLayout previewLabel="Discord embed" hasNav mode={mode}>
+        <LocalNav
+          q:slot="nav"
+          label="Embed sections"
+          items={SECTIONS}
+          current={activeSection.value}
+          stackAt="xl"
+        />
+
+        <div q:slot="settings" class="grid max-w-2xl gap-6">
+          <Section
+            id="embed-content"
+            title="Content"
+            description="The text Discord shows above and below your file."
+          >
+            <Surface>
+              <div class="grid gap-4">
+                <div>
+                  <Field
+                    label="Title"
+                    for="embed-title"
+                    help="The blue headline on the embed. Leave empty to use the file name."
+                  >
+                    <Input
+                      id="embed-title"
+                      value={title.value}
+                      maxLength={256}
+                      placeholder="{filename}"
+                      onInput$={(_, el) => {
+                        title.value = el.value;
+                        markDirty();
+                      }}
+                    />
+                  </Field>
+                  <PlaceholderRow field={title} ids="embed-title-tokens" />
+                </div>
+
+                <div>
+                  <Field
+                    label="Description"
+                    for="embed-description"
+                    help="Shown under the title. Line breaks are preserved."
+                  >
+                    <Textarea
+                      id="embed-description"
+                      rows={3}
+                      maxLength={2048}
+                      value={description.value}
+                      placeholder="Uploaded {uploaddate} · {filesize}"
+                      onInput$={(_, el) => {
+                        description.value = el.value;
+                        markDirty();
+                      }}
+                    />
+                  </Field>
+                  <PlaceholderRow
+                    field={description}
+                    ids="embed-description-tokens"
+                  />
+                </div>
+
+                <Field
+                  label="Author line"
+                  for="embed-author"
+                  help="Small text above the title."
+                >
+                  <Input
+                    id="embed-author"
+                    value={author.value}
+                    maxLength={256}
+                    placeholder={data.value.name || "Your name"}
+                    onInput$={(_, el) => {
+                      author.value = el.value;
+                      markDirty();
+                    }}
+                  />
+                </Field>
+
+                <Field
+                  label="Footer"
+                  for="embed-footer"
+                  help="Small text at the bottom. Ignored when account totals are shown."
+                >
+                  <Input
+                    id="embed-footer"
+                    value={footer.value}
+                    maxLength={2048}
+                    placeholder="twink.forsale"
+                    onInput$={(_, el) => {
+                      footer.value = el.value;
+                      markDirty();
+                    }}
+                  />
+                </Field>
               </div>
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Description~
-                </label>
-                <textarea
-                  name="embedDescription"
-                  bind:value={descriptionValue}
-                  placeholder="Uploaded via twink.forsale~ (◕‿◕)♡"
-                  rows={3}
-                  class="glass placeholder:theme-text-muted focus:ring-theme-accent-primary/50 text-theme-text-primary w-full resize-none rounded-2xl px-3 py-2 text-sm transition-all duration-300 focus:ring-2 focus:outline-none sm:px-4 sm:py-3 sm:text-base"
-                />
-                <PlaceholderChips onInsert$={insertInto(descriptionValue)} />
-              </div>
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Embed Color~
-                </label>
-                <ColorPicker
-                  id="color-picker"
-                  horizontal
-                  value={colorValue.value}
-                  onInput$={(newColor) => {
-                    colorValue.value = newColor;
+            </Surface>
+          </Section>
+
+          <Section
+            id="embed-appearance"
+            title="Appearance"
+            description="Discord draws a coloured bar down the left edge of the embed."
+          >
+            <Surface>
+              <Field
+                label="Accent colour"
+                for="embed-color"
+                help="A six-digit hex colour, for example #db2777."
+                class="max-w-xs"
+              >
+                <div class="flex items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Pick accent colour"
+                    value={preview.value.color}
+                    onInput$={(_, el) => {
+                      color.value = el.value;
+                      markDirty();
+                    }}
+                    class="focus-ring border-edge rounded-control h-9 w-10 shrink-0 cursor-pointer border bg-transparent p-1"
+                  />
+                  <Input
+                    id="embed-color"
+                    value={color.value}
+                    maxLength={7}
+                    spellcheck={false}
+                    class="font-mono"
+                    onInput$={(_, el) => {
+                      color.value = el.value;
+                      markDirty();
+                    }}
+                  />
+                </div>
+              </Field>
+            </Surface>
+          </Section>
+
+          <Section
+            id="embed-metadata"
+            title="Metadata"
+            description="Extra details appended to the embed, and how your links are named."
+          >
+            <Surface>
+              <div class="grid gap-3.5">
+                <Switch
+                  checked={showFileInfo.value}
+                  label="Show file name, size and type"
+                  help="Appends the file's details under your description."
+                  onChange$={(checked) => {
+                    showFileInfo.value = checked;
+                    markDirty();
                   }}
                 />
-              </div>
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Author Name~
-                </label>
-                <input
-                  type="text"
-                  name="embedAuthor"
-                  bind:value={authorValue}
-                  placeholder={user.name || "Cute User~"}
-                  class={inputClasses}
+                <Switch
+                  checked={showUploadDate.value}
+                  label="Show upload date"
+                  help="Appends the date the file was uploaded."
+                  onChange$={(checked) => {
+                    showUploadDate.value = checked;
+                    markDirty();
+                  }}
                 />
-                <PlaceholderChips onInsert$={insertInto(authorValue)} />
-              </div>
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Header Text~
-                </label>
-                <input
-                  type="text"
-                  name="embedFooter"
-                  bind:value={footerValue}
-                  placeholder="twink.forsale~"
-                  class={inputClasses}
+                <Switch
+                  checked={showUserStats.value}
+                  label="Show your account totals in the footer"
+                  help="Replaces the footer text with your file count, storage used and total views."
+                  onChange$={(checked) => {
+                    showUserStats.value = checked;
+                    markDirty();
+                  }}
                 />
-                <PlaceholderChips onInsert$={insertInto(footerValue)} />
-              </div>
-              <div>
-                <label class="text-theme-text-secondary mb-2 block text-xs font-medium sm:text-sm">
-                  Custom Domain (Optional)~
-                </label>
-                <input
-                  type="text"
-                  name="customDomain"
-                  value={user.customDomain || ""}
-                  placeholder="your-domain.com"
-                  class={inputClasses}
+                <Switch
+                  checked={useCustomWords.value}
+                  label="Use word-based link codes"
+                  help="New links read like /f/soft-peach-glow instead of /f/a7Kd2x."
+                  onChange$={(checked) => {
+                    useCustomWords.value = checked;
+                    markDirty();
+                  }}
                 />
-                <p class="text-theme-text-muted mt-2 pl-3 text-xs sm:pl-4">
-                  Override the domain shown in embeds (for custom domains)~
-                </p>
+
+                <Field
+                  label="Site name override"
+                  for="embed-domain"
+                  help="Shown by Discord as the source. Leave empty to use twink.forsale."
+                  class="max-w-sm"
+                >
+                  <Input
+                    id="embed-domain"
+                    value={customDomain.value}
+                    maxLength={100}
+                    placeholder="your-site.com"
+                    onInput$={(_, el) => {
+                      customDomain.value = el.value;
+                      markDirty();
+                    }}
+                  />
+                </Field>
               </div>
-              <div class="space-y-3 sm:space-y-4">
-                <label class={toggleClasses}>
-                  <Toggle
-                    checkbox
-                    name="showFileInfo"
-                    onColor="purple"
-                    checked={showFileInfo.value}
-                    onChange$={(e, el) => {
-                      showFileInfo.value = el.checked;
-                    }}
-                  />
-                  <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Show file information (name, size, type)~
-                  </span>
-                </label>
-                <label class={toggleClasses}>
-                  <Toggle
-                    checkbox
-                    name="showUploadDate"
-                    onColor="purple"
-                    checked={showUploadDate.value}
-                    onChange$={(e, el) => {
-                      showUploadDate.value = el.checked;
-                    }}
-                  />
-                  <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Show upload date~
-                  </span>
-                </label>
-                <label class={toggleClasses}>
-                  <Toggle
-                    checkbox
-                    name="showUserStats"
-                    onColor="purple"
-                    checked={showUserStats.value}
-                    onChange$={(e, el) => {
-                      showUserStats.value = el.checked;
-                    }}
-                  />
-                  <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Show user statistics (files uploaded, storage used, total
-                    views)~
-                  </span>
-                </label>
-                <label class={toggleClasses}>
-                  <Toggle
-                    checkbox
-                    name="useCustomWords"
-                    onColor="purple"
-                    checked={useCustomWords.value}
-                    onChange$={(e, el) => {
-                      useCustomWords.value = el.checked;
-                    }}
-                  />
-                  <span class="text-theme-text-secondary text-xs sm:text-sm">
-                    Use cute words for file URLs~
-                  </span>
-                </label>
-                <p class="text-theme-text-muted -mt-2 ml-8 text-xs">
-                  Generate adorable URLs like "bunny-sparkle-123" instead of
-                  random characters~ (◕‿◕)♡
-                </p>
-              </div>
-              {/* Hidden inputs to ensure checkbox values are always submitted */}
-              <input
-                type="hidden"
-                name="showFileInfo"
-                value={showFileInfo.value ? "on" : "off"}
-              />
-              <input
-                type="hidden"
-                name="showUploadDate"
-                value={showUploadDate.value ? "on" : "off"}
-              />
-              <input
-                type="hidden"
-                name="showUserStats"
-                value={showUserStats.value ? "on" : "off"}
-              />
-              <input
-                type="hidden"
-                name="useCustomWords"
-                value={useCustomWords.value ? "on" : "off"}
-              />
-              <Button type="submit" block>
-                <Save class="h-4 w-4" />
-                Save Settings~
-              </Button>
-            </div>
-          </Form>
+            </Surface>
+          </Section>
 
-          {updateAction.value?.success && (
-            <Callout tone="success" icon={CheckCircle} class="mt-4 sm:mt-6">
-              {updateAction.value.message}~
-            </Callout>
-          )}
+          <Callout tone="info">
+            Discord and other link previewers see this metadata. Anyone opening
+            the link in a browser is sent straight to the file itself.
+          </Callout>
+        </div>
 
-          {updateAction.value?.failed && (
-            <Callout tone="danger" icon={CircleX} class="mt-4 sm:mt-6">
-              {updateAction.value.message}~
-            </Callout>
-          )}
-        </Panel>
-
-        {/* Preview */}
-        <Panel title="Discord Embed Preview~" icon={Eye}>
-          <Button
-            q:slot="actions"
-            variant="glass"
-            size="sm"
-            onClick$={() => (showJson.value = !showJson.value)}
+        <div q:slot="preview" class="grid gap-3">
+          <PreviewPane
+            label="Discord embed"
+            note={saveState.value === "dirty" ? "Not saved yet" : undefined}
+            bodyClass="p-3"
           >
-            <Code class="h-3.5 w-3.5" />
-            {showJson.value ? "Hide JSON" : "View JSON"}
-          </Button>
-
-          {/* Discord-style embed card mock */}
-          <div class="rounded-lg bg-[#2b2d31] p-3 shadow-inner sm:p-4">
-            <div class="text-xs text-[#949ba4]">Today at 4:20 PM</div>
-            <div
-              class="mt-1.5 flex flex-col rounded border-l-4 bg-[#313338] p-3"
-              style={{ borderColor: preview.value.color }}
-            >
-              <div class="text-xs font-semibold text-white/90">
-                {preview.value.author}
-              </div>
-              <div class="mt-1 text-sm font-semibold text-[#00a8fc]">
-                {preview.value.title}
-              </div>
-              <div class="mt-1 text-sm whitespace-pre-wrap text-[#dbdee1]">
-                {preview.value.description.join("\n")}
-              </div>
-              {/* Inline image preview placeholder */}
-              <div class="mt-3 flex h-32 items-center justify-center rounded bg-black/30 text-[#949ba4]">
-                <div class="flex flex-col items-center gap-1">
-                  <ImageIcon class="h-6 w-6" />
-                  <span class="text-xs">example-image.png</span>
+            {/* Discord's own surface colours, so the preview is representative
+                rather than themed like the surrounding editor. */}
+            <div class="rounded-[6px] bg-[#313338] p-3">
+              <div class="text-xs text-[#949ba4]">Today at 16:20</div>
+              <div
+                class="mt-1.5 flex flex-col rounded-[4px] border-l-4 bg-[#2b2d31] p-3"
+                style={`border-color:${preview.value.color}`}
+              >
+                <div class="text-xs font-semibold text-white/90">
+                  {preview.value.author}
                 </div>
-              </div>
-              {preview.value.footer && (
-                <div class="mt-2 text-xs text-[#949ba4]">
-                  {preview.value.footer}
+                <div class="mt-1 text-sm font-semibold text-[#00a8fc]">
+                  {preview.value.title}
                 </div>
-              )}
+                <div class="mt-1 text-sm leading-5 whitespace-pre-wrap text-[#dbdee1]">
+                  {preview.value.description.join("\n")}
+                </div>
+                <div class="mt-3 flex h-28 items-center justify-center rounded-[4px] bg-black/30 text-[#949ba4]">
+                  <div class="flex flex-col items-center gap-1">
+                    <ImageIcon class="h-5 w-5" aria-hidden="true" />
+                    <span class="text-xs">example-image.png</span>
+                  </div>
+                </div>
+                {preview.value.footer && (
+                  <div class="mt-2 text-xs text-[#949ba4]">
+                    {preview.value.footer}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </PreviewPane>
 
-          {/* Optional raw JSON payload */}
-          {showJson.value && (
-            <div class="glass mt-4 rounded-2xl p-3 sm:p-4">
-              <div class="text-theme-text-muted mb-2 flex items-center gap-1.5 text-xs">
-                <Code class="h-3.5 w-3.5" />
-                Raw embed payload~
-              </div>
-              <pre class="text-theme-text-secondary bg-theme-bg-tertiary/20 overflow-x-auto rounded-lg p-3 font-mono text-xs whitespace-pre-wrap">
+          <details>
+            <summary class="focus-ring text-ink-muted hover:text-ink cursor-pointer text-xs">
+              Show the raw embed payload
+            </summary>
+            <div class="border-edge rounded-surface bg-surface-subtle relative mt-2 border">
+              <CopyButton
+                value={previewJson.value}
+                label="Copy"
+                variant="secondary"
+                class="absolute top-2 right-2"
+              />
+              <pre class="text-ink max-h-64 overflow-auto p-3 pr-20 font-mono text-xs leading-5">
                 {previewJson.value}
               </pre>
             </div>
-          )}
-
-          <Callout tone="accent" icon={Info} title="How it works~" class="mt-6">
-            <ul class="space-y-1.5">
-              <li>• Discord bots/crawlers see the embed metadata~</li>
-              <li>• Regular users are redirected to the actual file~</li>
-              <li>• Images show inline previews in Discord~</li>
-              <li>• Custom domains override the site name~</li>
-            </ul>
-          </Callout>
-        </Panel>
-      </div>
-    </div>
+          </details>
+        </div>
+      </EditorLayout>
+    </Page>
   );
 });
+
+export const head: DocumentHead = {
+  title: "Discord embeds - twink.forsale",
+  meta: [
+    {
+      name: "description",
+      content: "Customise how your file links look in Discord.",
+    },
+  ],
+};

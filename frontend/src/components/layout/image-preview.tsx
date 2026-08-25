@@ -1,11 +1,17 @@
 import {
-  component$,
   $,
+  component$,
   useSignal,
-  useOnDocument,
+  useVisibleTask$,
   type QRL,
 } from "@builder.io/qwik";
-import { X, Download, ExternalLink, Image as ImageIcon } from "lucide-icons-qwik";
+import {
+  Download,
+  ExternalLink,
+  Image as ImageIcon,
+  X,
+} from "lucide-icons-qwik";
+import { IconButton } from "~/components/ui";
 
 export interface ImagePreviewProps {
   isOpen: boolean;
@@ -17,24 +23,19 @@ export interface ImagePreviewProps {
 export const ImagePreview = component$<ImagePreviewProps>(
   ({ isOpen, imageUrl, imageName, onClose }) => {
     const imageLoaded = useSignal(false);
+    const dialogRef = useSignal<HTMLDialogElement>();
 
-    // ESC key handler using useOnDocument
-    useOnDocument(
-      "keydown",
-      $((event: KeyboardEvent) => {
-        if (isOpen && event.key === "Escape") {
-          onClose();
-        }
-      }),
+    // eslint-disable-next-line qwik/no-use-visible-task
+    useVisibleTask$(
+      ({ track }) => {
+        const dialog = dialogRef.value;
+        if (!dialog) return;
+        const shouldOpen = track(() => isOpen);
+        if (shouldOpen && !dialog.open) dialog.showModal();
+        else if (!shouldOpen && dialog.open) dialog.close();
+      },
+      { strategy: "document-ready" },
     );
-
-    const handleBackdropClick = $((event: MouseEvent) => {
-      // Only close if clicking the backdrop itself, not the modal content
-      const target = event.target as HTMLElement;
-      if (target.classList.contains("modal-backdrop")) {
-        onClose();
-      }
-    });
 
     const handleDownload = $(() => {
       const link = document.createElement("a");
@@ -42,110 +43,79 @@ export const ImagePreview = component$<ImagePreviewProps>(
       link.download = imageName || "image";
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.remove();
     });
 
     const handleExternalView = $(() => {
-      window.open(imageUrl, "_blank");
+      window.open(imageUrl, "_blank", "noopener,noreferrer");
     });
 
-    if (!isOpen) return null;
-
     return (
-      <div
-        class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm transition-opacity duration-300"
-        onClick$={handleBackdropClick}
+      <dialog
+        ref={dialogRef}
+        aria-label={imageName ? `Preview of ${imageName}` : "Image preview"}
+        onClose$={onClose}
+        onClick$={(event, dialog) => {
+          if (event.target === dialog) dialog.close();
+        }}
+        class="rounded-dialog border-edge bg-surface text-ink shadow-pop m-auto max-h-[95vh] w-[calc(100vw-2rem)] max-w-6xl overflow-hidden border p-0 backdrop:backdrop-blur-[2px]"
       >
-        {" "}
-        {/* Modal Content */}{" "}
-        <div
-          class="glass border-theme-card-border relative max-h-[95vh] max-w-[95vw] overflow-hidden rounded-2xl border"
-          onClick$={(event) => event.stopPropagation()}
-        >
-          {/* Header */}
-          <div class="border-theme-card-border flex items-center justify-between border-b bg-slate-900/50 p-4">
-            <div class="flex items-center space-x-3">
-              <div class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary flex h-8 w-8 items-center justify-center rounded-full">
-                <ImageIcon class="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h3 class="text-theme-text-primary max-w-[200px] truncate text-sm font-medium sm:max-w-[300px] sm:text-base">
-                  {imageName || "Image Preview"}
-                </h3>
-                <p class="text-theme-text-secondary text-xs">
-                  Click outside to close
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div class="flex items-center space-x-2">
-              <button
-                onClick$={handleDownload}
-                class="text-theme-accent-primary hover:text-theme-text-primary hover:bg-theme-accent-primary/20 rounded-full p-2 transition-all duration-300"
-                title="Download image"
-              >
-                <Download class="h-4 w-4" />
-              </button>
-              <button
-                onClick$={handleExternalView}
-                class="text-theme-accent-primary hover:text-theme-text-primary hover:bg-theme-accent-primary/20 rounded-full p-2 transition-all duration-300"
-                title="Open in new tab"
-              >
-                <ExternalLink class="h-4 w-4" />
-              </button>
-              <button
-                onClick$={onClose}
-                class="rounded-full p-2 text-pink-300 transition-all duration-300 hover:bg-theme-error/20 hover:text-white"
-                title="Close preview"
-              >
-                <X class="h-4 w-4" />
-              </button>
-            </div>
+        <div class="border-edge flex items-center justify-between gap-3 border-b px-4 py-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="bg-accent-soft text-accent-text rounded-surface flex h-8 w-8 shrink-0 items-center justify-center">
+              <ImageIcon class="h-4 w-4" aria-hidden="true" />
+            </span>
+            <h2 class="text-ink truncate text-sm font-semibold">
+              {imageName || "Image preview"}
+            </h2>
           </div>
-          {/* Image Container */}
-          <div class="relative flex min-h-[300px] items-center justify-center bg-black/20">
-            {/* Loading State */}
-            {!imageLoaded.value && (
-              <div class="absolute inset-0 flex items-center justify-center">
-                {" "}
-                <div class="flex flex-col items-center space-y-3">
-                  <div class="border-theme-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
-                  <p class="text-theme-text-secondary text-sm">Loading image...</p>
-                </div>
-              </div>
-            )}            {/* Image */}
-            {/* eslint-disable-next-line qwik/jsx-img */}
-            <img
-              src={imageUrl}
-              alt={imageName || "Preview"}
-              class={`max-h-[70vh] max-w-full object-contain transition-opacity duration-300 ${
-                imageLoaded.value ? "opacity-100" : "opacity-0"
-              }`}
-              onLoad$={() => {
-                imageLoaded.value = true;
-              }}
-              onError$={() => {
-                imageLoaded.value = true;
-              }}
-              // Ensure GIFs play automatically
-              style="image-rendering: auto;"
-            />
-          </div>{" "}
-          {/* Footer */}
-          <div class="border-theme-card-border border-t bg-slate-900/50 p-3">
-            <div class="flex items-center justify-center text-center">
-              <p class="text-theme-text-secondary text-xs">
-                Press{" "}
-                <kbd class="bg-theme-accent-primary/20 text-theme-accent-primary rounded px-1 py-0.5">
-                  ESC
-                </kbd>{" "}
-                to close
-              </p>
-            </div>
+          <div class="flex shrink-0 items-center gap-1">
+            <IconButton
+              size="sm"
+              label="Download image"
+              onClick$={handleDownload}
+            >
+              <Download class="h-4 w-4" />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label="Open image in a new tab"
+              onClick$={handleExternalView}
+            >
+              <ExternalLink class="h-4 w-4" />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label="Close image preview"
+              onClick$={() => dialogRef.value?.close()}
+            >
+              <X class="h-4 w-4" />
+            </IconButton>
           </div>
         </div>
-      </div>
+
+        <div class="bg-surface-subtle relative flex min-h-72 items-center justify-center">
+          {!imageLoaded.value && (
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+              <span
+                class="border-accent h-7 w-7 animate-spin rounded-full border-2 border-t-transparent"
+                aria-hidden="true"
+              />
+              <p class="text-ink-muted text-sm">Loading image…</p>
+            </div>
+          )}
+          {/* eslint-disable-next-line qwik/jsx-img */}
+          <img
+            src={imageUrl}
+            alt={imageName || "Preview"}
+            class={`max-h-[78vh] max-w-full object-contain transition-opacity duration-150 ${
+              imageLoaded.value ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad$={() => (imageLoaded.value = true)}
+            onError$={() => (imageLoaded.value = true)}
+          />
+        </div>
+      </dialog>
     );
   },
 );

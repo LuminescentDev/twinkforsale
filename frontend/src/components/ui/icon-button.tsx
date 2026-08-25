@@ -2,41 +2,41 @@ import { component$, Slot, type QRL } from "@builder.io/qwik";
 import { Link } from "@builder.io/qwik-city";
 import { cn } from "~/lib/utils";
 
-type Variant = "ghost" | "glass" | "solid" | "danger";
+type Variant = "ghost" | "outline" | "danger";
 type Size = "sm" | "md";
 
 export interface IconButtonProps {
   variant?: Variant;
   size?: Size;
-  /** Internal <Link> when a path is given, or plain <a> when external. */
   href?: string;
   external?: boolean;
   type?: "button" | "submit" | "reset";
   onClick$?: QRL<() => void>;
-  title?: string;
-  "aria-label"?: string;
+  /** Required: icon-only controls must carry an accessible name. */
+  label: string;
+  /** Show `label` as a native tooltip too. Defaults to true. */
+  tooltip?: boolean;
   disabled?: boolean;
+  pressed?: boolean;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
+  "aria-haspopup"?: "menu" | "dialog" | "true";
   class?: string;
 }
 
 const sizeMap: Record<Size, string> = {
   sm: "h-8 w-8",
-  md: "h-10 w-10",
+  md: "h-9 w-9",
 };
 
 const variantMap: Record<Variant, string> = {
   ghost:
-    "text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-tertiary/30",
-  glass: "glass text-theme-text-secondary hover:text-theme-text-primary",
-  solid: "btn-cute text-white",
-  danger: "text-theme-error hover:bg-theme-error/10",
+    "border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink",
+  outline: "border-edge bg-surface text-ink hover:bg-surface-hover",
+  danger: "border-transparent text-danger hover:bg-danger-soft",
 };
 
-/**
- * Square icon-only button/link with consistent sizing and theme-driven
- * variants. Replaces the many hand-rolled `rounded-full p-2 hover:bg-white/10`
- * icon buttons scattered across pages.
- */
+/** Square icon-only control. The accessible name is mandatory, not optional. */
 export const IconButton = component$<IconButtonProps>((props) => {
   const {
     variant = "ghost",
@@ -45,20 +45,23 @@ export const IconButton = component$<IconButtonProps>((props) => {
     external,
     type = "button",
     onClick$,
-    title,
+    label,
+    tooltip = true,
     disabled,
+    pressed,
     class: className,
   } = props;
 
   const classes = cn(
-    "inline-flex shrink-0 items-center justify-center rounded-xl transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+    "focus-ring rounded-control inline-flex shrink-0 items-center justify-center border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55",
     sizeMap[size],
     variantMap[variant],
+    pressed && "bg-accent-soft text-accent-text",
     className,
   );
-  const label = props["aria-label"] ?? title;
+  const title = tooltip ? label : undefined;
 
-  if (href) {
+  if (href && !disabled) {
     if (external) {
       return (
         <a
@@ -87,6 +90,10 @@ export const IconButton = component$<IconButtonProps>((props) => {
       disabled={disabled}
       title={title}
       aria-label={label}
+      aria-pressed={pressed}
+      aria-expanded={props["aria-expanded"]}
+      aria-controls={props["aria-controls"]}
+      aria-haspopup={props["aria-haspopup"]}
       class={classes}
     >
       <Slot />

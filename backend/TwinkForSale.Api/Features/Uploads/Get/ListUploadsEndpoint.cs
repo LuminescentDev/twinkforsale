@@ -37,7 +37,8 @@ public sealed class ListUploadsEndpoint(AppDbContext dbContext) : EndpointWithou
                 x.Views,
                 x.Downloads,
                 x.CreatedAt,
-                x.ExpiresAt))
+                x.ExpiresAt,
+                x.MaxViews))
             .ToListAsync(ct);
 
         await SendOkAsync(new ListUploadsResponse(uploads), ct);
@@ -56,4 +57,5 @@ public sealed record UploadListItem(
     int Views,
     int Downloads,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    int? MaxViews);

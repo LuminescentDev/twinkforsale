@@ -1,29 +1,37 @@
 import { component$, $ } from "@builder.io/qwik";
 import { routeLoader$, type DocumentHead } from "@builder.io/qwik-city";
 import {
-  TrendingUp,
-  Eye,
-  Download,
-  Clock,
-  Globe,
+  ExternalLink,
   Smartphone,
   Monitor,
   Tablet,
-  ArrowLeft,
-  BarChart3,
-  FileDown,
+  Globe,
 } from "lucide-icons-qwik";
-import { DetailedAnalyticsChart } from "~/components/charts/detailed-analytics-chart";
+import {
+  ActivityChart,
+  HourHistogram,
+} from "~/components/charts/activity-chart";
 import { api, serverAuth } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { formatBytes } from "~/lib/utils";
+import { fileTypeLabel, formatAbsoluteDate } from "~/lib/file-kinds";
 import {
-  Button,
-  EmptyState,
+  Page,
   PageHeader,
-  Panel,
-  ProgressBar,
-  StatCard,
+  Section,
+  Surface,
+  Button,
+  CopyButton,
+  SummaryList,
+  DefinitionRow,
+  EmptyState,
+  Table,
+  Thead,
+  Tbody,
+  Th,
+  Tr,
+  Td,
+  TdMeta,
 } from "~/components/ui";
 
 export const useFileAnalytics = routeLoader$(async (requestEvent) => {
@@ -35,11 +43,10 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
     throw requestEvent.redirect(302, "/");
   }
 
-  // Detailed per-file analytics (metadata, logs, referrers, devices). The
-  // endpoint enforces ownership and 404s for files the user doesn't own.
+  // The endpoint enforces ownership and 404s for files the user does not own.
   const detail = await api.analytics.upload(shortCode, auth).catch(() => null);
   if (!detail) {
-    throw requestEvent.redirect(302, "/dashboard/uploads");
+    throw requestEvent.redirect(302, "/dashboard");
   }
 
   return {
@@ -56,25 +63,43 @@ export const useFileAnalytics = routeLoader$(async (requestEvent) => {
   };
 });
 
+const deviceIcon = (device: string) => {
+  switch (device) {
+    case "Mobile":
+      return Smartphone;
+    case "Tablet":
+      return Tablet;
+    case "Desktop":
+      return Monitor;
+    default:
+      return Globe;
+  }
+};
+
 export default component$(() => {
   const data = useFileAnalytics();
+  const { upload } = data.value;
 
-  const exportAnalytics = $(() => {
-    const analyticsData = {
+  const uniqueVisitors = new Set(
+    data.value.viewLogs.map((log) => log.ipAddress).filter(Boolean),
+  ).size;
+
+  const fileUrl = `${data.value.origin}/f/${upload.shortCode}`;
+
+  const exportJson = $(() => {
+    const payload = {
       file: {
-        name: data.value.upload.originalName,
-        size: data.value.upload.size,
-        type: data.value.upload.mimeType,
-        uploadedAt: data.value.upload.createdAt,
-        shortCode: data.value.upload.shortCode,
+        name: upload.originalName,
+        size: upload.size,
+        type: upload.mimeType,
+        uploadedAt: upload.createdAt,
+        shortCode: upload.shortCode,
       },
       summary: {
         totalViews: data.value.totalViews,
         totalDownloads: data.value.totalDownloads,
-        uniqueVisitors: new Set(
-          data.value.viewLogs.map((log) => log.ipAddress).filter(Boolean),
-        ).size,
-        lastViewed: data.value.upload.lastViewed,
+        uniqueVisitors,
+        lastViewed: upload.lastViewed,
       },
       dailyAnalytics: data.value.analytics,
       referrerStats: data.value.referrerStats,
@@ -85,305 +110,233 @@ export default component$(() => {
       exportedAt: new Date().toISOString(),
     };
 
-    const blob = new Blob([JSON.stringify(analyticsData, null, 2)], {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `analytics-${data.value.upload.shortCode}-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `analytics-${upload.shortCode}-${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
 
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleString();
-  };
-  const formatFileSize = (bytes: number | bigint) => {
-    return formatBytes(bytes);
-  };
+  const views = data.value.analytics.map((d) => ({
+    date: d.date,
+    value: d.totalViews,
+  }));
+  const downloads = data.value.analytics.map((d) => ({
+    date: d.date,
+    value: d.totalDownloads,
+  }));
 
-  const getDeviceIcon = (device: string) => {
-    switch (device) {
-      case "Mobile":
-        return <Smartphone class="h-5 w-5" />;
-      case "Tablet":
-        return <Tablet class="h-5 w-5" />;
-      case "Desktop":
-        return <Monitor class="h-5 w-5" />;
-      default:
-        return <Globe class="h-5 w-5" />;
-    }
-  };
-
-  const uniqueVisitors = new Set(
-    data.value.viewLogs.map((log) => log.ipAddress).filter(Boolean),
-  ).size;
-  const downloadRate =
-    data.value.totalViews > 0
-      ? Math.round((data.value.totalDownloads / data.value.totalViews) * 100)
-      : 0;
-  const referrerMax = Math.max(...Object.values(data.value.referrerStats), 1);
-  const deviceMax = Math.max(...Object.values(data.value.deviceStats), 1);
-  const hourlyMax = Math.max(
-    ...data.value.hourlyActivity.map((i) => i.count),
-    1,
+  const referrers = Object.entries(data.value.referrerStats).sort(
+    (a, b) => b[1] - a[1],
   );
+  const devices = Object.entries(data.value.deviceStats).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const deviceTotal = devices.reduce((sum, [, count]) => sum + count, 0) || 1;
 
   return (
-    <div>
-      {/* Back link */}
-      <Button
-        href="/dashboard/uploads"
-        variant="ghost"
-        size="sm"
-        class="mb-4"
-      >
-        <ArrowLeft class="h-4 w-4" />
-        Back to Files
-      </Button>
-
-      <PageHeader
-        align="left"
-        title="File Analytics~"
-        icon={BarChart3}
-        subtitle={data.value.upload.originalName}
-      >
+    <Page>
+      <PageHeader title={upload.originalName}>
         <div q:slot="actions" class="flex flex-wrap gap-2">
-          <Button variant="glass" onClick$={exportAnalytics}>
-            <FileDown class="h-4 w-4" />
-            Export Data
+          <CopyButton
+            value={fileUrl}
+            label="Copy link"
+            variant="secondary"
+            size="md"
+          />
+          <Button variant="secondary" href={`/f/${upload.shortCode}`} external>
+            <ExternalLink class="h-4 w-4" aria-hidden="true" />
+            Open file
           </Button>
-          <Button
-            href={`${data.value.origin}/f/${data.value.upload.shortCode}`}
-            external
-          >
-            <Eye class="h-4 w-4" />
-            View File
+          <Button variant="ghost" onClick$={exportJson}>
+            Export JSON
           </Button>
         </div>
       </PageHeader>
 
-      <div class="text-theme-text-muted mb-6 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        <span>Size: {formatFileSize(data.value.upload.size)}</span>
-        <span>Type: {data.value.upload.mimeType}</span>
-        <span>Uploaded: {formatDate(data.value.upload.createdAt)}</span>
-      </div>
+      <SummaryList
+        label="File totals"
+        class="mb-5"
+        items={[
+          { label: "Views", value: data.value.totalViews.toLocaleString() },
+          {
+            label: "Downloads",
+            value: data.value.totalDownloads.toLocaleString(),
+          },
+          {
+            label: "Unique visitors",
+            value: uniqueVisitors.toLocaleString(),
+            note: "by IP address",
+          },
+          {
+            label: "Last viewed",
+            value: upload.lastViewed
+              ? formatAbsoluteDate(upload.lastViewed)
+              : "Never",
+          },
+        ]}
+      />
 
-      {/* Key Metrics */}
-      <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={Eye} accent={0} label="Total Views" value={data.value.totalViews} />
-        <StatCard
-          icon={Download}
-          accent={1}
-          label="Downloads"
-          value={data.value.totalDownloads}
-        />
-        <StatCard
-          icon={Globe}
-          accent={2}
-          label="Unique Visitors"
-          value={uniqueVisitors}
-        />
-        <StatCard
-          icon={TrendingUp}
-          accent={3}
-          label="Download Rate"
-          value={`${downloadRate}%`}
-        />
-      </div>
-
-      {/* Additional Insights */}
-      <Panel title="Insights & Summary" icon={BarChart3} class="mb-6">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div class="text-center">
-            <div class="text-theme-accent-primary text-2xl font-bold">
-              {data.value.totalViews > 0
-                ? Math.round(
-                    (data.value.totalDownloads / data.value.totalViews) * 100,
-                  )
-                : 0}
-              %
-            </div>
-            <div class="text-theme-text-secondary text-sm">
-              Download Conversion Rate
-            </div>
-          </div>
-          <div class="text-center">
-            <div class="text-theme-accent-secondary text-2xl font-bold">
-              {data.value.analytics.length > 0
-                ? Math.round(
-                    data.value.analytics.reduce(
-                      (sum, day) => sum + day.totalViews,
-                      0,
-                    ) / data.value.analytics.length,
-                  )
-                : 0}
-            </div>
-            <div class="text-theme-text-secondary text-sm">
-              Avg. Daily Views (30d)
-            </div>
-          </div>
-          <div class="text-center">
-            <div class="text-theme-accent-tertiary text-2xl font-bold">
-              {Object.keys(data.value.referrerStats).length}
-            </div>
-            <div class="text-theme-text-secondary text-sm">Traffic Sources</div>
-          </div>
-        </div>
-      </Panel>
-
-      {/* Charts Section */}
-      <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel title="Views Over Time (30 Days)" icon={BarChart3}>
-          <DetailedAnalyticsChart
-            data={data.value.analytics}
-            metric="totalViews"
-            colorTheme="primary"
-            height={200}
+      <Section title="Views over time" class="mb-6">
+        <Surface>
+          <ActivityChart
+            data={views}
+            compare={downloads}
+            compareLabel="Downloads"
+            seriesLabel="Views"
+            rangeLabel="Last 30 days"
+            height={220}
           />
-        </Panel>
+        </Surface>
+      </Section>
 
-        <Panel title="Hourly Activity (24h)" icon={Clock}>
-          <div class="space-y-2">
-            {data.value.hourlyActivity.map((item) => (
-              <div key={item.hour} class="flex items-center gap-3">
-                <span class="text-theme-text-muted w-12 shrink-0 text-sm">
-                  {item.hour.toString().padStart(2, "0")}:00
-                </span>
-                <ProgressBar value={item.count} max={hourlyMax} class="flex-1" />
-                <span class="text-theme-text-primary w-8 shrink-0 text-right text-sm font-medium">
-                  {item.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Panel>
+      <div class="mb-6 grid gap-5 lg:grid-cols-3">
+        <Section title="File details" class="lg:col-span-1">
+          <Surface>
+            <dl class="divide-edge divide-y">
+              <DefinitionRow term="Type">
+                {fileTypeLabel(upload.mimeType)}
+              </DefinitionRow>
+              <DefinitionRow term="Size">
+                {formatBytes(upload.size, 1)}
+              </DefinitionRow>
+              <DefinitionRow term="Short code">
+                <span class="font-mono">/{upload.shortCode}</span>
+              </DefinitionRow>
+              <DefinitionRow term="Uploaded">
+                {formatAbsoluteDate(upload.createdAt)}
+              </DefinitionRow>
+              <DefinitionRow term="Last downloaded">
+                {upload.lastDownloaded
+                  ? formatAbsoluteDate(upload.lastDownloaded)
+                  : "Never"}
+              </DefinitionRow>
+            </dl>
+          </Surface>
+        </Section>
+
+        <Section title="Activity by hour" class="lg:col-span-2">
+          <Surface>
+            <HourHistogram data={data.value.hourlyActivity} />
+          </Surface>
+        </Section>
       </div>
 
-      {/* Referrer and Device Stats */}
-      <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel title="Traffic Sources" icon={Globe}>
-          <div class="space-y-3">
-            {Object.entries(data.value.referrerStats)
-              .sort(([, a], [, b]) => b - a)
-              .map(([source, count]) => (
-                <div key={source} class="flex items-center gap-3">
-                  <span class="text-theme-text-primary min-w-0 flex-1 truncate font-medium">
-                    {source}
-                  </span>
-                  <ProgressBar
-                    value={count}
-                    max={referrerMax}
-                    tone="accent"
-                    class="w-24 shrink-0"
-                  />
-                  <span class="text-theme-text-primary w-8 shrink-0 text-right text-sm font-bold">
-                    {count}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </Panel>
-
-        <Panel title="Device Types" icon={BarChart3}>
-          <div class="space-y-3">
-            {Object.entries(data.value.deviceStats)
-              .sort(([, a], [, b]) => b - a)
-              .map(([device, count]) => (
-                <div key={device} class="flex items-center gap-3">
-                  <div class="text-theme-accent-primary shrink-0">
-                    {getDeviceIcon(device)}
-                  </div>
-                  <span class="text-theme-text-primary min-w-0 flex-1 truncate font-medium">
-                    {device}
-                  </span>
-                  <ProgressBar
-                    value={count}
-                    max={deviceMax}
-                    tone="accent"
-                    class="w-24 shrink-0"
-                  />
-                  <span class="text-theme-text-primary w-8 shrink-0 text-right text-sm font-bold">
-                    {count}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </Panel>
-      </div>
-
-      {/* Recent Activity */}
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel title="Recent Views" icon={Eye}>
-          <div class="max-h-80 space-y-3 overflow-y-auto">
-            {data.value.viewLogs.length > 0 ? (
-              data.value.viewLogs.map((log, index) => (
-                <div
-                  key={index}
-                  class="border-theme-card-border/60 border-b pb-2 last:border-b-0 last:pb-0"
-                >
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-theme-text-primary">{log.ipAddress}</span>
-                    <span class="text-theme-text-muted">
-                      {formatDate(log.viewedAt)}
-                    </span>
-                  </div>
-                  {log.referer && (
-                    <p class="text-theme-text-muted mt-1 truncate text-xs">
-                      From: {log.referer}
-                    </p>
-                  )}
-                </div>
-              ))
+      <div class="grid gap-5 lg:grid-cols-2">
+        <Section title="Referrers">
+          <Surface flush class="overflow-hidden">
+            {referrers.length === 0 ? (
+              <EmptyState
+                size="inline"
+                title="No referrers recorded"
+                description="Views arrived without a referring page."
+              />
             ) : (
-              <EmptyState icon={Eye} title="No views yet~" />
-            )}
-          </div>
-        </Panel>
-
-        <Panel title="Recent Downloads" icon={Download}>
-          <div class="max-h-80 space-y-3 overflow-y-auto">
-            {data.value.downloadLogs.length > 0 ? (
-              data.value.downloadLogs.map((log, index) => (
-                <div
-                  key={index}
-                  class="border-theme-card-border/60 border-b pb-2 last:border-b-0 last:pb-0"
-                >
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-theme-text-primary">{log.ipAddress}</span>
-                    <span class="text-theme-text-muted">
-                      {formatDate(log.downloadedAt)}
+              <ul class="divide-edge divide-y">
+                {referrers.slice(0, 8).map(([referrer, count]) => (
+                  <li
+                    key={referrer}
+                    class="flex items-center justify-between gap-3 px-3 py-2"
+                  >
+                    <span class="text-ink min-w-0 truncate text-[13px]">
+                      {referrer || "Direct"}
                     </span>
-                  </div>
-                  {log.referer && (
-                    <p class="text-theme-text-muted mt-1 truncate text-xs">
-                      From: {log.referer}
-                    </p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <EmptyState icon={Download} title="No downloads yet~" />
+                    <span class="text-ink-muted shrink-0 text-xs tabular-nums">
+                      {count.toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-        </Panel>
+          </Surface>
+        </Section>
+
+        <Section title="Devices">
+          <Surface flush class="overflow-hidden">
+            {devices.length === 0 ? (
+              <EmptyState size="inline" title="No device data recorded" />
+            ) : (
+              <ul class="divide-edge divide-y">
+                {devices.map(([device, count]) => {
+                  const Icon = deviceIcon(device);
+                  const pct = Math.round((count / deviceTotal) * 100);
+                  return (
+                    <li key={device} class="flex items-center gap-3 px-3 py-2">
+                      <Icon
+                        class="text-ink-muted h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span class="text-ink min-w-0 flex-1 truncate text-[13px]">
+                        {device}
+                      </span>
+                      <span class="text-ink-muted shrink-0 text-xs tabular-nums">
+                        {count.toLocaleString()} · {pct}%
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Surface>
+        </Section>
       </div>
-    </div>
+
+      <Section title="Recent views" class="mt-6">
+        <Surface flush class="overflow-hidden">
+          {data.value.viewLogs.length === 0 ? (
+            <EmptyState
+              size="inline"
+              title="No views yet"
+              description="Share the link and views will appear here."
+            />
+          ) : (
+            <Table label="Recent views" minWidth="680px">
+              <Thead>
+                <Tr hover={false}>
+                  <Th class="w-40">When</Th>
+                  <Th class="w-36">IP address</Th>
+                  <Th>Browser</Th>
+                  <Th class="w-48">Referrer</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {data.value.viewLogs.slice(0, 25).map((log, i) => (
+                  <Tr key={i}>
+                    <TdMeta>{formatAbsoluteDate(log.viewedAt)}</TdMeta>
+                    <TdMeta class="font-mono">{log.ipAddress}</TdMeta>
+                    <Td class="max-w-0">
+                      <span class="block truncate" title={log.userAgent ?? ""}>
+                        {log.userAgent || "Unknown"}
+                      </span>
+                    </Td>
+                    <TdMeta class="max-w-0">
+                      <span class="block truncate">
+                        {log.referer || "Direct"}
+                      </span>
+                    </TdMeta>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          )}
+        </Surface>
+      </Section>
+    </Page>
   );
 });
 
-export const head: DocumentHead = ({ resolveValue }) => {
-  const data = resolveValue(useFileAnalytics);
-  return {
-    title: `Analytics for ${data.upload.originalName} - twink.forsale`,
-    meta: [
-      {
-        name: "description",
-        content: `Detailed analytics for ${data.upload.originalName} including views, downloads, and visitor data.`,
-      },
-    ],
-  };
-};
+export const head: DocumentHead = ({ params }) => ({
+  title: `Analytics for /${params.shortCode} - twink.forsale`,
+  meta: [
+    {
+      name: "description",
+      content: "Views, downloads and referrers for a single file.",
+    },
+  ],
+});

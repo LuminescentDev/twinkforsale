@@ -1,24 +1,10 @@
-import { component$, $, useSignal } from "@builder.io/qwik";
+import { component$, $, useSignal, useComputed$ } from "@builder.io/qwik";
 import { routeLoader$, server$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
-import {
-  Camera,
-  Key,
-  Sparkle,
-  Shield,
-  Download,
-  Copy,
-  Rocket,
-  Lightbulb,
-  Smartphone,
-  Settings,
-  AlertTriangle,
-  Star,
-} from "lucide-icons-qwik";
-import { SelectMenu } from "@luminescent/ui-qwik";
-import { PageContainer, PageHeader } from "~/components/ui";
-import { api, serverAuth } from "~/lib/api-client";
+import { Check, Download, ExternalLink } from "lucide-icons-qwik";
+import { api, serverAuth, type ApiKeyListItem } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
+import { useToast } from "~/lib/toast-store";
 import {
   generateShareXConfig,
   downloadShareXConfig,
@@ -26,10 +12,23 @@ import {
   SHAREX_VERSIONS,
   type ShareXVersion,
 } from "~/lib/sharex-config";
-export const useUserApiKeys = routeLoader$(async (requestEvent) => {
+import {
+  Page,
+  PageHeader,
+  Surface,
+  Button,
+  CopyButton,
+  Field,
+  Input,
+  Select,
+  Callout,
+  Badge,
+} from "~/components/ui";
+
+export const useShareXSetup = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
-  const currentUser = await getCurrentUser(auth);
-  if (!currentUser) {
+  const user = await getCurrentUser(auth);
+  if (!user) {
     throw requestEvent.redirect(302, "/");
   }
 
@@ -38,12 +37,8 @@ export const useUserApiKeys = routeLoader$(async (requestEvent) => {
     .catch(() => ({ apiKeys: [] }));
 
   return {
-    // The backend masks stored keys; the full key is only returned at
-    // creation time (see `createApiKey`), which powers a working config.
-    user: {
-      ...currentUser,
-      apiKeys: apiKeys.map((k) => ({ ...k, key: k.maskedKey })),
-    },
+    apiKeys,
+    isApproved: user.isApproved,
     baseUrl: requestEvent.url.origin,
   };
 });
@@ -55,311 +50,336 @@ export const createApiKey = server$(async function (name: string) {
 });
 
 export default component$(() => {
-  const userData = useUserApiKeys();
-  const selectedVersion = useSignal<ShareXVersion>(getRecommendedVersion());
-  // The full API key is only returned by the backend at creation time (stored
-  // keys are masked), so we hold it in memory to build a working ShareX config.
-  const createdKey = useSignal<{ name: string; key: string } | null>(null);
-  const creating = useSignal(false);
+  const data = useShareXSetup();
+  const toast = useToast();
 
-  const handleCreateApiKey = $(async () => {
+  const version = useSignal<ShareXVersion>(getRecommendedVersion());
+  const keys = useSignal<ApiKeyListItem[]>([...data.value.apiKeys]);
+  /** Full key held in memory: the server only returns it at creation time. */
+  const activeKey = useSignal<{ name: string; key: string } | null>(null);
+  const keyName = useSignal("ShareX");
+  const creating = useSignal(false);
+  const downloaded = useSignal(false);
+
+  const configJson = useComputed$(() =>
+    JSON.stringify(
+      generateShareXConfig({
+        apiKey: activeKey.value?.key ?? "YOUR_API_KEY",
+        baseUrl: data.value.baseUrl,
+        version: version.value,
+      }),
+      null,
+      2,
+    ),
+  );
+
+  const create = $(async () => {
     creating.value = true;
     try {
-      const result = await createApiKey("ShareX API Key");
-      createdKey.value = { name: result.name, key: result.key };
+      const result = await createApiKey(keyName.value.trim() || "ShareX");
+      activeKey.value = { name: result.name, key: result.key };
+      keys.value = [
+        {
+          id: result.id,
+          name: result.name,
+          maskedKey: `${result.key.slice(0, 8)}…${result.key.slice(-4)}`,
+          createdAt: result.createdAt,
+          lastUsed: null,
+        },
+        ...keys.value,
+      ];
     } catch (error) {
-      console.error("Failed to create API key:", error);
-      alert("Failed to create API key");
+      toast.error(
+        "Could not create the key",
+        error instanceof Error ? error.message : "Try again in a moment.",
+      );
     } finally {
       creating.value = false;
     }
   });
 
-  const handleDownloadConfig = $((apiKey: string) => {
-    const config = generateShareXConfig({
-      apiKey,
-      baseUrl: userData.value.baseUrl,
-      version: selectedVersion.value,
-    });
-    downloadShareXConfig(config);
-  });
-
-  const copyKey = $((key: string) => {
-    navigator.clipboard.writeText(key);
+  const download = $(() => {
+    if (!activeKey.value) return;
+    downloadShareXConfig(
+      generateShareXConfig({
+        apiKey: activeKey.value.key,
+        baseUrl: data.value.baseUrl,
+        version: version.value,
+      }),
+    );
+    downloaded.value = true;
   });
 
   return (
-    <PageContainer width="narrow">
+    <Page width="narrow">
       <PageHeader
-        align="left"
-        title="ShareX Setup~"
-        icon={Camera}
-        subtitle="Configure ShareX to work with twink.forsale in just a few clicks! (◕‿◕)♡"
+        title="ShareX setup"
+        description="ShareX is a Windows screenshot tool. Connect it once and every screenshot you take uploads here automatically."
       />
-      <div>{" "}
-        {/* Step 1: API Key */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
-          <div class="flex flex-col items-start gap-4 sm:flex-row">
-            {" "}
-            <div class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
-              1
-            </div>
-            <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
-                <Key class="h-5 w-5 sm:h-6 sm:w-6" />
-                <span>Get Your API Key~</span>
-              </h2>{" "}
-              {/* Freshly created key — shown once with the full, working value */}
-              {createdKey.value && (
-                <div class="glass border-theme-accent-primary/40 mb-4 flex flex-col gap-4 rounded-xl border p-3 sm:rounded-2xl sm:p-4">
-                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="min-w-0 flex-1">
-                      <p class="text-theme-text-primary flex items-center gap-2 text-sm font-medium sm:text-base">
-                        <Shield class="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-                        <span class="truncate">{createdKey.value.name}</span>
-                      </p>
-                      <p class="text-theme-text-secondary mt-1 rounded bg-black/20 px-2 py-1 font-mono text-xs break-all sm:text-sm">
-                        {createdKey.value.key}
-                      </p>
-                      <p class="text-theme-accent-primary mt-2 flex items-start gap-1.5 text-xs">
-                        <AlertTriangle class="mt-0.5 h-3 w-3 flex-shrink-0" />
-                        <span>
-                          Copy this key now — for security it won't be shown
-                          again after you leave this page!
-                        </span>
-                      </p>
-                    </div>
 
-                    {/* Version Selector */}
-                    <div class="flex flex-col gap-1 sm:min-w-[200px]">
-                      <label class="text-theme-text-secondary flex items-center gap-1 text-xs font-medium">
-                        <Sparkle class="h-3 w-3" />
-                        <span>Version</span>
-                      </label>
-                      <SelectMenu
-                        id="sharex-version"
-                        values={Object.entries(SHAREX_VERSIONS).map(
-                          ([version, info]) => ({
-                            name: (
-                              <div class="flex items-center justify-between w-full">
-                                <span>{info.label}</span>
-                                {info.recommended && (
-                                  <Star class="text-theme-warning h-3.5 w-3.5" />
-                                )}
-                              </div>
-                            ),
-                            value: version,
-                          }),
-                        )}
-                        value={selectedVersion.value}
-                        onChange$={(e, el) => {
-                          selectedVersion.value = el.value as ShareXVersion;
-                        }}
-                      />
-                    </div>
-                  </div>
+      {!data.value.isApproved && (
+        <Callout tone="warning" title="Account pending approval" class="mb-5">
+          You can read through the steps now, but uploads and API keys only work
+          once an administrator approves your account.
+        </Callout>
+      )}
 
-                  <div class="flex flex-col gap-2 sm:flex-row">
-                    <button
-                      onClick$={() => handleDownloadConfig(createdKey.value!.key)}
-                      class="btn-cute flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white sm:px-6 sm:py-3 sm:text-base"
-                    >
-                      <Download class="h-4 w-4" />
-                      Download Config~
-                    </button>
-                    <button
-                      onClick$={() => copyKey(createdKey.value!.key)}
-                      class="glass border-theme-card-border hover:border-theme-accent-primary/40 flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
-                    >
-                      <Copy class="h-4 w-4" />
-                      Copy Key
-                    </button>
-                  </div>
+      <div class="mt-1">
+        {/* Step 1 — key */}
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span
+              class={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold ${
+                activeKey.value
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-edge-strong text-ink-muted"
+              }`}
+              aria-hidden="true"
+            >
+              {activeKey.value ? <Check class="h-4 w-4" /> : 1}
+            </span>
+            <span class="bg-edge mt-1 w-px flex-1" aria-hidden="true" />
+          </div>
+          <div class="min-w-0 flex-1 pb-6">
+            <h2 class="text-ink mb-1 text-base leading-6 font-semibold">
+              Create an API key
+            </h2>
+            <p class="text-ink-muted mb-3 text-[13px] leading-5">
+              An API key is a long password that lets ShareX upload as you,
+              without knowing your account password. It only works for
+              uploading, and you can revoke it at any time.
+            </p>
+
+            {activeKey.value ? (
+              <Callout
+                tone="success"
+                title={`“${activeKey.value.name}” is ready`}
+              >
+                Keep this window open until you have downloaded the
+                configuration below — the full key is only shown once.
+              </Callout>
+            ) : (
+              <Surface>
+                <div class="flex flex-wrap items-end gap-3">
+                  <Field
+                    label="Key name"
+                    for="sharex-key-name"
+                    help="Shown in your API key list so you can recognise this device."
+                    class="min-w-[12rem] flex-1"
+                  >
+                    <Input
+                      id="sharex-key-name"
+                      value={keyName.value}
+                      maxLength={64}
+                      onInput$={(_, el) => (keyName.value = el.value)}
+                    />
+                  </Field>
+                  <Button
+                    variant="primary"
+                    loading={creating.value}
+                    disabled={!data.value.isApproved}
+                    onClick$={create}
+                    class="mb-[1.65rem]"
+                  >
+                    Create key
+                  </Button>
                 </div>
+                {keys.value.length > 0 && (
+                  <p class="text-ink-muted mt-3 text-xs">
+                    You already have {keys.value.length} key
+                    {keys.value.length === 1 ? "" : "s"}. Existing keys cannot
+                    be shown again, so create a new one for this device.
+                  </p>
+                )}
+              </Surface>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2 — download config */}
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span
+              class={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold ${
+                downloaded.value
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-edge-strong text-ink-muted"
+              }`}
+              aria-hidden="true"
+            >
+              {downloaded.value ? <Check class="h-4 w-4" /> : 2}
+            </span>
+            <span class="bg-edge mt-1 w-px flex-1" aria-hidden="true" />
+          </div>
+          <div class="min-w-0 flex-1 pb-6">
+            <h2 class="text-ink mb-1 text-base leading-6 font-semibold">
+              Download the configuration
+            </h2>
+            <p class="text-ink-muted mb-3 text-[13px] leading-5">
+              A <code class="text-ink font-mono text-xs">.sxcu</code> file tells
+              ShareX where to send your uploads. Pick the version of ShareX you
+              have — it is shown in ShareX under Help, then About.
+            </p>
+
+            <Surface>
+              <div class="flex flex-wrap items-end gap-3">
+                <Field
+                  label="ShareX version"
+                  for="sharex-version"
+                  class="w-56"
+                  help="Choose the newest one you have installed."
+                >
+                  <Select
+                    id="sharex-version"
+                    value={version.value}
+                    onChange$={(_, el) =>
+                      (version.value = el.value as ShareXVersion)
+                    }
+                  >
+                    {(Object.keys(SHAREX_VERSIONS) as ShareXVersion[]).map(
+                      (v) => (
+                        <option key={v} value={v}>
+                          {SHAREX_VERSIONS[v].label}
+                        </option>
+                      ),
+                    )}
+                  </Select>
+                </Field>
+                <Button
+                  variant="primary"
+                  disabled={!activeKey.value}
+                  onClick$={download}
+                  class="mb-[1.65rem]"
+                >
+                  <Download class="h-4 w-4" aria-hidden="true" />
+                  Download .sxcu
+                </Button>
+                {SHAREX_VERSIONS[version.value].recommended && (
+                  <Badge tone="accent" class="mb-[1.9rem]">
+                    Recommended
+                  </Badge>
+                )}
+              </div>
+
+              {!activeKey.value && (
+                <p class="text-ink-muted mt-3 text-xs">
+                  Create a key in step 1 first — the configuration file has to
+                  contain it.
+                </p>
               )}
 
-              {/* Existing keys (masked, for reference only) */}
-              {userData.value.user?.apiKeys &&
-                userData.value.user.apiKeys.length > 0 && (
-                  <div class="mb-4 space-y-2">
-                    <p class="text-theme-text-secondary text-xs sm:text-sm">
-                      Your existing API keys~ (values are hidden for security, so
-                      generate a new key below to download a fresh config):
-                    </p>
-                    {userData.value.user.apiKeys.map((apiKey) => (
-                      <div
-                        key={apiKey.id}
-                        class="glass border-theme-card-border flex items-center gap-2 rounded-xl border p-3 text-sm"
-                      >
-                        <Shield class="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-                        <span class="text-theme-text-primary truncate font-medium">
-                          {apiKey.name}
-                        </span>
-                        <span class="text-theme-text-secondary ml-auto font-mono text-xs break-all">
-                          {apiKey.key}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-              {/* Create a new key + config */}
-              <div class="py-4 text-center sm:py-6">
-                {!createdKey.value && (
-                  <>
-                    <div class="glass mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full sm:mb-4 sm:h-16 sm:w-16">
-                      <Key class="text-theme-accent-primary h-6 w-6 sm:h-7 sm:w-7" />
-                    </div>{" "}
-                    <p class="text-theme-text-secondary mb-3 px-2 text-sm sm:mb-4 sm:text-base">
-                      Generate an API key to download your ShareX config~
-                    </p>
-                  </>
-                )}
-                <button
-                  onClick$={handleCreateApiKey}
-                  disabled={creating.value}
-                  class="btn-cute text-theme-text-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6 sm:text-base"
-                >
-                  {!creating.value && <Rocket class="h-4 w-4" />}
-                  {creating.value
-                    ? "Creating..."
-                    : userData.value.user?.apiKeys.length ||
-                        createdKey.value
-                      ? "Create Another API Key"
-                      : "Create API Key"}
-                </button>
-              </div>
-            </div>
+              <details class="mt-4">
+                <summary class="focus-ring text-ink-muted hover:text-ink cursor-pointer text-xs">
+                  Show the file contents
+                </summary>
+                <div class="border-edge rounded-surface bg-surface-subtle relative mt-2 border">
+                  <CopyButton
+                    value={configJson.value}
+                    label="Copy"
+                    variant="secondary"
+                    class="absolute top-2 right-2"
+                  />
+                  <pre class="text-ink max-h-64 overflow-auto p-3 pr-24 font-mono text-xs leading-5">
+                    {configJson.value}
+                  </pre>
+                </div>
+              </details>
+            </Surface>
           </div>
-        </div>{" "}
-        {/* Step 2: Download ShareX */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
-          <div class="flex flex-col items-start gap-4 sm:flex-row">
-            {" "}
-            <div class="bg-gradient-to-br from-theme-accent-secondary to-theme-accent-primary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
-              2
-            </div>
-            <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
-                <Smartphone class="h-5 w-5 sm:h-6 sm:w-6" />
-                <span>Install ShareX~</span>
-              </h2>{" "}
-              <p class="text-theme-text-secondary mb-3 text-sm sm:mb-4 sm:text-base">
-                If you don't have ShareX installed, download it from the
-                official website~ (◕‿◕)♡
-              </p>{" "}
+        </div>
+
+        {/* Step 3 — import */}
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span
+              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
+              aria-hidden="true"
+            >
+              3
+            </span>
+            <span class="bg-edge mt-1 w-px flex-1" aria-hidden="true" />
+          </div>
+          <div class="min-w-0 flex-1 pb-6">
+            <h2 class="text-ink mb-1 text-base leading-6 font-semibold">
+              Import it into ShareX
+            </h2>
+            <ol class="text-ink-muted list-decimal space-y-1.5 pl-4 text-[13px] leading-5">
+              <li>
+                Double-click the downloaded{" "}
+                <code class="text-ink font-mono text-xs">.sxcu</code> file.
+                ShareX asks whether to import it — choose Yes.
+              </li>
+              <li>
+                If nothing happens, open ShareX, go to{" "}
+                <span class="text-ink">
+                  Destinations → Destination settings
+                </span>
+                , then <span class="text-ink">Custom uploaders</span>, and use{" "}
+                <span class="text-ink">Import → From file</span>.
+              </li>
+              <li>
+                In the same window, set{" "}
+                <span class="text-ink">Image, Text and File uploader</span> to
+                twink.forsale.
+              </li>
+            </ol>
+            <p class="text-ink-muted mt-3 text-[13px] leading-5">
+              Do not have ShareX yet?{" "}
               <a
                 href="https://getsharex.com/"
                 target="_blank"
-                class="glass text-theme-text-primary hover:bg-theme-accent-primary/20 border-theme-card-border hover:border-theme-accent-primary/40 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-all duration-300 sm:px-6 sm:py-3 sm:text-base"
+                rel="noopener noreferrer"
+                class="focus-ring text-accent-text rounded-[4px] underline underline-offset-2"
               >
-                <Download class="h-4 w-4" />
-                Download ShareX~
+                Download it from getsharex.com
+                <ExternalLink
+                  class="ml-0.5 inline h-3 w-3"
+                  aria-hidden="true"
+                />
               </a>
-            </div>
+            </p>
           </div>
-        </div>{" "}
-        {/* Step 3: Import Config */}
-        <div class="card-cute mb-6 rounded-2xl p-4 sm:mb-8 sm:p-6 md:p-8">
-          <div class="flex flex-col items-start gap-4 sm:flex-row">
-            {" "}
-            <div class="bg-gradient-to-br from-theme-accent-secondary to-theme-accent-tertiary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
-              3
-            </div>
-            <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
-                <Settings class="h-5 w-5 sm:h-6 sm:w-6" />
-                <span>Import Configuration~</span>
-              </h2>
-              <div class="space-y-3 sm:space-y-4">
-                {" "}
-                <div class="text-theme-text-secondary flex flex-col items-start gap-2 text-sm sm:flex-row sm:gap-3 sm:text-base">
-                  <span class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-8 sm:w-8 sm:text-sm">
-                    1
-                  </span>
-                  <span>
-                    Download your configuration file using the button above~
-                  </span>
-                </div>
-                <div class="text-theme-text-secondary flex flex-col items-start gap-2 text-sm sm:flex-row sm:gap-3 sm:text-base">
-                  <span class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-8 sm:w-8 sm:text-sm">
-                    2
-                  </span>
-                  <span>
-                    Double-click the downloaded .sxcu file to import it into
-                    ShareX~
-                  </span>
-                </div>
-                <div class="text-theme-text-secondary flex flex-col items-start gap-2 text-sm sm:flex-row sm:gap-3 sm:text-base">
-                  <span class="bg-gradient-to-br from-theme-accent-primary to-theme-accent-secondary text-theme-text-primary flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-8 sm:w-8 sm:text-sm">
-                    3
-                  </span>
-                  <span>
-                    ShareX will automatically configure twink.forsale as your
-                    upload destination~
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>{" "}
-        {/* Step 4: Start Uploading */}
-        <div class="card-cute rounded-2xl p-4 sm:p-6 md:p-8">
-          <div class="flex flex-col items-start gap-4 sm:flex-row">
-            {" "}
-            <div class="bg-gradient-to-br from-theme-accent-tertiary to-theme-accent-quaternary text-theme-text-primary pulse-soft flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:h-10 sm:w-10 sm:text-base">
+        </div>
+
+        {/* Step 4 — verify */}
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span
+              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
+              aria-hidden="true"
+            >
               4
-            </div>
-            <div class="w-full flex-1">
-              <h2 class="text-gradient-cute mb-3 flex items-center gap-2 text-xl font-bold sm:mb-4 sm:text-2xl">
-                <Rocket class="h-5 w-5 sm:h-6 sm:w-6" />
-                <span>Start Uploading!~</span>
-              </h2>{" "}
-              <p class="text-theme-text-secondary mb-3 text-sm sm:mb-4 sm:text-base">
-                You're all set! Use ShareX's capture tools or drag files to
-                upload them to twink.forsale~ (◕‿◕)♡
-              </p>{" "}
-              <div class="glass border-theme-card-border rounded-xl border p-3 sm:rounded-2xl sm:p-4">
-                <h3 class="text-theme-accent-primary mb-2 flex items-center gap-2 text-sm font-semibold sm:mb-3 sm:text-base">
-                  <Lightbulb class="h-4 w-4" />
-                  <span>Quick Tips~</span>
-                </h3>
-                <ul class="text-theme-text-secondary space-y-1 text-xs sm:space-y-2 sm:text-sm">
-                  <li class="flex items-start gap-2">
-                    <span class="mt-0.5">•</span>
-                    <span>
-                      Use Ctrl+Shift+4 for region capture (default hotkey)~
-                    </span>
-                  </li>
-                  <li class="flex items-start gap-2">
-                    <span class="mt-0.5">•</span>
-                    <span>Drag and drop files directly onto ShareX~</span>
-                  </li>
-                  <li class="flex items-start gap-2">
-                    <span class="mt-0.5">•</span>
-                    <span>View your uploads in the Dashboard~</span>
-                  </li>
-                  <li class="flex items-start gap-2">
-                    <span class="mt-0.5">•</span>
-                    <span>Each upload gets a short, shareable URL~</span>
-                  </li>
-                </ul>
-              </div>
+            </span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-ink mb-1 text-base leading-6 font-semibold">
+              Take a screenshot
+            </h2>
+            <p class="text-ink-muted text-[13px] leading-5">
+              Capture anything with ShareX. The link is copied to your clipboard
+              automatically, and the file appears in Files.
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <Button variant="secondary" href="/dashboard">
+                Go to Files
+              </Button>
+              <Button variant="ghost" href="/dashboard/api-keys">
+                Manage API keys
+              </Button>
             </div>
           </div>
         </div>
       </div>
-    </PageContainer>
+    </Page>
   );
 });
 
 export const head: DocumentHead = {
-  title: "ShareX Setup~ - twink.forsale",
+  title: "ShareX setup - twink.forsale",
   meta: [
     {
       name: "description",
-      content:
-        "Configure ShareX to work with twink.forsale file sharing service~ (◕‿◕)♡",
+      content: "Connect ShareX so screenshots upload here automatically.",
     },
   ],
 };

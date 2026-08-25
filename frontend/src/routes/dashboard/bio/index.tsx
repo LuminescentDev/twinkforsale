@@ -2,38 +2,32 @@ import {
   component$,
   useSignal,
   useComputed$,
-  $,
   useTask$,
+  $,
+  type Signal,
 } from "@builder.io/qwik";
 import {
   routeLoader$,
-  Form,
   routeAction$,
+  usePreventNavigate$,
+  Form,
   z,
   zod$,
+  type DocumentHead,
 } from "@builder.io/qwik-city";
-import type { DocumentHead } from "@builder.io/qwik-city";
 import {
   User,
   Link as LinkIcon,
-  Plus,
-  Eye,
   Palette,
-  ExternalLink,
+  Plug,
+  Sparkles,
+  Code,
+  Plus,
+  Edit,
+  Trash2,
   ArrowUp,
   ArrowDown,
-  Trash2,
-  Globe,
-  Lock,
-  BarChart3,
-  Edit,
-  Save,
-  X,
-  CheckCircle,
-  CircleX,
-  AlertTriangle,
-  Search,
-  EyeOff,
+  ExternalLink,
 } from "lucide-icons-qwik";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -56,24 +50,33 @@ import {
 } from "~/components/ui/gradient-config-panel";
 import { getLanyardData } from "~/lib/discord";
 import { sanitizeCSS, hasDangerousCSS } from "~/lib/css-sanitizer";
+import { contrastVerdict } from "~/lib/contrast";
+import { EditorLayout } from "~/components/layout/editor-layout";
 import {
-  Button,
-  Callout,
-  CollapsibleSection,
-  EmptyState,
-  IconSelector,
+  Page,
   PageHeader,
-  Panel,
+  Section,
+  Surface,
+  PreviewPane,
+  Divider,
+  Button,
+  IconButton,
+  CopyButton,
+  Field,
+  Fieldset,
+  Input,
+  CodeInput,
+  Textarea,
+  Switch,
+  Badge,
+  Callout,
+  EmptyState,
+  Dialog,
+  SaveIndicator,
+  LocalNav,
+  IconSelector,
+  type SaveState,
 } from "~/components/ui";
-
-/** Discord logo glyph, wrapped so it can be passed as a CollapsibleSection `icon`. */
-const DiscordGlyph = component$<{ class?: string }>(
-  ({ class: className }) => (
-    <svg class={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-    </svg>
-  ),
-);
 
 export const useBioData = routeLoader$(async (requestEvent) => {
   const auth = serverAuth(requestEvent);
@@ -113,14 +116,6 @@ export const useBioData = routeLoader$(async (requestEvent) => {
     },
     bioLinks: bio?.links ?? [],
     bioLimits: DEFAULT_BIO_LIMITS,
-    // Bio analytics endpoint is not yet available; the view gates on this.
-    analytics: null as
-      | null
-      | {
-          totalViews: number;
-          uniqueIPs: number;
-          topLinks: { id: string; title: string; clicks: number }[];
-        },
     baseUrl: requestEvent.url.origin,
   };
 });
@@ -129,15 +124,14 @@ export const useUpdateBio = routeAction$(
   async (values, requestEvent) => {
     const auth = serverAuth(requestEvent);
 
-    // If making the bio public, require a username up front.
+    // Publishing without an address would produce an unreachable page.
     if (values.bioIsPublic && !(values.bioUsername || "").trim()) {
       return requestEvent.fail(400, {
-        message:
-          "Set a username (3+ characters) before making your bio public.",
+        message: "Set a username before publishing your page.",
       });
     }
 
-    // Sanitize custom CSS to prevent XSS before it ever leaves the browser.
+    // Custom CSS is user-authored, so it is sanitized before it is stored.
     let sanitizedCSS: string | null = null;
     if (values.bioCustomCss) {
       sanitizedCSS = sanitizeCSS(values.bioCustomCss);
@@ -146,8 +140,8 @@ export const useUpdateBio = routeAction$(
       }
     }
 
-    // The backend overwrites the Discord user id on every update, so preserve
-    // the current (auto-populated) value rather than clearing it.
+    // The backend overwrites the Discord user id on every update, so the
+    // current (auto-populated) value has to be round-tripped.
     const current = await api.bio.me(auth).catch(() => null);
 
     try {
@@ -174,14 +168,17 @@ export const useUpdateBio = routeAction$(
       );
       if (res && res.success === false) {
         return requestEvent.fail(409, {
-          message: res.error || "Failed to update bio",
+          message: res.error || "Could not save your bio page.",
         });
       }
-      return { success: true, message: "Bio updated successfully" };
+      return { success: true, message: "Bio page saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
-        message: error instanceof Error ? error.message : "Failed to update bio",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not save your bio page.",
       });
     }
   },
@@ -198,15 +195,15 @@ export const useUpdateBio = routeAction$(
     bioSpotifyTrack: z.string().optional(),
     bioGradientConfig: z.string().optional(),
     bioParticleConfig: z.string().optional(),
-    bioShowDiscord: z.preprocess((val) => {
-      return val === "true" || val === true;
-    }, z.boolean().optional()),
+    bioShowDiscord: z.preprocess(
+      (val) => val === "true" || val === true,
+      z.boolean().optional(),
+    ),
     bioDiscordConfig: z.string().optional(),
-    bioIsPublic: z.preprocess((val) => {
-      // Handle checkbox: if unchecked, val will be undefined
-      // If checked, val will be "true"
-      return val === "true" || val === true;
-    }, z.boolean().optional()),
+    bioIsPublic: z.preprocess(
+      (val) => val === "true" || val === true,
+      z.boolean().optional(),
+    ),
   }),
 );
 
@@ -219,14 +216,15 @@ export const useCreateBioLink = routeAction$(
       );
       if (res && res.success === false) {
         return requestEvent.fail(400, {
-          message: res.error || "Failed to add link",
+          message: res.error || "Could not add the link.",
         });
       }
-      return { success: true, message: "Link added successfully" };
+      return { success: true, message: "Link added." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
-        message: error instanceof Error ? error.message : "Failed to add link",
+        message:
+          error instanceof Error ? error.message : "Could not add the link.",
       });
     }
   },
@@ -255,15 +253,15 @@ export const useUpdateBioLink = routeAction$(
       );
       if (res && res.success === false) {
         return requestEvent.fail(400, {
-          message: res.error || "Failed to update link",
+          message: res.error || "Could not save the link.",
         });
       }
-      return { success: true, message: "Link updated successfully" };
+      return { success: true, message: "Link saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to update link",
+          error instanceof Error ? error.message : "Could not save the link.",
       });
     }
   },
@@ -280,8 +278,10 @@ export const useUpdateBioLink = routeAction$(
   }),
 );
 
-/** Swaps a link with its neighbour and renumbers the list so the saved order
- *  stays a contiguous 0..n-1 sequence. */
+/**
+ * Swaps a link with its neighbour and renumbers the list so the saved order
+ * stays a contiguous 0..n-1 sequence.
+ */
 export const useReorderBioLink = routeAction$(
   async (values, requestEvent) => {
     const auth = serverAuth(requestEvent);
@@ -291,7 +291,7 @@ export const useReorderBioLink = routeAction$(
     const index = links.findIndex((link) => link.id === values.id);
     const target = values.direction === "up" ? index - 1 : index + 1;
     if (index === -1 || target < 0 || target >= links.length) {
-      return requestEvent.fail(400, { message: "Cannot move that link." });
+      return requestEvent.fail(400, { message: "That link cannot move." });
     }
     [links[index], links[target]] = [links[target], links[index]];
 
@@ -313,12 +313,14 @@ export const useReorderBioLink = routeAction$(
               ),
         ),
       );
-      return { success: true, message: "Link order updated" };
+      return { success: true, message: "Order updated." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to reorder links",
+          error instanceof Error
+            ? error.message
+            : "Could not reorder the links.",
       });
     }
   },
@@ -332,19 +334,77 @@ export const useDeleteBioLink = routeAction$(
   async (values, requestEvent) => {
     try {
       await api.bio.deleteLink(values.id, serverAuth(requestEvent));
-      return { success: true, message: "Link deleted successfully" };
+      return { success: true, message: "Link deleted." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
         message:
-          error instanceof Error ? error.message : "Failed to delete link",
+          error instanceof Error ? error.message : "Could not delete the link.",
       });
     }
   },
-  zod$({
-    id: z.string(),
-  }),
+  zod$({ id: z.string() }),
 );
+
+const SECTIONS = [
+  { href: "#bio-profile", label: "Profile", icon: User },
+  { href: "#bio-links", label: "Links", icon: LinkIcon },
+  { href: "#bio-appearance", label: "Appearance", icon: Palette },
+  { href: "#bio-integrations", label: "Integrations", icon: Plug },
+  { href: "#bio-effects", label: "Effects", icon: Sparkles },
+  { href: "#bio-advanced", label: "Advanced", icon: Code },
+];
+
+const DEFAULT_DISCORD_CONFIG: Record<string, boolean | number> = {
+  showAvatar: true,
+  showStatus: true,
+  showActivity: true,
+  showSpotify: true,
+  showBadges: true,
+  showGuild: true,
+  refreshInterval: 30,
+};
+
+const DEFAULT_GRADIENT: GradientConfig = {
+  type: "linear",
+  direction: "to right",
+  colors: ["#8B5CF6", "#EC4899"],
+  enabled: false,
+};
+
+function parseJson<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Colour swatch and hex field kept in step with one another. */
+const ColorField = component$<{
+  label: string;
+  id: string;
+  value: Signal<string>;
+}>(({ label, id, value }) => (
+  <Field label={label} for={id}>
+    <div class="flex items-center gap-1.5">
+      <input
+        type="color"
+        aria-label={`Pick ${label.toLowerCase()} colour`}
+        value={/^#[0-9A-Fa-f]{6}$/.test(value.value) ? value.value : "#000000"}
+        onInput$={(_, el) => (value.value = el.value)}
+        class="focus-ring border-edge rounded-control h-9 w-9 shrink-0 cursor-pointer border bg-transparent p-1"
+      />
+      <CodeInput
+        id={id}
+        value={value.value}
+        maxLength={7}
+        onInput$={(_, el) => (value.value = el.value)}
+      />
+    </div>
+  </Field>
+));
 
 export default component$(() => {
   const bioData = useBioData();
@@ -353,42 +413,76 @@ export default component$(() => {
   const updateBioLink = useUpdateBioLink();
   const deleteBioLink = useDeleteBioLink();
   const reorderBioLink = useReorderBioLink();
-  const editingLink = useSignal<string | null>(null);
-  const deletingLink = useSignal<string | null>(null);
+
+  const user = bioData.value.user;
+  const limits = bioData.value.bioLimits;
+
+  const mode = useSignal("edit");
+
+  // Profile and publishing
+  const username = useSignal(user.bioUsername || "");
+  const displayName = useSignal(user.bioDisplayName || "");
+  const description = useSignal(user.bioDescription || "");
+  const profileImage = useSignal(user.bioProfileImage || "");
+  const isPublic = useSignal(user.bioIsPublic);
+
+  // Appearance
+  const backgroundImage = useSignal(user.bioBackgroundImage || "");
+  const backgroundColor = useSignal(user.bioBackgroundColor);
+  const textColor = useSignal(user.bioTextColor);
+  const accentColor = useSignal(user.bioAccentColor);
+  const gradientConfig = useSignal<GradientConfig>(
+    parseJson(user.bioGradientConfig, DEFAULT_GRADIENT),
+  );
+
+  // Integrations
+  const showDiscord = useSignal(user.bioShowDiscord);
+  const discordConfig = useSignal<Record<string, boolean | number>>(
+    parseJson(user.bioDiscordConfig, DEFAULT_DISCORD_CONFIG),
+  );
+  const discordError = useSignal<string | null>(null);
+  const discordTesting = useSignal(false);
+  const spotifyTrack = useSignal(user.bioSpotifyTrack || "");
+
+  // Effects
+  const particleConfig = useSignal<ParticleConfig>(
+    parseJson(user.bioParticleConfig, defaultParticleConfigs.hearts),
+  );
+
+  // Advanced
+  const customCss = useSignal(user.bioCustomCss || "");
+  const cssWarning = useSignal<string | null>(null);
+
+  // Link editing
   const showNewLinkForm = useSignal(false);
   const newLinkTitle = useSignal("");
   const newLinkUrl = useSignal("");
   const newLinkIcon = useSignal("");
-  /** Set once the user picks an icon/title by hand so URL matching stops
-   *  overwriting their choice. */
   const newLinkIconTouched = useSignal(false);
   const newLinkTitleTouched = useSignal(false);
+  const editingLink = useSignal<string | null>(null);
   const editingLinkIcons = useSignal<Record<string, string>>({});
+  const pendingDeleteLink = useSignal<{ id: string; title: string } | null>(
+    null,
+  );
+  const deleteLinkOpen = useSignal(false);
 
   const newLinkSuggestion = useComputed$(() =>
     newLinkUrl.value ? suggestIconForUrl(newLinkUrl.value) : null,
   );
 
-  // Fill in the icon (and title) from the URL until the user overrides them.
+  // Paste a link and the icon and title fill themselves in for known sites,
+  // until the person types their own.
   useTask$(({ track }) => {
-    const suggestion = track(() => newLinkSuggestion.value);
+    const url = track(() => newLinkUrl.value);
+    const suggestion = url ? suggestIconForUrl(url) : null;
     if (!suggestion) return;
-    if (!newLinkIconTouched.value) {
-      newLinkIcon.value = suggestion;
-    }
+    if (!newLinkIconTouched.value) newLinkIcon.value = suggestion;
     if (!newLinkTitleTouched.value) {
       newLinkTitle.value = getIconDef(suggestion)?.label ?? newLinkTitle.value;
     }
   });
-  // Collapsible section states
-  const basicInfoCollapsed = useSignal(false);
-  const appearanceCollapsed = useSignal(false);
-  const discordCollapsed = useSignal(false);
-  const backgroundEffectsCollapsed = useSignal(false);
-  const linksCollapsed = useSignal(false);
-  const analyticsCollapsed = useSignal(false);
 
-  // Function to reset new link form
   const resetNewLinkForm = $(() => {
     newLinkTitle.value = "";
     newLinkUrl.value = "";
@@ -398,15 +492,11 @@ export default component$(() => {
     showNewLinkForm.value = false;
   });
 
-  // Reset form when link is successfully created
   useTask$(({ track }) => {
     track(() => createBioLink.value);
-    if (createBioLink.value?.success) {
-      resetNewLinkForm();
-    }
+    if (createBioLink.value?.success) resetNewLinkForm();
   });
 
-  // Close the inline editor once a link save goes through.
   useTask$(({ track }) => {
     track(() => updateBioLink.value);
     if (updateBioLink.value?.success) {
@@ -418,1058 +508,514 @@ export default component$(() => {
   useTask$(({ track }) => {
     track(() => deleteBioLink.value);
     if (deleteBioLink.value?.success) {
-      deletingLink.value = null;
+      deleteLinkOpen.value = false;
+      pendingDeleteLink.value = null;
     }
   });
 
-  // State for managing form changes
-  const hasChanges = useSignal(false);
+  const saveState = useSignal<SaveState>("idle");
 
-  // Form signals
-  const username = useSignal(bioData.value.user.bioUsername || "");
-  const displayName = useSignal(bioData.value.user.bioDisplayName || "");
-  const description = useSignal(bioData.value.user.bioDescription || "");
-  const profileImage = useSignal(bioData.value.user.bioProfileImage || "");
-  const backgroundImage = useSignal(
-    bioData.value.user.bioBackgroundImage || "",
+  const isDirty = useComputed$(
+    () =>
+      username.value !== (user.bioUsername || "") ||
+      displayName.value !== (user.bioDisplayName || "") ||
+      description.value !== (user.bioDescription || "") ||
+      profileImage.value !== (user.bioProfileImage || "") ||
+      backgroundImage.value !== (user.bioBackgroundImage || "") ||
+      backgroundColor.value !== user.bioBackgroundColor ||
+      textColor.value !== user.bioTextColor ||
+      accentColor.value !== user.bioAccentColor ||
+      customCss.value !== (user.bioCustomCss || "") ||
+      spotifyTrack.value !== (user.bioSpotifyTrack || "") ||
+      isPublic.value !== user.bioIsPublic ||
+      showDiscord.value !== user.bioShowDiscord ||
+      JSON.stringify(particleConfig.value) !==
+        JSON.stringify(
+          parseJson(user.bioParticleConfig, defaultParticleConfigs.hearts),
+        ) ||
+      JSON.stringify(gradientConfig.value) !==
+        JSON.stringify(parseJson(user.bioGradientConfig, DEFAULT_GRADIENT)) ||
+      JSON.stringify(discordConfig.value) !==
+        JSON.stringify(
+          parseJson(user.bioDiscordConfig, DEFAULT_DISCORD_CONFIG),
+        ),
   );
-  const backgroundColor = useSignal(bioData.value.user.bioBackgroundColor);
-  const textColor = useSignal(bioData.value.user.bioTextColor);
-  const accentColor = useSignal(bioData.value.user.bioAccentColor);
-  const customCss = useSignal(bioData.value.user.bioCustomCss || "");
-  const spotifyTrack = useSignal(bioData.value.user.bioSpotifyTrack || "");
-  const isPublic = useSignal(bioData.value.user.bioIsPublic);
-  const showDiscord = useSignal(bioData.value.user.bioShowDiscord);
 
-  // Discord error tracking
-  const discordError = useSignal<string | null>(null);
-  const discordTesting = useSignal(false);
-
-  // CSS security warning
-  const cssWarning = useSignal<string | null>(null);
-  // Parse Discord configuration
-  const parseDiscordConfig = () => {
-    try {
-      if (bioData.value.user.bioDiscordConfig) {
-        return JSON.parse(bioData.value.user.bioDiscordConfig);
-      }
-    } catch (e) {
-      console.warn("Failed to parse Discord config:", e);
+  usePreventNavigate$((target) => {
+    if (!isDirty.value || saveState.value === "saved") return false;
+    if (target !== undefined) {
+      return !window.confirm(
+        "You have unsaved bio changes. Leave without saving them?",
+      );
     }
-    return {
-      showAvatar: true,
-      showStatus: true,
-      showActivity: true,
-      showSpotify: true,
-      showBadges: true,
-      showGuild: true,
-      refreshInterval: 30,
-    };
-  };
+    return true;
+  });
 
-  const discordConfig = useSignal(parseDiscordConfig());
+  useTask$(({ track }) => {
+    const dirty = track(() => isDirty.value);
+    if (dirty) saveState.value = "dirty";
+    else if (saveState.value === "dirty") saveState.value = "idle";
+  });
 
-  // Function to test Discord connectivity
+  useTask$(({ track }) => {
+    track(() => updateBio.value);
+    if (updateBio.value?.success) saveState.value = "saved";
+    else if (updateBio.value?.failed) saveState.value = "error";
+  });
+
+  // Custom CSS is sanitized on save; warn here so the reason is visible first.
+  useTask$(({ track }) => {
+    track(() => customCss.value);
+    cssWarning.value =
+      customCss.value && hasDangerousCSS(customCss.value)
+        ? "Parts of this CSS can load remote content, so they will be removed when you save."
+        : null;
+  });
+
   const testDiscordConnection = $(async () => {
-    if (!bioData.value.user.bioDiscordUserId) {
+    if (!user.bioDiscordUserId) {
       discordError.value =
-        "No Discord user ID found. Please log in with Discord first.";
+        "No Discord account is linked. Sign in with Discord to link one.";
       return;
     }
-
     discordTesting.value = true;
     discordError.value = null;
-
     try {
-      const result = await getLanyardData(bioData.value.user.bioDiscordUserId);
-      if (!result.success) {
-        discordError.value =
-          result.error ||
-          "Failed to connect to Discord. Please check if you've joined our Discord server (https://discord.gg/RJ9Cedxvqe) or invited the bot to your server.";
-      } else {
-        discordError.value = null;
-      }
-    } catch (error) {
-      discordError.value =
-        "Error testing Discord connection. Please try again.";
-      console.error("Discord test error:", error);
+      const result = await getLanyardData(user.bioDiscordUserId);
+      discordError.value = result.success
+        ? null
+        : result.error ||
+          "Discord did not respond. Presence needs you to be in a server running the Lanyard bot — join discord.gg/RJ9Cedxvqe.";
+    } catch {
+      discordError.value = "Could not reach Discord. Try again in a moment.";
     } finally {
       discordTesting.value = false;
     }
   });
 
-  // Auto-test Discord connection on load if enabled
   useTask$(async () => {
-    if (showDiscord.value && bioData.value.user.bioDiscordUserId) {
+    if (showDiscord.value && user.bioDiscordUserId) {
       await testDiscordConnection();
     }
   });
 
-  // Parse and initialize particle configuration
-  const parseParticleConfig = (): ParticleConfig => {
-    try {
-      if (bioData.value.user.bioParticleConfig) {
-        return JSON.parse(bioData.value.user.bioParticleConfig);
-      }
-    } catch (e) {
-      console.warn("Failed to parse particle config:", e);
-    }
-    return defaultParticleConfigs.hearts;
-  };
-
-  // Parse and initialize gradient configuration
-  const parseGradientConfig = (): GradientConfig => {
-    try {
-      if (bioData.value.user.bioGradientConfig) {
-        return JSON.parse(bioData.value.user.bioGradientConfig);
-      }
-    } catch (e) {
-      console.warn("Failed to parse gradient config:", e);
-    }
-    return {
-      type: "linear",
-      direction: "to right",
-      colors: ["#8B5CF6", "#EC4899"],
-      enabled: false,
-    };
-  };
-
-  const particleConfig = useSignal<ParticleConfig>(parseParticleConfig());
-  const gradientConfig = useSignal<GradientConfig>(parseGradientConfig());
-  // Monitor for successful form submission to reset change tracking
-  useTask$(({ track }) => {
-    track(() => updateBio.value);
-
-    if (updateBio.value?.success) {
-      hasChanges.value = false;
-    }
+  const resetToSaved = $(() => {
+    username.value = user.bioUsername || "";
+    displayName.value = user.bioDisplayName || "";
+    description.value = user.bioDescription || "";
+    profileImage.value = user.bioProfileImage || "";
+    backgroundImage.value = user.bioBackgroundImage || "";
+    backgroundColor.value = user.bioBackgroundColor;
+    textColor.value = user.bioTextColor;
+    accentColor.value = user.bioAccentColor;
+    customCss.value = user.bioCustomCss || "";
+    spotifyTrack.value = user.bioSpotifyTrack || "";
+    isPublic.value = user.bioIsPublic;
+    showDiscord.value = user.bioShowDiscord;
+    particleConfig.value = parseJson(
+      user.bioParticleConfig,
+      defaultParticleConfigs.hearts,
+    );
+    gradientConfig.value = parseJson(user.bioGradientConfig, DEFAULT_GRADIENT);
+    discordConfig.value = parseJson(
+      user.bioDiscordConfig,
+      DEFAULT_DISCORD_CONFIG,
+    );
+    discordError.value = null;
+    cssWarning.value = null;
+    saveState.value = "idle";
   });
 
-  // Function to check if any values have changed
-  const checkForChanges = $(() => {
-    const originalParticleConfig = (() => {
-      try {
-        if (bioData.value.user.bioParticleConfig) {
-          return JSON.parse(bioData.value.user.bioParticleConfig);
-        }
-      } catch {
-        console.warn("Failed to parse particle config");
-      }
-      return defaultParticleConfigs.hearts;
-    })();
-    const originalGradientConfig = (() => {
-      try {
-        if (bioData.value.user.bioGradientConfig) {
-          return JSON.parse(bioData.value.user.bioGradientConfig);
-        }
-      } catch {
-        console.warn("Failed to parse gradient config");
-      }
-      return {
-        type: "linear",
-        direction: "to right",
-        colors: ["#8B5CF6", "#EC4899"],
-        enabled: false,
-      };
-    })();
+  // The preview renders from local state, so a change is visible before saving.
+  const previewBioData = useComputed$<BioPageData>(() => ({
+    displayName: displayName.value || user.name,
+    description: description.value,
+    profileImage: profileImage.value,
+    backgroundImage: backgroundImage.value,
+    backgroundColor: gradientConfig.value.enabled
+      ? getGradientCSS(gradientConfig.value, backgroundColor.value)
+      : backgroundColor.value,
+    textColor: textColor.value,
+    accentColor: accentColor.value,
+    customCss: customCss.value,
+    spotifyTrack: spotifyTrack.value,
+    bioLinks: bioData.value.bioLinks,
+    gradientConfig: JSON.stringify(gradientConfig.value),
+    particleConfig: JSON.stringify(particleConfig.value),
+    discordUserId: user.bioDiscordUserId,
+    showDiscord: showDiscord.value,
+    discordConfig: JSON.stringify(discordConfig.value),
+  }));
 
-    const originalDiscordConfig = (() => {
-      try {
-        if (bioData.value.user.bioDiscordConfig) {
-          return JSON.parse(bioData.value.user.bioDiscordConfig);
-        }
-      } catch {
-        console.warn("Failed to parse Discord config");
-      }
-      return {
-        showAvatar: true,
-        showStatus: true,
-        showActivity: true,
-        showSpotify: true,
-        refreshInterval: 30,
-      };
-    })();
+  const textContrast = useComputed$(() =>
+    contrastVerdict(textColor.value, backgroundColor.value),
+  );
+  const accentContrast = useComputed$(() =>
+    contrastVerdict(accentColor.value, backgroundColor.value),
+  );
 
-    const changed =
-      username.value !== (bioData.value.user.bioUsername || "") ||
-      displayName.value !== (bioData.value.user.bioDisplayName || "") ||
-      description.value !== (bioData.value.user.bioDescription || "") ||
-      profileImage.value !== (bioData.value.user.bioProfileImage || "") ||
-      backgroundImage.value !== (bioData.value.user.bioBackgroundImage || "") ||
-      backgroundColor.value !== bioData.value.user.bioBackgroundColor ||
-      textColor.value !== bioData.value.user.bioTextColor ||
-      accentColor.value !== bioData.value.user.bioAccentColor ||
-      customCss.value !== (bioData.value.user.bioCustomCss || "") ||
-      spotifyTrack.value !== (bioData.value.user.bioSpotifyTrack || "") ||
-      isPublic.value !== bioData.value.user.bioIsPublic ||
-      showDiscord.value !== bioData.value.user.bioShowDiscord ||
-      JSON.stringify(particleConfig.value) !==
-      JSON.stringify(originalParticleConfig) ||
-      JSON.stringify(gradientConfig.value) !==
-      JSON.stringify(originalGradientConfig) ||
-      JSON.stringify(discordConfig.value) !==
-      JSON.stringify(originalDiscordConfig);
-
-    hasChanges.value = changed;
-  });
-  // Watch for changes in any signal and trigger change detection
-  useTask$(({ track }) => {
-    track(() => username.value);
-    track(() => displayName.value);
-    track(() => description.value);
-    track(() => profileImage.value);
-    track(() => backgroundImage.value);
-    track(() => backgroundColor.value);
-    track(() => textColor.value);
-    track(() => accentColor.value);
-    track(() => customCss.value);
-    track(() => spotifyTrack.value);
-    track(() => isPublic.value);
-    track(() => showDiscord.value);
-    track(() => JSON.stringify(discordConfig.value));
-    track(() => JSON.stringify(particleConfig.value));
-    track(() => JSON.stringify(gradientConfig.value));
-    checkForChanges();
-  });
-
-  // Monitor CSS changes for security warnings
-  useTask$(({ track }) => {
-    track(() => customCss.value);
-
-    if (customCss.value && hasDangerousCSS(customCss.value)) {
-      cssWarning.value =
-        "Warning: Your custom CSS contains potentially dangerous content that will be automatically sanitized for security.";
-    } else {
-      cssWarning.value = null;
-    }
-  });
-
-  // Function to reset all values to original database values
-  const resetToOriginal = $(() => {
-    username.value = bioData.value.user.bioUsername || "";
-    displayName.value = bioData.value.user.bioDisplayName || "";
-    description.value = bioData.value.user.bioDescription || "";
-    profileImage.value = bioData.value.user.bioProfileImage || "";
-    backgroundImage.value = bioData.value.user.bioBackgroundImage || "";
-    backgroundColor.value = bioData.value.user.bioBackgroundColor;
-    textColor.value = bioData.value.user.bioTextColor;
-    accentColor.value = bioData.value.user.bioAccentColor;
-    customCss.value = bioData.value.user.bioCustomCss || "";
-    spotifyTrack.value = bioData.value.user.bioSpotifyTrack || "";
-    isPublic.value = bioData.value.user.bioIsPublic;
-
-    // Reset configs to original values
-    try {
-      if (bioData.value.user.bioParticleConfig) {
-        particleConfig.value = JSON.parse(bioData.value.user.bioParticleConfig);
-      } else {
-        particleConfig.value = defaultParticleConfigs.hearts;
-      }
-    } catch {
-      particleConfig.value = defaultParticleConfigs.hearts;
-    }
-    try {
-      if (bioData.value.user.bioGradientConfig) {
-        gradientConfig.value = JSON.parse(bioData.value.user.bioGradientConfig);
-      } else {
-        gradientConfig.value = {
-          type: "linear",
-          direction: "to right",
-          colors: ["#8B5CF6", "#EC4899"],
-          enabled: false,
-        };
-      }
-    } catch {
-      gradientConfig.value = {
-        type: "linear",
-        direction: "to right",
-        colors: ["#8B5CF6", "#EC4899"],
-        enabled: false,
-      };
-    } // Reset Discord settings
-    showDiscord.value = bioData.value.user.bioShowDiscord;
-    discordError.value = null; // Clear Discord errors on reset
-    cssWarning.value = null; // Clear CSS warnings on reset
-    try {
-      if (bioData.value.user.bioDiscordConfig) {
-        discordConfig.value = JSON.parse(bioData.value.user.bioDiscordConfig);
-      } else {
-        discordConfig.value = {
-          showAvatar: true,
-          showStatus: true,
-          showActivity: true,
-          showSpotify: true,
-          refreshInterval: 30,
-        };
-      }
-    } catch {
-      discordConfig.value = {
-        showAvatar: true,
-        showStatus: true,
-        showActivity: true,
-        showSpotify: true,
-        refreshInterval: 30,
-      };
-    }
-
-    hasChanges.value = false;
-  });
-
-  // Computed bio data for preview
-  const previewBioData = useComputed$<BioPageData>(() => {
-    const baseBackgroundColor = backgroundColor.value;
-    const finalBackgroundColor = gradientConfig.value.enabled
-      ? getGradientCSS(gradientConfig.value, baseBackgroundColor)
-      : baseBackgroundColor;
-    return {
-      displayName: displayName.value || bioData.value.user.name,
-      description: description.value,
-      profileImage: profileImage.value,
-      backgroundImage: backgroundImage.value,
-      backgroundColor: finalBackgroundColor,
-      textColor: textColor.value,
-      accentColor: accentColor.value,
-      customCss: customCss.value,
-      spotifyTrack: spotifyTrack.value,
-      bioLinks: bioData.value.bioLinks,
-      gradientConfig: JSON.stringify(gradientConfig.value),
-      particleConfig: JSON.stringify(particleConfig.value),
-      discordUserId: bioData.value.user.bioDiscordUserId,
-      showDiscord: showDiscord.value,
-      discordConfig: JSON.stringify(discordConfig.value),
-    };
-  });
-
-  const inputClasses =
-    "w-full px-4 py-3 glass rounded-2xl placeholder:text-theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/50 transition-all duration-300 text-theme-text-primary";
-  const buttonClasses =
-    "px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center gap-2";
+  const publicUrl = username.value
+    ? `${bioData.value.baseUrl}/${username.value}`
+    : null;
+  const atLinkLimit = bioData.value.bioLinks.length >= limits.maxBioLinks;
+  const sortedLinks = [...bioData.value.bioLinks].sort(
+    (a, b) => a.order - b.order,
+  );
 
   return (
-    <div>
-      <div>
-        <PageHeader
-          title="Bio Page Builder"
-          icon={LinkIcon}
-          align="left"
-          subtitle="Create your custom bio link page for sharing all your important links"
-        />
-        <div class="mb-8 space-y-4 empty:hidden">
-          {updateBio.value?.success && (
-            <Callout tone="success" icon={CheckCircle}>
-              {updateBio.value.message}
-            </Callout>
+    <Page>
+      <PageHeader title="Bio page">
+        <div q:slot="actions" class="flex flex-wrap items-center gap-3">
+          <SaveIndicator state={saveState.value} />
+          {isDirty.value && (
+            <Button variant="ghost" onClick$={resetToSaved}>
+              Discard
+            </Button>
           )}
-          {updateBio.value?.failed && (
-            <Callout tone="danger" icon={CircleX}>
-              {updateBio.value.message}
-            </Callout>
-          )}
-          {!bioData.value.user.isApproved && (
-            <Callout tone="warning" icon={AlertTriangle}>
-              Your account needs to be approved to use the bio service.
-            </Callout>
-          )}
-        </div>
-
-        <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Settings Panel */}
-          <div class="space-y-6">
-            {/* Basic Settings */}
-            <CollapsibleSection
-              title="Basic Information"
-              icon={User}
-              collapsed={basicInfoCollapsed}
+          <Form action={updateBio}>
+            <input type="hidden" name="bioUsername" value={username.value} />
+            <input
+              type="hidden"
+              name="bioDisplayName"
+              value={displayName.value}
+            />
+            <input
+              type="hidden"
+              name="bioDescription"
+              value={description.value}
+            />
+            <input
+              type="hidden"
+              name="bioProfileImage"
+              value={profileImage.value}
+            />
+            <input
+              type="hidden"
+              name="bioBackgroundImage"
+              value={backgroundImage.value}
+            />
+            <input
+              type="hidden"
+              name="bioBackgroundColor"
+              value={backgroundColor.value}
+            />
+            <input type="hidden" name="bioTextColor" value={textColor.value} />
+            <input
+              type="hidden"
+              name="bioAccentColor"
+              value={accentColor.value}
+            />
+            <input type="hidden" name="bioCustomCss" value={customCss.value} />
+            <input
+              type="hidden"
+              name="bioSpotifyTrack"
+              value={spotifyTrack.value}
+            />
+            <input
+              type="hidden"
+              name="bioIsPublic"
+              value={isPublic.value ? "true" : "false"}
+            />
+            <input
+              type="hidden"
+              name="bioGradientConfig"
+              value={JSON.stringify(gradientConfig.value)}
+            />
+            <input
+              type="hidden"
+              name="bioParticleConfig"
+              value={JSON.stringify(particleConfig.value)}
+            />
+            <input
+              type="hidden"
+              name="bioShowDiscord"
+              value={showDiscord.value ? "true" : "false"}
+            />
+            <input
+              type="hidden"
+              name="bioDiscordConfig"
+              value={JSON.stringify(discordConfig.value)}
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              loading={updateBio.isRunning}
+              disabled={!isDirty.value}
             >
-                <div class="space-y-4">
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Username
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({username.value.length}/
-                        {bioData.value.bioLimits.maxUsernameLength})
-                      </span>
-                    </label>
-                    <div class="relative">
-                      <input
-                        type="text"
-                        name="bioUsername"
-                        bind:value={username}
-                        placeholder="your-username"
-                        maxLength={bioData.value.bioLimits.maxUsernameLength}
-                        class={inputClasses}
-                      />
-                      <div class="text-theme-text-muted absolute inset-y-0 right-3 flex items-center text-sm">
-                        {bioData.value.baseUrl}/
-                      </div>
-                    </div>
-                    {username.value && (
-                      <div class="text-theme-text-muted mt-2 text-sm">
-                        Your bio will be available at: {bioData.value.baseUrl}/
-                        {username.value}
-                      </div>
+              Save changes
+            </Button>
+          </Form>
+        </div>
+      </PageHeader>
+
+      {updateBio.value?.failed && (
+        <Callout tone="danger" title="Could not save" class="mb-4">
+          {updateBio.value.message}
+        </Callout>
+      )}
+
+      <EditorLayout previewLabel="bio page" hasNav mode={mode}>
+        <LocalNav
+          q:slot="nav"
+          label="Bio sections"
+          items={SECTIONS}
+          current={SECTIONS[0].href}
+          stackAt="xl"
+        />
+
+        <div q:slot="settings" class="grid max-w-2xl gap-6">
+          <Section
+            id="bio-profile"
+            title="Profile and publishing"
+            description="Your address, name and introduction."
+          >
+            <Surface>
+              <div class="grid gap-4">
+                <Field
+                  label="Username"
+                  for="bio-username"
+                  required
+                  help={
+                    publicUrl
+                      ? `Your page will live at ${publicUrl}`
+                      : "This becomes the address of your page."
+                  }
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-ink-muted shrink-0 font-mono text-[13px]">
+                      /
+                    </span>
+                    <CodeInput
+                      id="bio-username"
+                      value={username.value}
+                      maxLength={limits.maxUsernameLength}
+                      placeholder="your-name"
+                      onInput$={(_, el) =>
+                        (username.value = el.value.toLowerCase())
+                      }
+                    />
+                  </div>
+                </Field>
+
+                <Field
+                  label="Display name"
+                  for="bio-display-name"
+                  help={`Shown at the top of the page. ${displayName.value.length}/${limits.maxDisplayNameLength}`}
+                >
+                  <Input
+                    id="bio-display-name"
+                    value={displayName.value}
+                    maxLength={limits.maxDisplayNameLength}
+                    placeholder={user.name || "Your name"}
+                    onInput$={(_, el) => (displayName.value = el.value)}
+                  />
+                </Field>
+
+                <Field
+                  label="Introduction"
+                  for="bio-description"
+                  help={`${description.value.length}/${limits.maxDescriptionLength}`}
+                >
+                  <Textarea
+                    id="bio-description"
+                    rows={3}
+                    value={description.value}
+                    maxLength={limits.maxDescriptionLength}
+                    placeholder="A sentence or two about you."
+                    onInput$={(_, el) => (description.value = el.value)}
+                  />
+                </Field>
+
+                <Field
+                  label="Profile image URL"
+                  for="bio-profile-image"
+                  help="A square image works best. Leave empty to show no picture."
+                >
+                  <Input
+                    id="bio-profile-image"
+                    type="url"
+                    value={profileImage.value}
+                    maxLength={limits.maxUrlLength}
+                    placeholder="https://example.com/me.png"
+                    onInput$={(_, el) => (profileImage.value = el.value)}
+                  />
+                </Field>
+
+                <Divider />
+
+                <Switch
+                  checked={isPublic.value}
+                  label="Publish this page"
+                  help={
+                    username.value
+                      ? "Anyone with the address can see it. Turn this off to take it offline."
+                      : "Set a username first — a page cannot be published without an address."
+                  }
+                  disabled={!username.value}
+                  onChange$={(checked) => (isPublic.value = checked)}
+                />
+
+                {publicUrl && (
+                  <div class="border-edge bg-surface-subtle rounded-control flex flex-wrap items-center gap-2 border px-2 py-1.5">
+                    <Badge tone={isPublic.value ? "success" : "neutral"}>
+                      {isPublic.value ? "Published" : "Not published"}
+                    </Badge>
+                    <code class="text-ink min-w-0 flex-1 truncate font-mono text-xs">
+                      {publicUrl}
+                    </code>
+                    <CopyButton
+                      value={publicUrl}
+                      label="Copy"
+                      variant="secondary"
+                    />
+                    {isPublic.value && (
+                      <IconButton
+                        size="sm"
+                        variant="outline"
+                        label="Open your bio page"
+                        href={`/${username.value}`}
+                        external
+                      >
+                        <ExternalLink class="h-4 w-4" />
+                      </IconButton>
                     )}
                   </div>
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Display Name
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({displayName.value.length}/
-                        {bioData.value.bioLimits.maxDisplayNameLength})
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      name="bioDisplayName"
-                      bind:value={displayName}
-                      placeholder="Your Name"
-                      maxLength={bioData.value.bioLimits.maxDisplayNameLength}
-                      class={inputClasses}
-                    />
-                  </div>
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Description
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({description.value.length}/
-                        {bioData.value.bioLimits.maxDescriptionLength})
-                      </span>
-                    </label>
-                    <textarea
-                      name="bioDescription"
-                      bind:value={description}
-                      placeholder="Tell people about yourself..."
-                      maxLength={bioData.value.bioLimits.maxDescriptionLength}
-                      rows={3}
-                      class={inputClasses}
-                    />
-                  </div>
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Profile Image URL
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({profileImage.value.length}/
-                        {bioData.value.bioLimits.maxUrlLength})
-                      </span>
-                    </label>
-                    <input
-                      type="url"
-                      name="bioProfileImage"
-                      bind:value={profileImage}
-                      placeholder="https://example.com/image.jpg"
-                      maxLength={bioData.value.bioLimits.maxUrlLength}
-                      class={inputClasses}
-                    />
-                  </div>
-                  <div class="glass flex items-center justify-between gap-3 rounded-2xl p-3">
-                    {/* Fancy toggle switch */}
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={isPublic.value ? "true" : "false"}
-                      onClick$={() => (isPublic.value = !isPublic.value)}
-                      onKeyDown$={(e) => {
-                        const key = (e as KeyboardEvent).key;
-                        if (key === "Enter" || key === " ") {
-                          e.preventDefault();
-                          isPublic.value = !isPublic.value;
-                        }
-                      }}
-                      class={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-theme-accent-primary/60 ${
-                        isPublic.value
-                          ? "from-theme-accent-primary to-theme-accent-secondary bg-gradient-to-r shadow-[0_0_0_3px_rgba(255,255,255,0.08)]"
-                          : "bg-theme-card-border/80"
-                      }`}
-                    >
-                      {/* Track icons */}
-                      <span class="pointer-events-none absolute left-2 flex h-4 w-4 items-center justify-center text-white/80">
-                        <Globe class={`h-3.5 w-3.5 transition-opacity ${isPublic.value ? "opacity-90" : "opacity-30"}`} />
-                      </span>
-                      <span class="pointer-events-none absolute right-2 flex h-4 w-4 items-center justify-center text-theme-text-muted">
-                        <Lock class={`h-3.5 w-3.5 transition-opacity ${isPublic.value ? "opacity-30" : "opacity-70"}`} />
-                      </span>
-                      {/* Knob */}
-                      <span
-                        class={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${
-                          isPublic.value ? "translate-x-8" : "translate-x-2"
-                        }`}
-                      />
-                    </button>
+                )}
+              </div>
+            </Surface>
+          </Section>
 
-                    {/* Label and hint */}
-                    <div class="flex-1">
-                      <div class="text-theme-text-primary font-medium">
-                        {isPublic.value ? (
-                          <span class="flex items-center gap-2">
-                            <Globe class="h-4 w-4" />
-                            Public
-                          </span>
-                        ) : (
-                          <span class="flex items-center gap-2">
-                            <Lock class="h-4 w-4" />
-                            Private
-                          </span>
-                        )}
-                      </div>
-                      <div class="text-theme-text-secondary text-sm">
-                        {isPublic.value
-                          ? "Anyone can view your bio page"
-                          : "Your bio page is hidden from public"}
-                      </div>
-                    </div>
+          <Section
+            id="bio-links"
+            title="Links"
+            description={`${bioData.value.bioLinks.length} of ${limits.maxBioLinks} used. They appear in the order shown here.`}
+          >
+            {!showNewLinkForm.value && (
+              <Button
+                q:slot="actions"
+                variant="secondary"
+                disabled={atLinkLimit}
+                title={
+                  atLinkLimit ? "You have reached your link limit." : undefined
+                }
+                onClick$={() => (showNewLinkForm.value = true)}
+              >
+                <Plus class="h-4 w-4" aria-hidden="true" />
+                Add link
+              </Button>
+            )}
+
+            {showNewLinkForm.value && !atLinkLimit && (
+              <Surface class="mb-3">
+                <Form action={createBioLink} class="grid gap-4">
+                  <Field
+                    label="Address"
+                    for="new-link-url"
+                    required
+                    help="Paste a link — the icon and title fill themselves in for sites we recognise."
+                  >
+                    <Input
+                      id="new-link-url"
+                      type="url"
+                      name="url"
+                      value={newLinkUrl.value}
+                      maxLength={limits.maxUrlLength}
+                      required
+                      placeholder="https://twitch.tv/yourname"
+                      onInput$={(_, el) => (newLinkUrl.value = el.value)}
+                    />
+                  </Field>
+
+                  <Field
+                    label="Title"
+                    for="new-link-title"
+                    required
+                    help={`${newLinkTitle.value.length}/${limits.maxLinkTitleLength}`}
+                  >
+                    <Input
+                      id="new-link-title"
+                      name="title"
+                      value={newLinkTitle.value}
+                      maxLength={limits.maxLinkTitleLength}
+                      required
+                      placeholder="Twitch"
+                      onInput$={(_, el) => {
+                        newLinkTitle.value = el.value;
+                        newLinkTitleTouched.value = true;
+                      }}
+                    />
+                  </Field>
+
+                  <div>
+                    <span class="text-ink mb-1.5 block text-[13px] font-medium">
+                      Icon
+                    </span>
+                    <IconSelector
+                      selectedIcon={newLinkIcon.value}
+                      suggestedIcon={newLinkSuggestion.value}
+                      onIconSelect={$((icon: string) => {
+                        newLinkIcon.value = icon;
+                        newLinkIconTouched.value = true;
+                      })}
+                    />
+                    <input
+                      type="hidden"
+                      name="icon"
+                      value={newLinkIcon.value}
+                    />
                   </div>
-                  {isPublic.value && !username.value && (
-                    <Callout tone="warning" class="mt-2">
-                      Set a username above to publish your bio.
+
+                  {createBioLink.value?.failed && (
+                    <Callout tone="danger">
+                      {createBioLink.value.message}
                     </Callout>
                   )}
-                </div>
-            </CollapsibleSection>
-            {/* Appearance Settings */}
-            <CollapsibleSection
-              title="Appearance"
-              icon={Palette}
-              collapsed={appearanceCollapsed}
-            >
-                <div class="space-y-4">
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Background Image URL
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({backgroundImage.value.length}/
-                        {bioData.value.bioLimits.maxUrlLength})
-                      </span>
-                    </label>
-                    <input
-                      type="url"
-                      name="bioBackgroundImage"
-                      bind:value={backgroundImage}
-                      placeholder="https://example.com/background.jpg"
-                      maxLength={bioData.value.bioLimits.maxUrlLength}
-                      class={inputClasses}
-                    />
+
+                  <div class="flex flex-wrap gap-2">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      loading={createBioLink.isRunning}
+                    >
+                      Add link
+                    </Button>
+                    <Button variant="ghost" onClick$={resetNewLinkForm}>
+                      Cancel
+                    </Button>
                   </div>
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div>
-                      <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                        Background Color
-                      </label>
-                      <input
-                        type="color"
-                        name="bioBackgroundColor"
-                        bind:value={backgroundColor}
-                        class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
-                      />
-                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
-                        {backgroundColor.value}
-                      </div>
-                    </div>
-                    <div>
-                      <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                        Text Color
-                      </label>
-                      <input
-                        type="color"
-                        name="bioTextColor"
-                        bind:value={textColor}
-                        class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
-                      />
-                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
-                        {textColor.value}
-                      </div>
-                    </div>
-                    <div>
-                      <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                        Accent Color
-                      </label>
-                      <input
-                        type="color"
-                        name="bioAccentColor"
-                        bind:value={accentColor}
-                        class="border-theme-card-border h-10 w-full cursor-pointer rounded-xl border-2 bg-transparent"
-                      />
-                      <div class="text-theme-text-muted mt-1 text-center font-mono text-xs uppercase">
-                        {accentColor.value}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                      Spotify Track/Playlist URL
-                      <span class="text-theme-text-muted ml-2 text-xs">
-                        ({spotifyTrack.value.length}/
-                        {bioData.value.bioLimits.maxUrlLength})
-                      </span>
-                    </label>
-                    <input
-                      type="url"
-                      name="bioSpotifyTrack"
-                      bind:value={spotifyTrack}
-                      placeholder="https://open.spotify.com/track/..."
-                      maxLength={bioData.value.bioLimits.maxUrlLength}
-                      class={inputClasses}
-                    />
-                  </div>
-                </div>
-            </CollapsibleSection>
-            {/* Discord Integration */}
-            <CollapsibleSection
-              title="Discord Profile"
-              icon={DiscordGlyph}
-              collapsed={discordCollapsed}
-            >
-                <div class="space-y-4">
-                  {bioData.value.user.bioDiscordUserId && (
-                    <div class="bg-theme-accent-primary/5 border-theme-accent-primary/20 rounded-xl border p-4">
-                      <div class="mb-3 flex items-center gap-2">
-                        <div class="bg-theme-accent-primary/20 rounded-full p-2">
-                          <svg
-                            class="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p class="text-theme-text-primary text-sm font-medium">
-                            Discord Connected
-                          </p>
-                          <p class="text-theme-text-muted text-xs">
-                            ID: {bioData.value.user.bioDiscordUserId}
-                          </p>
-                        </div>
-                      </div>
-                      <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                          <label class="text-theme-text-secondary flex items-center gap-2 text-sm font-medium">
-                            Show Discord Profile
-                          </label>
-                          <button
-                            type="button"
-                            onClick$={async () => {
-                              const newValue = !showDiscord.value;
-                              showDiscord.value = newValue;
+                </Form>
+              </Surface>
+            )}
 
-                              // Test Discord connection when enabling
-                              if (newValue) {
-                                await testDiscordConnection();
-                              } else {
-                                // Clear errors when disabling
-                                discordError.value = null;
-                              }
-                            }}
-                            class={`focus:ring-theme-accent-primary relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${showDiscord.value
-                                ? "bg-theme-accent-primary"
-                                : "bg-theme-card-border"
-                              }`}
-                          >
-                            <span
-                              class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showDiscord.value
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                                }`}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Discord Connection Test Button */}
-                        <div class="flex items-center gap-3 pt-2">
-                          <button
-                            type="button"
-                            onClick$={testDiscordConnection}
-                            disabled={discordTesting.value}
-                            class="btn-secondary flex items-center gap-2 px-3 py-1.5 text-xs"
-                          >
-                            {discordTesting.value ? (
-                              <>
-                                <div class="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
-                                Testing...
-                              </>
-                            ) : (
-                              <>
-                                <Search class="h-3.5 w-3.5" />
-                                Test Connection
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        {/* Discord Error Display */}
-                        {discordError.value && (
-                          <div class="rounded-lg border border-theme-error/20 bg-theme-error/10 p-3">
-                            <div class="flex items-start gap-2">
-                              <AlertTriangle class="text-theme-error mt-0.5 h-4 w-4 flex-shrink-0" />
-                              <div>
-                                <p class="mb-1 text-sm font-medium text-theme-error">
-                                  Discord Connection Failed
-                                </p>
-                                <p class="text-xs text-theme-error">
-                                  {discordError.value}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {showDiscord.value && (
-                          <div class="space-y-3 pt-2">
-                            <h4 class="text-theme-text-primary text-sm font-medium">
-                              Display Options
-                            </h4>
-
-                            <div class="grid grid-cols-2 gap-3">
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={discordConfig.value.showAvatar}
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showAvatar: (e.target as HTMLInputElement)
-                                        .checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Avatar
-                                </span>
-                              </label>
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={discordConfig.value.showStatus}
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showStatus: (e.target as HTMLInputElement)
-                                        .checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Status
-                                </span>
-                              </label>
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={discordConfig.value.showActivity}
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showActivity: (
-                                        e.target as HTMLInputElement
-                                      ).checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Activity
-                                </span>
-                              </label>{" "}
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={discordConfig.value.showSpotify}
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showSpotify: (
-                                        e.target as HTMLInputElement
-                                      ).checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Spotify
-                                </span>
-                              </label>
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    discordConfig.value.showBadges ?? true
-                                  }
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showBadges: (e.target as HTMLInputElement)
-                                        .checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Badges
-                                </span>
-                              </label>
-                              <label class="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    discordConfig.value.showGuild ?? true
-                                  }
-                                  onChange$={(e) => {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      showGuild: (e.target as HTMLInputElement)
-                                        .checked,
-                                    };
-                                  }}
-                                  class="border-theme-card-border bg-theme-bg-secondary text-theme-accent-primary focus:ring-theme-accent-primary rounded"
-                                />
-                                <span class="text-theme-text-secondary text-sm">
-                                  Guild
-                                </span>
-                              </label>
-                            </div>
-
-                            <div>
-                              <label class="text-theme-text-secondary mb-2 block text-sm font-medium">
-                                Refresh Interval (seconds)
-                              </label>
-                              <input
-                                type="number"
-                                min="10"
-                                max="300"
-                                value={discordConfig.value.refreshInterval}
-                                onInput$={(e) => {
-                                  const value = parseInt(
-                                    (e.target as HTMLInputElement).value,
-                                  );
-                                  if (value >= 10 && value <= 300) {
-                                    discordConfig.value = {
-                                      ...discordConfig.value,
-                                      refreshInterval: value,
-                                    };
-                                  }
-                                }}
-                                class={inputClasses}
-                              />
-                              <p class="text-theme-text-muted mt-1 text-xs">
-                                How often to update Discord status (10-300
-                                seconds)
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+            {sortedLinks.length === 0 ? (
+              <Surface flush>
+                <EmptyState
+                  icon={LinkIcon}
+                  size="inline"
+                  title="No links yet"
+                  description="Add the places people should find you."
+                >
+                  {!showNewLinkForm.value && (
+                    <Button
+                      variant="primary"
+                      onClick$={() => (showNewLinkForm.value = true)}
+                    >
+                      Add your first link
+                    </Button>
                   )}
-                  {!bioData.value.user.bioDiscordUserId && (
-                    <div class="border-theme-card-border/50 bg-theme-bg-secondary/30 rounded-xl border p-4 text-center">
-                      <div class="text-theme-text-muted mb-2">
-                        <svg
-                          class="mx-auto h-8 w-8"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                        </svg>
-                      </div>
-                      <p class="text-theme-text-secondary mb-2 text-sm font-medium">
-                        Discord Not Connected
-                      </p>
-                      <p class="text-theme-text-muted text-xs">
-                        Log in with Discord to display your real-time Discord
-                        profile on your bio page. This will show your status,
-                        current activity, and Spotify listening status.
-                      </p>
-                    </div>
-                  )}
-                </div>
-            </CollapsibleSection>
-            {/* Background Effects */}
-            <CollapsibleSection
-              title="Background Effects"
-              icon={Palette}
-              collapsed={backgroundEffectsCollapsed}
-            >
-                <div class="space-y-6">
-                  {/* Gradient Configuration */}
-                  <GradientConfigPanel
-                    config={gradientConfig}
-                    fallbackColor={backgroundColor.value}
-                  />
-                  {/* Particle Configuration */}
-                  <ParticleConfigPanel
-                    config={particleConfig}
-                    previewEnabled={true}
-                  />
-                </div>
-            </CollapsibleSection>
-            {/* Links Management */}
-            <CollapsibleSection
-              title="Bio Links"
-              icon={LinkIcon}
-              collapsed={linksCollapsed}
-              meta={`${bioData.value.bioLinks.length}/${bioData.value.bioLimits.maxBioLinks}`}
-            >
-                <div>
-                  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-theme-text-muted text-sm">
-                      Links appear as circular buttons on your page, in the
-                      order shown here.
-                    </p>
-                    {!showNewLinkForm.value && (
-                      <button
-                        onClick$={() => (showNewLinkForm.value = true)}
-                        class={`btn-cute ${buttonClasses}`}
-                        disabled={
-                          bioData.value.bioLinks.length >=
-                          bioData.value.bioLimits.maxBioLinks
-                        }
-                      >
-                        <Plus class="h-4 w-4" />
-                        Add Link
-                      </button>
-                    )}
-                  </div>
-                  {/* Add New Link Form */}
-                  {showNewLinkForm.value &&
-                    bioData.value.bioLinks.length <
-                    bioData.value.bioLimits.maxBioLinks && (
-                      <div class="border-theme-card-border bg-theme-bg-secondary/30 mb-6 space-y-4 rounded-2xl border p-4">
-                        <Form action={createBioLink} class="space-y-4">
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs">
-                              URL
-                            </label>
-                            <input
-                              type="url"
-                              name="url"
-                              value={newLinkUrl.value}
-                              onInput$={(e) =>
-                                (newLinkUrl.value = (
-                                  e.target as HTMLInputElement
-                                ).value)
-                              }
-                              placeholder="https://twitch.tv/yourname"
-                              maxLength={bioData.value.bioLimits.maxUrlLength}
-                              required
-                              class={inputClasses}
-                            />
-                            <p class="text-theme-text-muted mt-1 text-xs">
-                              Paste a link — the icon and title are filled in
-                              automatically for known sites.
-                            </p>
-                          </div>
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs">
-                              Title
-                              <span class="text-theme-text-muted ml-2">
-                                ({newLinkTitle.value.length}/
-                                {bioData.value.bioLimits.maxLinkTitleLength})
-                              </span>
-                            </label>
-                            <input
-                              type="text"
-                              name="title"
-                              value={newLinkTitle.value}
-                              onInput$={(e) => {
-                                newLinkTitle.value = (
-                                  e.target as HTMLInputElement
-                                ).value;
-                                newLinkTitleTouched.value = true;
-                              }}
-                              placeholder="Twitch"
-                              maxLength={
-                                bioData.value.bioLimits.maxLinkTitleLength
-                              }
-                              required
-                              class={inputClasses}
-                            />
-                          </div>
-                          <div>
-                            <label class="text-theme-text-secondary mb-1 block text-xs">
-                              Icon
-                            </label>
-                            <IconSelector
-                              selectedIcon={newLinkIcon.value}
-                              suggestedIcon={newLinkSuggestion.value}
-                              onIconSelect={$((icon) => {
-                                newLinkIcon.value = icon;
-                                newLinkIconTouched.value = true;
-                              })}
-                            />
-                            <input
-                              type="hidden"
-                              name="icon"
-                              value={newLinkIcon.value}
-                            />
-                          </div>
-                          <div class="border-theme-card-border bg-theme-bg-primary/30 flex items-center gap-3 rounded-xl border p-3">
-                            <span
-                              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2"
-                              style={{
-                                borderColor: accentColor.value,
-                                backgroundColor: `${accentColor.value}20`,
-                              }}
-                            >
-                              <BioLinkIcon
-                                icon={newLinkIcon.value}
-                                size={22}
-                                class="text-theme-text-primary"
-                              />
-                            </span>
-                            <div class="min-w-0">
-                              <div class="text-theme-text-primary truncate text-sm font-medium">
-                                {newLinkTitle.value || "Untitled link"}
-                              </div>
-                              <div class="text-theme-text-muted truncate text-xs">
-                                {newLinkUrl.value || "No URL yet"}
-                              </div>
-                            </div>
-                          </div>
-                          {createBioLink.value?.failed && (
-                            <Callout tone="danger" icon={CircleX}>
-                              {createBioLink.value.message}
-                            </Callout>
-                          )}
-                          <div class="flex gap-2">
-                            <button
-                              type="submit"
-                              class={`btn-cute ${buttonClasses}`}
-                            >
-                              <Plus class="h-4 w-4" />
-                              Add Link
-                            </button>
-                            <button
-                              type="button"
-                              onClick$={resetNewLinkForm}
-                              class={`btn-secondary ${buttonClasses}`}
-                            >
-                              <X class="h-4 w-4" />
-                              Cancel
-                            </button>
-                          </div>
-                        </Form>
-                      </div>
-                    )}
-                  {/* Max links reached message */}
-                  {bioData.value.bioLinks.length >=
-                    bioData.value.bioLimits.maxBioLinks && (
-                      <Callout tone="warning" class="mb-6">
-                        You've reached your maximum bio links limit (
-                        {bioData.value.bioLimits.maxBioLinks}).
-                        {bioData.value.bioLinks.length > 0 &&
-                          " Delete some links to add new ones."}
-                      </Callout>
-                    )}
-                  {/* Existing Links */}
-                  <div class="space-y-2">
-                    {bioData.value.bioLinks.map((link, index) => (
-                      <div
-                        key={link.id}
-                        class="border-theme-card-border bg-theme-bg-secondary/30 rounded-2xl border p-3"
-                      >
-                        {editingLink.value === link.id ? (
-                          <Form action={updateBioLink} class="space-y-3">
+                </EmptyState>
+              </Surface>
+            ) : (
+              <Surface flush class="overflow-hidden">
+                <ul class="divide-edge divide-y">
+                  {sortedLinks.map((link, index) => {
+                    const isEditing = editingLink.value === link.id;
+                    const editIcon =
+                      editingLinkIcons.value[link.id] ?? link.icon ?? "";
+                    return (
+                      <li key={link.id} class="px-3 py-2.5">
+                        {isEditing ? (
+                          <Form action={updateBioLink} class="grid gap-3">
                             <input type="hidden" name="id" value={link.id} />
                             <input
                               type="hidden"
@@ -1481,48 +1027,32 @@ export default component$(() => {
                               name="isActive"
                               value={link.isActive ? "true" : "false"}
                             />
-                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                              <div>
-                                <label class="text-theme-text-secondary mb-1 block text-xs">
-                                  Title
-                                </label>
-                                <input
-                                  type="text"
-                                  name="title"
-                                  value={link.title}
-                                  maxLength={
-                                    bioData.value.bioLimits.maxLinkTitleLength
-                                  }
-                                  required
-                                  class={`${inputClasses} text-sm`}
-                                />
-                              </div>
-                              <div>
-                                <label class="text-theme-text-secondary mb-1 block text-xs">
-                                  URL
-                                </label>
-                                <input
-                                  type="url"
-                                  name="url"
-                                  value={link.url}
-                                  maxLength={bioData.value.bioLimits.maxUrlLength}
-                                  required
-                                  class={`${inputClasses} text-sm`}
-                                />
-                              </div>
-                            </div>
+                            <Field label="Title" for={`edit-title-${link.id}`}>
+                              <Input
+                                id={`edit-title-${link.id}`}
+                                name="title"
+                                value={link.title}
+                                maxLength={limits.maxLinkTitleLength}
+                                required
+                              />
+                            </Field>
+                            <Field label="Address" for={`edit-url-${link.id}`}>
+                              <Input
+                                id={`edit-url-${link.id}`}
+                                name="url"
+                                type="url"
+                                value={link.url}
+                                maxLength={limits.maxUrlLength}
+                                required
+                              />
+                            </Field>
                             <div>
-                              <label class="text-theme-text-secondary mb-1 block text-xs">
+                              <span class="text-ink mb-1.5 block text-[13px] font-medium">
                                 Icon
-                              </label>
+                              </span>
                               <IconSelector
-                                selectedIcon={
-                                  editingLinkIcons.value[link.id] ??
-                                  link.icon ??
-                                  ""
-                                }
-                                suggestedIcon={suggestIconForUrl(link.url)}
-                                onIconSelect={$((icon) => {
+                                selectedIcon={editIcon}
+                                onIconSelect={$((icon: string) => {
                                   editingLinkIcons.value = {
                                     ...editingLinkIcons.value,
                                     [link.id]: icon,
@@ -1532,34 +1062,60 @@ export default component$(() => {
                               <input
                                 type="hidden"
                                 name="icon"
-                                value={
-                                  editingLinkIcons.value[link.id] ??
-                                  link.icon ??
-                                  ""
-                                }
+                                value={editIcon}
                               />
                             </div>
-                            <div class="flex gap-2">
-                              <button
+                            {updateBioLink.value?.failed && (
+                              <Callout tone="danger">
+                                {updateBioLink.value.message}
+                              </Callout>
+                            )}
+                            <div class="flex flex-wrap gap-2">
+                              <Button
                                 type="submit"
-                                class="btn-cute flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm"
+                                variant="primary"
+                                size="sm"
+                                loading={updateBioLink.isRunning}
                               >
-                                <Save class="h-4 w-4" />
-                                Save
-                              </button>
-                              <button
-                                type="button"
+                                Save link
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
                                 onClick$={() => (editingLink.value = null)}
-                                class="btn-secondary px-3 py-1.5 text-sm"
                               >
                                 Cancel
-                              </button>
+                              </Button>
                             </div>
                           </Form>
                         ) : (
-                          <div class="flex items-center gap-3">
-                            <div class="flex flex-col">
-                              <Form action={reorderBioLink}>
+                          <div class="flex items-center gap-2.5">
+                            <span
+                              class="border-edge flex h-9 w-9 shrink-0 items-center justify-center rounded-full border"
+                              style={`background:${accentColor.value}22;border-color:${accentColor.value}`}
+                            >
+                              <BioLinkIcon
+                                icon={link.icon ?? ""}
+                                size={18}
+                                class="text-ink"
+                              />
+                            </span>
+                            <div class="min-w-0 flex-1">
+                              <p class="text-ink truncate text-[13px] font-medium">
+                                {link.title}
+                              </p>
+                              <p class="text-ink-muted truncate text-xs">
+                                {link.url}
+                              </p>
+                            </div>
+                            <span class="text-ink-muted hidden shrink-0 text-xs sm:block">
+                              {link.clicks.toLocaleString()} clicks
+                            </span>
+                            {!link.isActive && (
+                              <Badge tone="neutral">Hidden</Badge>
+                            )}
+                            <div class="flex shrink-0 items-center gap-0.5">
+                              <Form action={reorderBioLink} class="contents">
                                 <input
                                   type="hidden"
                                   name="id"
@@ -1570,17 +1126,16 @@ export default component$(() => {
                                   name="direction"
                                   value="up"
                                 />
-                                <button
+                                <IconButton
+                                  size="sm"
                                   type="submit"
+                                  label={`Move ${link.title} up`}
                                   disabled={index === 0}
-                                  aria-label={`Move ${link.title} up`}
-                                  title="Move up"
-                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                                 >
                                   <ArrowUp class="h-4 w-4" />
-                                </button>
+                                </IconButton>
                               </Form>
-                              <Form action={reorderBioLink}>
+                              <Form action={reorderBioLink} class="contents">
                                 <input
                                   type="hidden"
                                   name="id"
@@ -1591,397 +1146,316 @@ export default component$(() => {
                                   name="direction"
                                   value="down"
                                 />
-                                <button
+                                <IconButton
+                                  size="sm"
                                   type="submit"
-                                  disabled={
-                                    index ===
-                                    bioData.value.bioLinks.length - 1
-                                  }
-                                  aria-label={`Move ${link.title} down`}
-                                  title="Move down"
-                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                                  label={`Move ${link.title} down`}
+                                  disabled={index === sortedLinks.length - 1}
                                 >
                                   <ArrowDown class="h-4 w-4" />
-                                </button>
+                                </IconButton>
                               </Form>
-                            </div>
-
-                            <span
-                              class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 ${link.isActive ? "" : "opacity-40"}`}
-                              style={{
-                                borderColor: accentColor.value,
-                                backgroundColor: `${accentColor.value}20`,
-                              }}
-                            >
-                              <BioLinkIcon
-                                icon={link.icon}
-                                size={18}
-                                class="text-theme-text-primary"
-                              />
-                            </span>
-
-                            <div class="min-w-0 flex-1">
-                              <div class="flex items-center gap-2">
-                                <span class="text-theme-text-primary truncate font-medium">
-                                  {link.title}
-                                </span>
-                                {!link.isActive && (
-                                  <span class="text-theme-text-muted border-theme-card-border shrink-0 rounded-full border px-2 py-0.5 text-[10px]">
-                                    Hidden
-                                  </span>
-                                )}
-                              </div>
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="text-theme-text-secondary hover:text-theme-accent-primary block truncate text-sm transition-colors"
+                              <IconButton
+                                size="sm"
+                                label={`Edit ${link.title}`}
+                                onClick$={() => (editingLink.value = link.id)}
                               >
-                                {link.url}
-                              </a>
-                              <div class="text-theme-text-muted text-xs">
-                                {link.clicks} clicks
-                              </div>
+                                <Edit class="h-4 w-4" />
+                              </IconButton>
+                              <IconButton
+                                size="sm"
+                                variant="danger"
+                                label={`Delete ${link.title}`}
+                                onClick$={() => {
+                                  pendingDeleteLink.value = {
+                                    id: link.id,
+                                    title: link.title,
+                                  };
+                                  deleteLinkOpen.value = true;
+                                }}
+                              >
+                                <Trash2 class="h-4 w-4" />
+                              </IconButton>
                             </div>
-
-                            {deletingLink.value === link.id ? (
-                              <div class="flex shrink-0 items-center gap-2">
-                                <span class="text-theme-text-secondary hidden text-sm sm:inline">
-                                  Delete?
-                                </span>
-                                <Form action={deleteBioLink}>
-                                  <input
-                                    type="hidden"
-                                    name="id"
-                                    value={link.id}
-                                  />
-                                  <button
-                                    type="submit"
-                                    class="bg-theme-error/15 text-theme-error hover:bg-theme-error/25 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                </Form>
-                                <button
-                                  type="button"
-                                  onClick$={() => (deletingLink.value = null)}
-                                  class="btn-secondary px-3 py-1.5 text-sm"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <div class="flex shrink-0 items-center gap-1">
-                                <Form action={updateBioLink}>
-                                  <input
-                                    type="hidden"
-                                    name="id"
-                                    value={link.id}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="title"
-                                    value={link.title}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="url"
-                                    value={link.url}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="icon"
-                                    value={link.icon ?? ""}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="order"
-                                    value={link.order}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="isActive"
-                                    value={link.isActive ? "false" : "true"}
-                                  />
-                                  <button
-                                    type="submit"
-                                    aria-label={
-                                      link.isActive
-                                        ? `Hide ${link.title}`
-                                        : `Show ${link.title}`
-                                    }
-                                    title={
-                                      link.isActive
-                                        ? "Hide from bio page"
-                                        : "Show on bio page"
-                                    }
-                                    class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
-                                  >
-                                    {link.isActive ? (
-                                      <Eye class="h-4 w-4" />
-                                    ) : (
-                                      <EyeOff class="h-4 w-4" />
-                                    )}
-                                  </button>
-                                </Form>
-                                <button
-                                  type="button"
-                                  onClick$={() => (editingLink.value = link.id)}
-                                  aria-label={`Edit ${link.title}`}
-                                  title="Edit link"
-                                  class="text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-tertiary/40 rounded-lg p-2 transition-colors"
-                                >
-                                  <Edit class="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick$={() =>
-                                    (deletingLink.value = link.id)
-                                  }
-                                  aria-label={`Delete ${link.title}`}
-                                  title="Delete link"
-                                  class="text-theme-error hover:bg-theme-error/10 rounded-lg p-2 transition-colors"
-                                >
-                                  <Trash2 class="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
                           </div>
                         )}
-                      </div>
-                    ))}
-                    {bioData.value.bioLinks.length === 0 && (
-                      <EmptyState
-                        icon={LinkIcon}
-                        title="No links yet"
-                        description="Add your socials, streams, shops or anything else you want to share."
-                      >
-                        {!showNewLinkForm.value && (
-                          <button
-                            onClick$={() => (showNewLinkForm.value = true)}
-                            class={`btn-cute ${buttonClasses}`}
-                          >
-                            <Plus class="h-4 w-4" />
-                            Add your first link
-                          </button>
-                        )}
-                      </EmptyState>
-                    )}
-                  </div>
-                </div>
-            </CollapsibleSection>
-            {bioData.value.analytics && (
-              <CollapsibleSection
-                title="Analytics (Last 7 Days)"
-                icon={BarChart3}
-                collapsed={analyticsCollapsed}
-              >
-                  <div>
-                    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                      <div class="text-center">
-                        <div class="text-theme-accent-primary text-2xl font-bold">
-                          {bioData.value.user.bioViews}
-                        </div>
-                        <div class="text-theme-text-secondary text-sm">
-                          Total Views
-                        </div>
-                      </div>
-                      <div class="text-center">
-                        <div class="text-theme-accent-primary text-2xl font-bold">
-                          {bioData.value.analytics.totalViews}
-                        </div>
-                        <div class="text-theme-text-secondary text-sm">
-                          Recent Views
-                        </div>
-                      </div>
-                      <div class="text-center">
-                        <div class="text-theme-accent-primary text-2xl font-bold">
-                          {bioData.value.analytics.uniqueIPs}
-                        </div>
-                        <div class="text-theme-text-secondary text-sm">
-                          Unique Visitors
-                        </div>
-                      </div>
-                    </div>
-
-                    {bioData.value.analytics.topLinks.length > 0 && (
-                      <div>
-                        <h3 class="text-theme-text-primary mb-3 font-medium">
-                          Top Links
-                        </h3>
-                        <div class="space-y-2">
-                          {bioData.value.analytics.topLinks
-                            .slice(0, 5)
-                            .map((link) => (
-                              <div
-                                key={link.id}
-                                class="bg-theme-accent-primary/5 flex items-center justify-between rounded-lg p-2"
-                              >
-                                <span class="text-theme-text-primary text-sm font-medium">
-                                  {link.title}
-                                </span>
-                                <span class="text-theme-text-secondary text-sm">
-                                  {link.clicks} clicks
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-              </CollapsibleSection>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Surface>
             )}
-          </div>
+          </Section>
 
-          {/* Preview Panel */}
-          <div class="sticky top-8 self-start">
-            <Panel title="Preview" icon={Eye}>
-              {bioData.value.user.bioUsername &&
-                bioData.value.user.bioIsPublic && (
-                  <Button
-                    q:slot="actions"
-                    href={`/${bioData.value.user.bioUsername}`}
-                    external
-                    variant="glass"
-                    size="sm"
-                  >
-                    <ExternalLink class="h-4 w-4" />
-                    View Live
-                  </Button>
-                )}
-              {/* Bio Preview */}
-              <div class="border-theme-card-border relative overflow-hidden rounded-2xl border">
-                <BioPageDisplay
-                  bioData={previewBioData.value}
-                  isPreview={true}
-                  class="relative z-10 !min-h-1/3"
+          <Section
+            id="bio-appearance"
+            title="Appearance"
+            description="Colours and background of your public page."
+          >
+            <Surface>
+              <div class="grid gap-4">
+                <div class="grid gap-4 sm:grid-cols-3">
+                  <ColorField
+                    label="Background"
+                    id="bio-bg-color"
+                    value={backgroundColor}
+                  />
+                  <ColorField
+                    label="Text"
+                    id="bio-text-color"
+                    value={textColor}
+                  />
+                  <ColorField
+                    label="Accent"
+                    id="bio-accent-color"
+                    value={accentColor}
+                  />
+                </div>
+
+                {!gradientConfig.value.enabled &&
+                  (textContrast.value.verdict === "unreadable" ||
+                    textContrast.value.verdict === "low") && (
+                    <Callout
+                      tone={
+                        textContrast.value.verdict === "unreadable"
+                          ? "danger"
+                          : "warning"
+                      }
+                      title="Text may be hard to read"
+                    >
+                      Your text colour has a contrast ratio of{" "}
+                      {textContrast.value.ratio?.toFixed(1)}:1 against the
+                      background. Aim for at least 4.5:1 so visitors can read
+                      your introduction.
+                    </Callout>
+                  )}
+
+                {!gradientConfig.value.enabled &&
+                  accentContrast.value.verdict === "unreadable" && (
+                    <Callout tone="warning" title="Accent may be hard to see">
+                      Your accent colour sits very close to the background, so
+                      link buttons will be difficult to make out.
+                    </Callout>
+                  )}
+
+                <Divider />
+
+                <GradientConfigPanel
+                  config={gradientConfig}
+                  fallbackColor={backgroundColor.value}
                 />
+
+                <Divider />
+
+                <Field
+                  label="Background image URL"
+                  for="bio-bg-image"
+                  help="Sits behind the colour or gradient. Leave empty for none."
+                >
+                  <Input
+                    id="bio-bg-image"
+                    type="url"
+                    value={backgroundImage.value}
+                    maxLength={limits.maxUrlLength}
+                    placeholder="https://example.com/background.jpg"
+                    onInput$={(_, el) => (backgroundImage.value = el.value)}
+                  />
+                </Field>
               </div>
-              {!bioData.value.user.bioUsername && (
-                <Callout tone="warning" class="mt-4">
-                  Set a username to make your bio page accessible to others
-                </Callout>
-              )}
-            </Panel>
-          </div>
+            </Surface>
+          </Section>
+
+          <Section
+            id="bio-integrations"
+            title="Integrations"
+            description="Show what you are doing or listening to."
+          >
+            <Surface>
+              <div class="grid gap-4">
+                <Switch
+                  checked={showDiscord.value}
+                  label="Show Discord presence"
+                  help="Displays your Discord status, activity and listening state. Requires the Lanyard bot to be able to see you."
+                  onChange$={(checked) => {
+                    showDiscord.value = checked;
+                    if (checked) testDiscordConnection();
+                  }}
+                />
+
+                {showDiscord.value &&
+                  (discordError.value ? (
+                    <Callout
+                      tone="warning"
+                      title="Discord presence unavailable"
+                    >
+                      {discordError.value}
+                      <Button
+                        q:slot="actions"
+                        size="sm"
+                        variant="secondary"
+                        loading={discordTesting.value}
+                        onClick$={testDiscordConnection}
+                      >
+                        Test again
+                      </Button>
+                    </Callout>
+                  ) : (
+                    <Callout tone="success" title="Discord presence connected">
+                      Your status will appear on your page.
+                      <Button
+                        q:slot="actions"
+                        size="sm"
+                        variant="secondary"
+                        loading={discordTesting.value}
+                        onClick$={testDiscordConnection}
+                      >
+                        Test again
+                      </Button>
+                    </Callout>
+                  ))}
+
+                {showDiscord.value && (
+                  <Fieldset legend="What to show">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      {(
+                        [
+                          ["showAvatar", "Avatar"],
+                          ["showStatus", "Online status"],
+                          ["showActivity", "Current activity"],
+                          ["showSpotify", "Spotify listening"],
+                          ["showBadges", "Profile badges"],
+                          ["showGuild", "Server tag"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <Switch
+                          key={key}
+                          checked={Boolean(discordConfig.value[key])}
+                          label={label}
+                          onChange$={(checked) =>
+                            (discordConfig.value = {
+                              ...discordConfig.value,
+                              [key]: checked,
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </Fieldset>
+                )}
+
+                <Divider />
+
+                <Field
+                  label="Spotify track"
+                  for="bio-spotify"
+                  help="A Spotify track link, embedded as a player. Leave empty for none."
+                >
+                  <Input
+                    id="bio-spotify"
+                    value={spotifyTrack.value}
+                    maxLength={limits.maxUrlLength}
+                    placeholder="https://open.spotify.com/track/..."
+                    onInput$={(_, el) => (spotifyTrack.value = el.value)}
+                  />
+                </Field>
+              </div>
+            </Surface>
+          </Section>
+
+          <Section
+            id="bio-effects"
+            title="Effects"
+            description="Optional movement behind your page."
+          >
+            <Surface>
+              <ParticleConfigPanel
+                config={particleConfig}
+                label="Particles on your bio page"
+              />
+            </Surface>
+          </Section>
+
+          <Section
+            id="bio-advanced"
+            title="Advanced"
+            description="Custom CSS, for full control of the published page."
+          >
+            <Surface>
+              <Field
+                label="Custom CSS"
+                for="bio-css"
+                error={cssWarning.value ?? undefined}
+                help="Applied to your public page only. Rules that can load remote content are removed when you save."
+              >
+                <Textarea
+                  id="bio-css"
+                  rows={8}
+                  spellcheck={false}
+                  value={customCss.value}
+                  class="font-mono text-xs"
+                  placeholder=".bio-link { border-radius: 4px; }"
+                  onInput$={(_, el) => (customCss.value = el.value)}
+                />
+              </Field>
+            </Surface>
+          </Section>
         </div>
 
-        {/* Sticky Save/Reset Bar */}
-        {hasChanges.value && (
-          <div class="border-theme-card-border bg-theme-bg-secondary/80 fixed right-0 bottom-0 left-0 z-50 border-t p-4 backdrop-blur-lg">
-            <div class="container mx-auto flex items-center justify-between">
-              <div class="text-theme-text-secondary text-sm">
-                You have unsaved changes
-              </div>
-              <div class="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick$={resetToOriginal}
-                  class="btn-secondary flex items-center gap-2 rounded-2xl px-6 py-3 font-medium transition-all duration-300"
-                >
-                  <X class="h-4 w-4" />
-                  Reset
-                </button>
-                <Form action={updateBio}>
-                  {/* All form fields as hidden inputs */}
-                  <input
-                    type="hidden"
-                    name="bioUsername"
-                    value={username.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDisplayName"
-                    value={displayName.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDescription"
-                    value={description.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioProfileImage"
-                    value={profileImage.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioBackgroundImage"
-                    value={backgroundImage.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioBackgroundColor"
-                    value={backgroundColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioTextColor"
-                    value={textColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioAccentColor"
-                    value={accentColor.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioCustomCss"
-                    value={customCss.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioSpotifyTrack"
-                    value={spotifyTrack.value}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioIsPublic"
-                    value={isPublic.value ? "true" : "false"}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioGradientConfig"
-                    value={JSON.stringify(gradientConfig.value)}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioParticleConfig"
-                    value={JSON.stringify(particleConfig.value)}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioShowDiscord"
-                    value={showDiscord.value ? "true" : "false"}
-                  />
-                  <input
-                    type="hidden"
-                    name="bioDiscordConfig"
-                    value={JSON.stringify(discordConfig.value)}
-                  />
-                  <button
-                    type="submit"
-                    class="btn-cute flex items-center gap-2 rounded-2xl px-6 py-3 font-medium transition-all duration-300"
-                  >
-                    <Save class="h-4 w-4" />
-                    Save All Changes
-                  </button>
-                </Form>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        <div q:slot="preview">
+          <PreviewPane
+            label="Bio page"
+            note={isDirty.value ? "Not saved yet" : undefined}
+          >
+            <BioPageDisplay
+              bioData={previewBioData.value}
+              isPreview={true}
+              class="relative z-10 !min-h-[28rem]"
+            />
+          </PreviewPane>
+          {!username.value && (
+            <Callout tone="warning" class="mt-3">
+              Set a username so your page has an address people can visit.
+            </Callout>
+          )}
+        </div>
+      </EditorLayout>
+
+      <Dialog open={deleteLinkOpen} title="Delete this link?" size="sm">
+        <p class="text-ink-muted text-[13px] leading-5">
+          <span class="text-ink font-medium">
+            {pendingDeleteLink.value?.title}
+          </span>{" "}
+          is removed from your page immediately, along with its click count.
+          This cannot be undone.
+        </p>
+        <Button
+          q:slot="footer"
+          variant="secondary"
+          onClick$={() => (deleteLinkOpen.value = false)}
+        >
+          Cancel
+        </Button>
+        <Form q:slot="footer" action={deleteBioLink}>
+          <input type="hidden" name="id" value={pendingDeleteLink.value?.id} />
+          <Button
+            type="submit"
+            variant="danger"
+            loading={deleteBioLink.isRunning}
+          >
+            Delete link
+          </Button>
+        </Form>
+      </Dialog>
+    </Page>
   );
 });
 
 export const head: DocumentHead = {
-  title: "Bio Page Builder - twink.forsale",
+  title: "Bio page - twink.forsale",
   meta: [
     {
       name: "description",
-      content: "Create your custom bio link page",
+      content: "Build a public page linking everywhere people can find you.",
     },
   ],
 };

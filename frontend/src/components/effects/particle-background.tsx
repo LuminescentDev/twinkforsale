@@ -45,20 +45,31 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
     // eslint-disable-next-line qwik/no-use-visible-task
     useVisibleTask$(({ track }) => {
       track(() => config);
-      
+
       const canvas = canvasRef.value;
       if (!canvas || !config.enabled) return;
+
+      // Continuous background movement is decorative, so it is dropped
+      // entirely when the user asks for reduced motion. A single static frame
+      // still renders, keeping the theme's atmosphere without the animation.
+      const reducedMotion =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
       let particles: Particle[] = [];
       let animationId: number;
       let lastParticleTime = 0;
       const maxParticles = Math.floor((config.amount / 100) * 150); // Max 150 particles
-      const particleInterval = Math.max(50, 500 - (config.amount * 4)); // More particles = faster spawn
+      const particleInterval = Math.max(50, 500 - config.amount * 4); // More particles = faster spawn
 
-      const createParticle = (id: number, width: number, height: number): Particle => {
+      const createParticle = (
+        id: number,
+        width: number,
+        height: number,
+      ): Particle => {
         const baseSpeedX = (Math.random() - 0.5) * config.speed;
         const baseSpeedY = Math.random() * config.speed + 0.1;
-        
+
         let speedX = baseSpeedX;
         let speedY = baseSpeedY;
         let startX = Math.random() * width;
@@ -98,13 +109,19 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
           id,
           x: startX,
           y: startY,
-          size: Math.random() * (config.size.max - config.size.min) + config.size.min,
+          size:
+            Math.random() * (config.size.max - config.size.min) +
+            config.size.min,
           speedX,
           speedY,
-          opacity: Math.random() * (config.opacity.max - config.opacity.min) + config.opacity.min,
-          color: config.colors[Math.floor(Math.random() * config.colors.length)],
+          opacity:
+            Math.random() * (config.opacity.max - config.opacity.min) +
+            config.opacity.min,
+          color:
+            config.colors[Math.floor(Math.random() * config.colors.length)],
           rotation: config.type === "confetti" ? Math.random() * 360 : 0,
-          rotationSpeed: config.type === "confetti" ? (Math.random() - 0.5) * 5 : 0,
+          rotationSpeed:
+            config.type === "confetti" ? (Math.random() - 0.5) * 5 : 0,
         };
       };
 
@@ -115,7 +132,7 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
         ctx.save();
         ctx.globalAlpha = particle.opacity;
         ctx.fillStyle = particle.color;
-        
+
         switch (config.type) {
           case "hearts":
             drawHeart(ctx, particle.x, particle.y, particle.size);
@@ -130,10 +147,16 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
             drawBubble(ctx, particle.x, particle.y, particle.size);
             break;
           case "confetti":
-            drawConfetti(ctx, particle.x, particle.y, particle.size, particle.rotation || 0);
+            drawConfetti(
+              ctx,
+              particle.x,
+              particle.y,
+              particle.size,
+              particle.rotation || 0,
+            );
             break;
         }
-        
+
         ctx.restore();
       };
 
@@ -168,7 +191,7 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
       ) => {
         ctx.save();
         ctx.translate(x, y);
-        
+
         ctx.beginPath();
         ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
         ctx.fill();
@@ -199,16 +222,16 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
       ) => {
         ctx.save();
         ctx.translate(x, y);
-        
+
         ctx.beginPath();
         for (let i = 0; i < 5; i++) {
           ctx.lineTo(
             Math.cos(((18 + i * 72) / 180) * Math.PI) * size,
-            -Math.sin(((18 + i * 72) / 180) * Math.PI) * size
+            -Math.sin(((18 + i * 72) / 180) * Math.PI) * size,
           );
           ctx.lineTo(
             Math.cos(((54 + i * 72) / 180) * Math.PI) * (size / 2),
-            -Math.sin(((54 + i * 72) / 180) * Math.PI) * (size / 2)
+            -Math.sin(((54 + i * 72) / 180) * Math.PI) * (size / 2),
           );
         }
         ctx.closePath();
@@ -225,14 +248,14 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
       ) => {
         ctx.save();
         ctx.translate(x, y);
-        
+
         // Main bubble
         ctx.beginPath();
         ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
         ctx.fill();
 
         // Bubble highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
         ctx.beginPath();
         ctx.arc(-size / 6, -size / 6, size / 6, 0, Math.PI * 2);
         ctx.fill();
@@ -250,9 +273,9 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate((rotation * Math.PI) / 180);
-        
+
         ctx.fillRect(-size / 4, -size / 2, size / 2, size);
-        
+
         ctx.restore();
       };
 
@@ -266,9 +289,10 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
           // Update position
           particle.x += particle.speedX;
           particle.y += particle.speedY;
-          
+
           if (particle.rotationSpeed) {
-            particle.rotation = (particle.rotation || 0) + particle.rotationSpeed;
+            particle.rotation =
+              (particle.rotation || 0) + particle.rotationSpeed;
           }
 
           // Fade out effect for some particle types
@@ -279,10 +303,12 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
           }
 
           // Remove particles that are off screen or too faded
-          const isOffScreen = 
-            particle.x < -50 || particle.x > canvas.width + 50 ||
-            particle.y < -50 || particle.y > canvas.height + 50;
-          
+          const isOffScreen =
+            particle.x < -50 ||
+            particle.x > canvas.width + 50 ||
+            particle.y < -50 ||
+            particle.y > canvas.height + 50;
+
           if (isOffScreen || particle.opacity < 0.01) {
             return false;
           }
@@ -296,11 +322,13 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
           currentTime - lastParticleTime > particleInterval &&
           particles.length < maxParticles
         ) {
-          particles.push(createParticle(Date.now(), canvas.width, canvas.height));
+          particles.push(
+            createParticle(Date.now(), canvas.width, canvas.height),
+          );
           lastParticleTime = currentTime;
         }
 
-        animationId = requestAnimationFrame(animate);
+        if (!reducedMotion) animationId = requestAnimationFrame(animate);
       };
 
       const resizeCanvas = () => {
@@ -311,7 +339,17 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
       resizeCanvas();
       const handleResize = () => resizeCanvas();
       window.addEventListener("resize", handleResize);
-      
+
+      if (reducedMotion) {
+        // Seed a full field once so the static frame is not empty.
+        for (let i = 0; i < maxParticles; i++) {
+          const particle = createParticle(i, canvas.width, canvas.height);
+          particle.y = Math.random() * canvas.height;
+          particle.x = Math.random() * canvas.width;
+          particles.push(particle);
+        }
+      }
+
       animate(performance.now());
 
       return () => {
@@ -329,10 +367,13 @@ export const ParticleBackground = component$<ParticleBackgroundProps>(
     return (
       <canvas
         ref={canvasRef}
+        aria-hidden="true"
         class={`pointer-events-none fixed inset-0 z-0 ${className}`}
         style={{
           filter: "blur(0.5px)",
-          opacity: "0.7",
+          // Subdued by default so working content always dominates. Pages that
+          // want a stronger atmosphere raise it via `class`.
+          opacity: "var(--particle-opacity, 0.35)",
         }}
       />
     );

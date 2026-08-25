@@ -1,65 +1,130 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "@luminescent/ui";
 @plugin "@luminescent/ui/lum-bg";
 @config "@luminescent/ui-qwik/config";
 @source "../node_modules/@luminescent/ui-qwik";
 
-/* Tailwind v4 theme configuration */
+/* ---------------------------------------------------------------------------
+   Role tokens
+   ---------------------------------------------------------------------------
+   The signed-in application is built exclusively on these semantic roles. A
+   theme swaps the underlying `--ui-*` values; it never changes geometry,
+   hierarchy or the meaning of a status colour.
+--------------------------------------------------------------------------- */
 @theme {
-  /* Theme background colors */
-  --color-theme-bg-primary: var(--theme-bg-primary);
-  --color-theme-bg-secondary: var(--theme-bg-secondary);
-  --color-theme-bg-tertiary: var(--theme-bg-tertiary);
+  --color-canvas: var(--ui-canvas);
+  --color-nav: var(--ui-nav);
+  --color-surface: var(--ui-surface);
+  --color-surface-subtle: var(--ui-surface-subtle);
+  --color-surface-hover: var(--ui-surface-hover);
 
-  /* Theme text colors */
-  --color-theme-text-primary: var(--theme-text-primary);
-  --color-theme-text-secondary: var(--theme-text-secondary);
-  --color-theme-text-muted: var(--theme-text-muted);
+  --color-edge: var(--ui-edge);
+  --color-edge-strong: var(--ui-edge-strong);
 
-  /* Theme accent colors */
-  --color-theme-accent-primary: var(--theme-accent-primary);
-  --color-theme-accent-secondary: var(--theme-accent-secondary);
-  --color-theme-accent-tertiary: var(--theme-accent-tertiary);
-  --color-theme-accent-quaternary: var(--theme-accent-quaternary);
+  --color-ink: var(--ui-ink);
+  --color-ink-muted: var(--ui-ink-muted);
 
-  /* Theme UI element colors */
-  --color-theme-card-bg: var(--theme-card-bg);
-  --color-theme-card-border: var(--theme-card-border);
-  --color-theme-glass-bg: var(--theme-glass-bg);
-  --color-theme-glass-border: var(--theme-glass-border);
+  --color-accent: var(--ui-accent);
+  --color-accent-hover: var(--ui-accent-hover);
+  --color-accent-soft: var(--ui-accent-soft);
+  --color-accent-text: var(--ui-accent-text);
+  --color-on-accent: var(--ui-on-accent);
 
-  /* Theme button colors */
+  --color-overlay: var(--ui-overlay);
+
+  --color-success: var(--ui-success);
+  --color-success-soft: var(--ui-success-soft);
+  --color-warning: var(--ui-warning);
+  --color-warning-soft: var(--ui-warning-soft);
+  --color-danger: var(--ui-danger);
+  --color-danger-soft: var(--ui-danger-soft);
+  --color-danger-fill: var(--ui-danger-fill);
+  --color-danger-fill-hover: var(--ui-danger-fill-hover);
+  --color-info: var(--ui-info);
+  --color-info-soft: var(--ui-info-soft);
+
+  /* Geometry: controls 6px, ordinary surfaces 8px, dialogs/previews 12px. */
+  --radius-control: 6px;
+  --radius-surface: 8px;
+  --radius-dialog: 12px;
+
+  /* Elevation is reserved for menus, dialogs, sheets and temporary bars. */
+  --shadow-pop: 0 8px 24px -6px var(--ui-shadow),
+    0 2px 6px -2px var(--ui-shadow);
+  --shadow-bar: 0 -6px 20px -8px var(--ui-shadow);
+
+  /* Compatibility aliases used by user-authored bio integrations and older
+     legal markup. They resolve to the same roles as the rebuilt UI. */
+  --color-theme-bg-primary: var(--ui-canvas);
+  --color-theme-bg-secondary: var(--ui-surface);
+  --color-theme-bg-tertiary: var(--ui-surface-subtle);
+  --color-theme-text-primary: var(--ui-ink);
+  --color-theme-text-secondary: var(--ui-ink-muted);
+  --color-theme-text-muted: var(--ui-ink-muted);
+  --color-theme-accent-primary: var(--ui-accent-text);
+  --color-theme-accent-secondary: var(--ui-accent);
+  --color-theme-accent-tertiary: var(--ui-accent-text);
+  --color-theme-accent-quaternary: var(--ui-accent);
+  --color-theme-card-bg: var(--ui-surface);
+  --color-theme-card-border: var(--ui-edge);
+  --color-theme-glass-bg: var(--ui-surface);
+  --color-theme-glass-border: var(--ui-edge);
   --color-theme-button-gradient-start: var(--theme-button-gradient-start);
   --color-theme-button-gradient-end: var(--theme-button-gradient-end);
   --color-theme-button-shadow: var(--theme-button-shadow);
-  /* Theme scrollbar colors */
   --color-theme-scrollbar-track: var(--theme-scrollbar-track);
   --color-theme-scrollbar-thumb: var(--theme-scrollbar-thumb);
   --color-theme-scrollbar-thumb-hover: var(--theme-scrollbar-thumb-hover);
-
-  /* Theme action colors */
   --color-theme-confirm: var(--theme-confirm);
   --color-theme-confirm-hover: var(--theme-confirm-hover);
   --color-theme-deny: var(--theme-deny);
   --color-theme-deny-hover: var(--theme-deny-hover);
   --color-theme-warning-hover: var(--theme-warning-hover);
   --color-theme-info-hover: var(--theme-info-hover);
-
-  /* Semantic status colors (theme-driven; use with opacity modifiers,
-     e.g. bg-theme-success/10 border-theme-success/30 text-theme-success) */
-  --color-theme-success: var(--theme-confirm);
-  --color-theme-error: var(--theme-deny);
-  --color-theme-warning: var(--theme-warning);
-  --color-theme-info: var(--theme-info);
+  --color-theme-success: var(--ui-success);
+  --color-theme-error: var(--ui-danger);
+  --color-theme-warning: var(--ui-warning);
+  --color-theme-info: var(--ui-info);
 }
 
-/* Custom styles for cute femboy aesthetic */
-
+/* Dark role tokens are the boot default; the theme store overwrites them on
+   the document element before first paint. */
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
 
-  /* Default theme colors (dark theme) - will be overridden by theme system */
+  --ui-canvas: #0e1016;
+  --ui-nav: #12151d;
+  --ui-surface: #171b24;
+  --ui-surface-subtle: #1d222c;
+  --ui-surface-hover: #232833;
+  --ui-edge: #2b3240;
+  --ui-edge-strong: #3d4557;
+  --ui-ink: #f1f3f8;
+  --ui-ink-muted: #99a3b5;
+  --ui-accent: #db2777;
+  --ui-accent-hover: #ec4899;
+  --ui-accent-soft: rgba(236, 72, 153, 0.15);
+  --ui-accent-text: #f472b6;
+  --ui-on-accent: #ffffff;
+  --ui-overlay: rgba(5, 6, 10, 0.72);
+  --ui-shadow: rgba(0, 0, 0, 0.55);
+  --ui-success: #4ade80;
+  --ui-success-soft: rgba(74, 222, 128, 0.14);
+  --ui-warning: #fbbf24;
+  --ui-warning-soft: rgba(251, 191, 36, 0.14);
+  --ui-danger: #f87171;
+  --ui-danger-soft: rgba(248, 113, 113, 0.14);
+  --ui-danger-fill: #b91c1c;
+  --ui-danger-fill-hover: #dc2626;
+  --ui-info: #60a5fa;
+  --ui-info-soft: rgba(96, 165, 250, 0.14);
+
+  /* Compatibility palette defaults for bio integrations and legal markup. */
   --theme-bg-primary: #0f172a;
   --theme-bg-secondary: #1e293b;
   --theme-bg-tertiary: #334155;
@@ -73,7 +138,11 @@
   --theme-accent-secondary: #f472b6;
   --theme-accent-tertiary: #c084fc;
   --theme-accent-quaternary: #8b5cf6;
-  --theme-card-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+  --theme-card-bg: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.8),
+    rgba(30, 41, 59, 0.6)
+  );
   --theme-card-border: rgba(236, 72, 153, 0.2);
   --theme-glass-bg: rgba(15, 23, 42, 0.3);
   --theme-glass-border: rgba(255, 255, 255, 0.1);
@@ -93,174 +162,95 @@
   --theme-info-hover: #0ea5e9;
 }
 
-/* Custom scrollbar */
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+
+body {
+  color: var(--ui-ink);
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--theme-scrollbar-track);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--theme-scrollbar-thumb);
-  border-radius: 4px;
+  background: var(--ui-edge-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-scrollbar-thumb-hover);
+  background: var(--ui-ink-muted);
+  background-clip: content-box;
 }
 
-/* Cute animations */
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+/* Colour/opacity only — never geometry. 150–200ms. */
+body,
+[class*="bg-surface"],
+[class*="bg-canvas"],
+[class*="bg-nav"],
+[class*="text-ink"],
+[class*="border-edge"] {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
 }
 
-@keyframes pulse-soft {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
+/* One focus treatment for the whole application. */
+.focus-ring {
+  outline: none;
 }
 
-@keyframes gradient-shift {
-
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ui-accent-text);
+  outline-offset: 2px;
+  border-radius: inherit;
 }
 
-.pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
+/* Native dialog overlays used by Dialog and Sheet. */
+dialog::backdrop {
+  background: var(--ui-overlay);
 }
 
-/* Glassmorphism effect */
-.glass {
-  background: var(--theme-glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--theme-glass-border);
+dialog {
+  color: var(--ui-ink);
 }
 
-/* Cute button styles */
-.btn-cute {
-  background: linear-gradient(135deg, var(--theme-button-gradient-start), var(--theme-button-gradient-end));
-  transition: all 0.2s ease;
-  position: relative;
+dialog:not([open]) {
+  display: none;
+}
+
+/* Truncate to a fixed number of lines (file descriptions, event messages). */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* Calmer hover — no lift, just a gentle brighten + soft shadow so buttons feel
-   responsive without everything springing off the page. */
-.btn-cute:hover {
-  filter: brightness(1.06);
-  box-shadow: 0 4px 16px var(--theme-button-shadow);
-}
+/* Legal sections form one continuous reading surface. */
 
-.btn-cute:before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.btn-cute:hover:before {
-  left: 100%;
-}
-
-/* Secondary (glass) button. Defined in the components layer so Tailwind
-   utilities on the element (px-*, rounded-*, etc.) still win. Previously this
-   class was referenced in several places but never defined, leaving those
-   buttons completely unstyled. */
-@layer components {
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1.25rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    color: var(--theme-text-primary);
-    background: var(--theme-glass-bg);
-    border: 1px solid var(--theme-glass-border);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: all 0.3s ease;
-  }
-
-  .btn-secondary:hover {
-    background: color-mix(in srgb, var(--theme-bg-tertiary) 25%, transparent);
-    border-color: var(--theme-accent-primary);
-  }
-}
-
-/* Static card surface — same look as card-cute but no hover lift/glow.
-   Used for non-interactive containers via the <Card> primitive. */
-.card-static {
-  background: var(--theme-card-bg);
-  border: 1px solid var(--theme-card-border);
-}
-
-/* Cute card hover effects */
 .card-cute {
-  transition: all 0.2s ease;
-  background: var(--theme-card-bg);
-  border: 1px solid var(--theme-card-border);
-}
-
-/* Calmer hover — accent the border and add a soft shadow, but no lift. Reserved
-   for genuinely interactive/linked cards. */
-.card-cute:hover {
-  border-color: var(--theme-accent-primary);
-  box-shadow: 0 4px 20px var(--theme-button-shadow);
-}
-
-/* Cute text gradient */
-.text-gradient-cute {
-  background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary), var(--theme-accent-tertiary), var(--theme-accent-quaternary));
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 3s ease infinite;
-}
-
-/* Gradient for SVG icons - makes them inherit the same animated gradient */
-.icon-gradient-cute {
-  background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary), var(--theme-accent-tertiary), var(--theme-accent-quaternary));
-  background-size: 300% 300%;
-  animation: gradient-shift 3s ease infinite;
-  -webkit-mask: var(--icon-mask, none);
-  mask: var(--icon-mask, none);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ui-edge);
+  border-radius: 0;
 }
 
 /* Bio link brand marks. The SVG is used as a mask so a single-colour brand
@@ -274,109 +264,22 @@
   mask: var(--bio-icon-url) center / contain no-repeat;
 }
 
-/* Heart icon specific gradient */
-.heart-gradient {
-  display: inline-block;
-  width: 1.25rem;
-  height: 1.25rem;
-  background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary), var(--theme-accent-tertiary), var(--theme-accent-quaternary));
-  background-size: 300% 300%;
-  animation: gradient-shift 3s ease infinite;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E") no-repeat center;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E") no-repeat center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-@media (min-width: 640px) {
-  .heart-gradient.sm {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-}
-
-/* Theme transitions — scoped to color properties only so theme switches
-   cross-fade smoothly without animating layout/transform on every element.
-   Elements opting into their own transitions (buttons, cards) still work. */
-:root {
-  --theme-fade: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease;
-}
-
-body,
-.card-cute,
-.glass,
-.btn-cute,
-[class*="bg-theme-"],
-[class*="text-theme-"],
-[class*="border-theme-"] {
-  transition: var(--theme-fade);
-}
-
-/* Light theme specific overrides */
-[data-theme="light"] {
-  color-scheme: light;
-}
-
-[data-theme="light"] .glass {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* Dark theme specific overrides */
-[data-theme="dark"] {
-  color-scheme: dark;
-}
-
-/* Neon theme specific effects */
-[data-theme-variant="neon"] .card-cute:hover {
-  box-shadow: 0 0 18px var(--theme-accent-primary), 0 4px 20px var(--theme-button-shadow);
-}
-
-[data-theme-variant="neon"] .btn-cute:hover {
-  box-shadow: 0 0 16px var(--theme-accent-primary), 0 4px 16px var(--theme-button-shadow);
-}
-
-[data-theme-variant="neon"] .text-gradient-cute {
-  filter: drop-shadow(0 0 8px var(--theme-accent-primary));
-}
-
-/* Pastel theme specific effects */
-[data-theme-variant="pastel"] .card-cute,
-[data-theme-variant="valentine"] .card-cute {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-[data-theme-variant="pastel"] .btn-cute,
-[data-theme-variant="valentine"] .btn-cute {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Animation delay utility classes */
-.animation-delay-200 {
-  animation-delay: 0.2s;
-}
-
-.animation-delay-400 {
-  animation-delay: 0.4s;
-}
-
-.animation-delay-600 {
-  animation-delay: 0.6s;
-}
-
-.animation-delay-800 {
-  animation-delay: 0.8s;
-}
-
-.animation-delay-1000 {
-  animation-delay: 1s;
-}
-
-/* Additional utility classes for admin page and other components */
-
-/* GIF support - ensure animated GIFs play properly */
 img[src$=".gif"],
 img[src*=".gif"] {
   image-rendering: auto;
   image-rendering: -webkit-optimize-contrast;
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

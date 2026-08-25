@@ -1,46 +1,225 @@
-import { createContextId, useContext, useContextProvider, useSignal, useStore, useVisibleTask$, $ } from "@builder.io/qwik";
+import { createContextId, useContext, useContextProvider, useSignal, useVisibleTask$, $ } from "@builder.io/qwik";
 import { getThemePreference, setThemePreference } from "./cookie-utils";
 
 export type ThemeName = 'dark' | 'light' | 'pastel' | 'neon' | 'valentine' | 'auto';
+export type PaletteName = Exclude<ThemeName, 'auto'>;
 
-export interface ThemeColors {
-  // Background colors
+/**
+ * Semantic roles the whole signed-in application is built on. A theme changes
+ * these values and nothing else — geometry, hierarchy and the meaning of a
+ * status colour are identical in every theme.
+ */
+export interface RoleTokens {
+  canvas: string;
+  nav: string;
+  surface: string;
+  surfaceSubtle: string;
+  surfaceHover: string;
+  edge: string;
+  edgeStrong: string;
+  ink: string;
+  inkMuted: string;
+  accent: string;
+  accentHover: string;
+  accentSoft: string;
+  /** Accent tuned for text/icons on canvas, where the accent fill is too dark. */
+  accentText: string;
+  onAccent: string;
+  overlay: string;
+  shadow: string;
+  success: string;
+  successSoft: string;
+  warning: string;
+  warningSoft: string;
+  danger: string;
+  dangerSoft: string;
+  dangerFill: string;
+  dangerFillHover: string;
+  info: string;
+  infoSoft: string;
+}
+
+/** Whether a palette reads as dark, used for `color-scheme` and particle defaults. */
+export const paletteIsDark: Record<PaletteName, boolean> = {
+  dark: true,
+  light: false,
+  pastel: false,
+  neon: true,
+  valentine: false,
+};
+
+export const palettes: Record<PaletteName, RoleTokens> = {
+  dark: {
+    canvas: '#0e1016',
+    nav: '#12151d',
+    surface: '#171b24',
+    surfaceSubtle: '#1d222c',
+    surfaceHover: '#232833',
+    edge: '#2b3240',
+    edgeStrong: '#3d4557',
+    ink: '#f1f3f8',
+    inkMuted: '#99a3b5',
+    accent: '#db2777',
+    accentHover: '#ec4899',
+    accentSoft: 'rgba(236, 72, 153, 0.15)',
+    accentText: '#f472b6',
+    onAccent: '#ffffff',
+    overlay: 'rgba(5, 6, 10, 0.72)',
+    shadow: 'rgba(0, 0, 0, 0.55)',
+    success: '#4ade80',
+    successSoft: 'rgba(74, 222, 128, 0.14)',
+    warning: '#fbbf24',
+    warningSoft: 'rgba(251, 191, 36, 0.14)',
+    danger: '#f87171',
+    dangerSoft: 'rgba(248, 113, 113, 0.14)',
+    dangerFill: '#b91c1c',
+    dangerFillHover: '#dc2626',
+    info: '#60a5fa',
+    infoSoft: 'rgba(96, 165, 250, 0.14)',
+  },
+  light: {
+    canvas: '#f6f7f9',
+    nav: '#ffffff',
+    surface: '#ffffff',
+    surfaceSubtle: '#f1f3f6',
+    surfaceHover: '#e9ecf1',
+    edge: '#e0e4ea',
+    edgeStrong: '#c6ccd6',
+    ink: '#14171f',
+    inkMuted: '#5c6474',
+    accent: '#db2777',
+    accentHover: '#be185d',
+    accentSoft: 'rgba(219, 39, 119, 0.10)',
+    accentText: '#be185d',
+    onAccent: '#ffffff',
+    overlay: 'rgba(16, 18, 24, 0.45)',
+    shadow: 'rgba(15, 23, 42, 0.18)',
+    success: '#15803d',
+    successSoft: 'rgba(21, 128, 61, 0.10)',
+    warning: '#b45309',
+    warningSoft: 'rgba(180, 83, 9, 0.10)',
+    danger: '#c2261f',
+    dangerSoft: 'rgba(194, 38, 31, 0.10)',
+    dangerFill: '#c2261f',
+    dangerFillHover: '#a01a14',
+    info: '#0369a1',
+    infoSoft: 'rgba(3, 105, 161, 0.10)',
+  },
+  pastel: {
+    canvas: '#fbf5fc',
+    nav: '#fffbff',
+    surface: '#fffdff',
+    surfaceSubtle: '#f7ecfa',
+    surfaceHover: '#f1e2f6',
+    edge: '#ecdcf0',
+    edgeStrong: '#d5bade',
+    ink: '#3b2340',
+    inkMuted: '#77567e',
+    accent: '#a3348f',
+    accentHover: '#8a2a79',
+    accentSoft: 'rgba(163, 52, 143, 0.10)',
+    accentText: '#8a2a79',
+    onAccent: '#ffffff',
+    overlay: 'rgba(48, 26, 50, 0.42)',
+    shadow: 'rgba(80, 40, 90, 0.18)',
+    success: '#0f7350',
+    successSoft: 'rgba(15, 115, 80, 0.10)',
+    warning: '#9a5406',
+    warningSoft: 'rgba(154, 84, 6, 0.10)',
+    danger: '#bd2846',
+    dangerSoft: 'rgba(189, 40, 70, 0.10)',
+    dangerFill: '#bd2846',
+    dangerFillHover: '#9d1c37',
+    info: '#2a6296',
+    infoSoft: 'rgba(42, 98, 150, 0.10)',
+  },
+  neon: {
+    canvas: '#07070c',
+    nav: '#0b0b14',
+    surface: '#10101c',
+    surfaceSubtle: '#161628',
+    surfaceHover: '#1d1d33',
+    edge: '#2a2a48',
+    edgeStrong: '#3f3f68',
+    ink: '#f4f4ff',
+    inkMuted: '#9d9dc4',
+    accent: '#d4006e',
+    accentHover: '#ff0080',
+    accentSoft: 'rgba(255, 0, 128, 0.16)',
+    accentText: '#ff4da6',
+    onAccent: '#ffffff',
+    overlay: 'rgba(0, 0, 0, 0.78)',
+    shadow: 'rgba(0, 0, 0, 0.7)',
+    success: '#00e58a',
+    successSoft: 'rgba(0, 229, 138, 0.14)',
+    warning: '#ffc400',
+    warningSoft: 'rgba(255, 196, 0, 0.14)',
+    danger: '#ff4d7d',
+    dangerSoft: 'rgba(255, 77, 125, 0.14)',
+    dangerFill: '#b0003c',
+    dangerFillHover: '#d90050',
+    info: '#22d3ee',
+    infoSoft: 'rgba(34, 211, 238, 0.14)',
+  },
+  valentine: {
+    canvas: '#fdf3f5',
+    nav: '#fffafb',
+    surface: '#fffcfd',
+    surfaceSubtle: '#fbe9ee',
+    surfaceHover: '#f7dce4',
+    edge: '#f2d5dd',
+    edgeStrong: '#e0aebd',
+    ink: '#43101e',
+    inkMuted: '#8a4457',
+    accent: '#c2185b',
+    accentHover: '#9c1348',
+    accentSoft: 'rgba(194, 24, 91, 0.10)',
+    accentText: '#a8124e',
+    onAccent: '#ffffff',
+    overlay: 'rgba(52, 12, 24, 0.45)',
+    shadow: 'rgba(120, 30, 60, 0.18)',
+    success: '#12704a',
+    successSoft: 'rgba(18, 112, 74, 0.10)',
+    warning: '#9c5306',
+    warningSoft: 'rgba(156, 83, 6, 0.10)',
+    danger: '#b81f30',
+    dangerSoft: 'rgba(184, 31, 48, 0.10)',
+    dangerFill: '#b81f30',
+    dangerFillHover: '#961523',
+    info: '#2c6596',
+    infoSoft: 'rgba(44, 101, 150, 0.10)',
+  },
+};
+
+/**
+ * Legacy palette values. Still consumed by the marketing, legal and public bio
+ * routes, which are deferred to a later visual pass. Redesigned application
+ * components use {@link palettes} instead.
+ */
+export interface LegacyThemeColors {
   bgPrimary: string;
   bgSecondary: string;
   bgTertiary: string;
-
-  // Background gradients
   bgGradientFrom: string;
   bgGradientVia: string;
   bgGradientTo: string;
-
-  // Text colors
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
-
-  // Accent colors (the main cute gradient colors)
   accentPrimary: string;
   accentSecondary: string;
   accentTertiary: string;
   accentQuaternary: string;
-
-  // UI element colors
   cardBg: string;
   cardBorder: string;
   glassBg: string;
   glassBorder: string;
-
-  // Scrollbar colors
   scrollbarTrack: string;
   scrollbarThumb: string;
   scrollbarThumbHover: string;
-  // Button colors
   buttonGradientStart: string;
   buttonGradientEnd: string;
   buttonShadow: string;
-
-  // Action colors
   confirm: string;
   confirmHover: string;
   deny: string;
@@ -51,7 +230,7 @@ export interface ThemeColors {
   infoHover: string;
 }
 
-export const themes: Record<ThemeName, ThemeColors> = {
+export const themes: Record<PaletteName, LegacyThemeColors> = {
   dark: {
     bgPrimary: '#0f172a',
     bgSecondary: '#1e293b',
@@ -84,7 +263,8 @@ export const themes: Record<ThemeName, ThemeColors> = {
     warningHover: '#d97706',
     info: '#38bdf8',
     infoHover: '#0ea5e9',
-  }, light: {
+  },
+  light: {
     bgPrimary: '#ffffff',
     bgSecondary: '#f8fafc',
     bgTertiary: '#f1f5f9',
@@ -116,7 +296,8 @@ export const themes: Record<ThemeName, ThemeColors> = {
     warningHover: '#b45309',
     info: '#0284c7',
     infoHover: '#0369a1',
-  }, pastel: {
+  },
+  pastel: {
     bgPrimary: '#fef7ff',
     bgSecondary: '#fdf4ff',
     bgTertiary: '#fae8ff',
@@ -181,7 +362,8 @@ export const themes: Record<ThemeName, ThemeColors> = {
     warningHover: '#ffaa00',
     info: '#00e0ff',
     infoHover: '#00b8d4',
-  }, valentine: {
+  },
+  valentine: {
     bgPrimary: '#fdf2f8',
     bgSecondary: '#fce7f3',
     bgTertiary: '#fbcfe8',
@@ -214,181 +396,129 @@ export const themes: Record<ThemeName, ThemeColors> = {
     info: '#e05a9c',
     infoHover: '#c23a7e',
   },
-  auto: {
-    bgPrimary: '#0f172a',
-    bgSecondary: '#1e293b',
-    bgTertiary: '#334155',
-    bgGradientFrom: '#0f172a',
-    bgGradientVia: '#7c2d92',
-    bgGradientTo: '#9d174d',
-    textPrimary: '#ffffff',
-    textSecondary: '#f1f5f9',
-    textMuted: '#94a3b8',
-    accentPrimary: '#ec4899',
-    accentSecondary: '#f472b6',
-    accentTertiary: '#c084fc',
-    accentQuaternary: '#8b5cf6',
-    cardBg: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6))',
-    cardBorder: 'rgba(236, 72, 153, 0.2)',
-    glassBg: 'rgba(15, 23, 42, 0.3)',
-    glassBorder: 'rgba(255, 255, 255, 0.1)',
-    scrollbarTrack: '#1e293b',
-    scrollbarThumb: 'linear-gradient(to bottom, #ec4899, #8b5cf6)',
-    scrollbarThumbHover: 'linear-gradient(to bottom, #f472b6, #a855f7)',
-    buttonGradientStart: '#ec4899',
-    buttonGradientEnd: '#8b5cf6',
-    buttonShadow: 'rgba(236, 72, 153, 0.3)',
-    confirm: '#10b981',
-    confirmHover: '#059669',
-    deny: '#ef4444',
-    denyHover: '#dc2626',
-    warning: '#f59e0b',
-    warningHover: '#d97706',
-    info: '#38bdf8',
-    infoHover: '#0ea5e9',
-  },
 };
+
+/** Human-facing theme options, in the order they are offered. */
+export const themeOptions: { value: ThemeName; label: string }[] = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'pastel', label: 'Pastel' },
+  { value: 'neon', label: 'Neon' },
+  { value: 'valentine', label: 'Valentine' },
+  { value: 'auto', label: 'Auto' },
+];
+
+function camelToCssVar(prefix: string, key: string): string {
+  return `--${prefix}-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+}
+
+function cssVarBlock(palette: PaletteName): string {
+  const roles = Object.entries(palettes[palette])
+    .map(([key, value]) => `${camelToCssVar('ui', key)}: ${value};`);
+  const legacy = Object.entries(themes[palette])
+    .map(([key, value]) => `${camelToCssVar('theme', key)}: ${value};`);
+  return [...roles, ...legacy].join('\n    ');
+}
 
 export interface ThemeContextType {
   currentTheme: ThemeName;
   setTheme: (theme: ThemeName) => void;
   isDark: boolean;
-  themeColors: ThemeColors;
 }
 
 export const ThemeContext = createContextId<ThemeContextType>('theme-context');
+
+function prefersDark(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+}
+
+/** Resolve `auto` to the system-selected Dark or Light palette. */
+export function resolvePalette(theme: ThemeName, systemDark = prefersDark()): PaletteName {
+  if (theme !== 'auto') return theme;
+  return systemDark ? 'dark' : 'light';
+}
 
 export const useThemeProvider = () => {
   const currentTheme = useSignal<ThemeName>('dark');
   const isDark = useSignal(true);
 
-  // Apply theme to CSS variables
   const applyTheme = $((themeName: ThemeName) => {
     if (typeof document === 'undefined') return;
 
-    let effectiveTheme = themeName;
-    if (themeName === 'auto') {
-      effectiveTheme = (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-    }
-
-    const themeColors = themes[effectiveTheme];
+    const palette = resolvePalette(themeName);
     const root = document.documentElement;
 
-    // Apply CSS custom properties
-    Object.entries(themeColors).forEach(([key, value]) => {
-      const cssVarName = `--theme-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-      root.style.setProperty(cssVarName, value);
+    Object.entries(palettes[palette]).forEach(([key, value]) => {
+      root.style.setProperty(camelToCssVar('ui', key), value);
+    });
+    Object.entries(themes[palette]).forEach(([key, value]) => {
+      root.style.setProperty(camelToCssVar('theme', key), value);
     });
 
-    // Update data attributes for additional styling hooks
-    root.setAttribute('data-theme', effectiveTheme);
+    root.setAttribute('data-theme', paletteIsDark[palette] ? 'dark' : 'light');
+    root.setAttribute('data-palette', palette);
     root.setAttribute('data-theme-variant', themeName);
 
-    isDark.value = effectiveTheme === 'dark' ||
-      (themeName === 'neon') ||
-      (themeName === 'auto' && (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
-  }); const setTheme = $((theme: ThemeName) => {
-    currentTheme.value = theme;
-    applyTheme(theme);
-    setThemePreference(theme);
+    isDark.value = paletteIsDark[palette];
   });
-  // Load saved theme on initialization
+
+  const setTheme = $(async (theme: ThemeName) => {
+    currentTheme.value = theme;
+    await applyTheme(theme);
+    await setThemePreference(theme);
+  });
+
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
-    // Check if theme is already applied server-side
     const root = document.documentElement;
-    const serverTheme = root.getAttribute('data-theme-variant');
+    const serverTheme = root.getAttribute('data-theme-variant') as ThemeName | null;
 
-    let initialTheme: ThemeName;
+    const initialTheme: ThemeName =
+      serverTheme && (serverTheme === 'auto' || serverTheme in palettes)
+        ? serverTheme
+        : (await getThemePreference()) || 'auto';
 
-    if (serverTheme && themes[serverTheme as ThemeName]) {
-      // Use server-side theme if available
-      initialTheme = serverTheme as ThemeName;
-      currentTheme.value = initialTheme;
-    } else {
-      // Fallback to cookie-based theme detection
-      const savedTheme = await getThemePreference();
-      initialTheme = savedTheme || 'auto';
-      currentTheme.value = initialTheme;
-    }
+    currentTheme.value = initialTheme;
+    await applyTheme(initialTheme);
 
-    // Apply theme (this will update if needed)
-    applyTheme(initialTheme);
-
-    // Listen for system theme changes when using auto theme
     if (typeof window !== 'undefined' && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => {
-        if (currentTheme.value === 'auto') {
-          applyTheme('auto');
-        }
+        if (currentTheme.value === 'auto') applyTheme('auto');
       };
       mediaQuery.addEventListener('change', handleChange);
-
-      // Cleanup function
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-  }); const contextValue: ThemeContextType = {
+  });
+
+  const contextValue: ThemeContextType = {
     currentTheme: currentTheme.value,
     setTheme,
     isDark: isDark.value,
-    themeColors: themes[currentTheme.value],
   };
 
   useContextProvider(ThemeContext, contextValue);
 
-  return {
-    currentTheme,
-    setTheme,
-    isDark,
-    get themeColors() { return themes[currentTheme.value]; },
-  };
+  return { currentTheme, setTheme, isDark };
 };
 
-export const useTheme = () => {
-  return useContext(ThemeContext);
-};
+export const useTheme = () => useContext(ThemeContext);
 
 /**
- * Generate CSS variables string for server-side theme injection
- * This prevents theme flashing by applying theme styles immediately during SSR
- * @param themeName - The theme name to apply
- * @param userAgent - Optional user agent string for auto theme detection
- * @returns CSS variables string to inject into the document
+ * CSS custom properties for server-side injection, so the first paint already
+ * carries the user's palette. `auto` cannot be resolved on the server, so the
+ * emitted block covers Dark and lets a `prefers-color-scheme: light` media
+ * query swap to Light before hydration.
  */
-export function generateThemeCSS(themeName: ThemeName, userAgent?: string): string {
-  let effectiveTheme = themeName;
-
-  // Handle auto theme detection on server-side
-  if (themeName === 'auto') {
-    // Basic server-side dark mode detection (fallback to dark)
-    // In a real implementation, you might want to detect this differently
-    effectiveTheme = 'dark'; // Default fallback for server-side
-  }
-
-  const themeColors = themes[effectiveTheme];
-
-  // Generate CSS custom properties
-  const cssVars = Object.entries(themeColors)
-    .map(([key, value]) => {
-      const cssVarName = `--theme-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-      return `${cssVarName}: ${value};`;
-    })
-    .join('\n    ');
-
-  return cssVars;
+export function generateThemeCSS(themeName: ThemeName): string {
+  return cssVarBlock(resolvePalette(themeName, true));
 }
 
-/**
- * Get the effective theme name (resolves 'auto' to actual theme)
- * @param themeName - The theme name (including 'auto')
- * @param userAgent - Optional user agent string for auto theme detection
- * @returns The effective theme name ('dark' or 'light' etc.)
- */
-export function getEffectiveTheme(themeName: ThemeName, userAgent?: string): Exclude<ThemeName, 'auto'> {
-  if (themeName === 'auto') {
-    // Server-side auto theme detection fallback
-    return 'dark'; // Default fallback
-  }
-  return themeName;
+/** Light-palette override emitted only for `auto`, keyed on the system preference. */
+export function generateAutoLightCSS(): string {
+  return cssVarBlock('light');
+}
+
+export function getEffectiveTheme(themeName: ThemeName): PaletteName {
+  return resolvePalette(themeName, true);
 }

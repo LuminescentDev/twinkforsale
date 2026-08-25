@@ -2,9 +2,9 @@ import { component$, isDev } from "@builder.io/qwik";
 import { QwikCityProvider, RouterOutlet } from "@builder.io/qwik-city";
 import { RouterHead } from "./components/router-head";
 import { useThemeProvider } from "./lib/theme-store";
-import { useAlertProvider } from "./lib/alert-store";
+import { useToastProvider } from "./lib/toast-store";
 import { useGlobalParticleProvider } from "./lib/global-particle-store";
-import { AlertContainer } from "./components/alert";
+import { Toaster } from "./components/ui";
 
 import "./global.css";
 
@@ -19,8 +19,8 @@ export default component$(() => {
   // Initialize theme provider
   useThemeProvider();
 
-  // Initialize alert provider
-  useAlertProvider();
+  // Status/toast announcements
+  useToastProvider();
 
   // Initialize global particle provider
   useGlobalParticleProvider();
@@ -35,17 +35,21 @@ export default component$(() => {
               rel="manifest"
               href={`${import.meta.env.BASE_URL}manifest.json`}
             />
-            <script defer src="https://umami.bwmp.dev/script.js" data-website-id="999be449-668c-4557-a5bd-6b8a27eb28e1" />
+            <script
+              defer
+              src="https://umami.bwmp.dev/script.js"
+              data-website-id="999be449-668c-4557-a5bd-6b8a27eb28e1"
+            />
           </>
         )}
         <RouterHead />
       </head>
       <body
         lang="en"
-        style="background-color: var(--theme-bg-primary); color: var(--theme-text-primary);"
+        style="background-color: var(--ui-canvas); color: var(--ui-ink);"
       >
         <RouterOutlet />
-        <AlertContainer />
+        <Toaster />
       </body>
     </QwikCityProvider>
   );
