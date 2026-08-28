@@ -21,7 +21,13 @@ errorOnDuplicatesPkgDeps(devDependencies, dependencies);
 
 export default defineConfig(({ command, mode }): UserConfig => {
   return {
-    plugins: [qwikCity(), qwikVite(), tsconfigPaths(), tailwindcss()],
+    plugins: [
+      qwikCity(),
+      // `usePreventNavigate$` (bio and embed editors) is still experimental.
+      qwikVite({ experimental: ["preventNavigate"] }),
+      tsconfigPaths(),
+      tailwindcss(),
+    ],
     // This tells Vite which dependencies to pre-build in dev mode.
     optimizeDeps: {
       // Put problematic deps that break bundling here, mostly those with binaries.
