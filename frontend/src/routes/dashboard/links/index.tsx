@@ -117,7 +117,7 @@ export const createShortLink = server$(async function (payload: {
         return {
           ok: false,
           field: "url",
-          message: `This URL already has a short link: /${body.code ?? ""}`,
+          message: `This URL already has a short link: /l/${body.code ?? ""}`,
         };
       }
       const message = body.error || err.message;
@@ -236,7 +236,7 @@ export default component$(() => {
     formOpen.value = false;
     toast.success(
       "Short link created",
-      `${data.value.origin}/s/${result.code}`,
+      `${data.value.origin}/l/${result.code}`,
     );
   });
 
@@ -259,7 +259,7 @@ export default component$(() => {
     }
   });
 
-  const shortUrl = (linkCode: string) => `${data.value.origin}/s/${linkCode}`;
+  const shortUrl = (linkCode: string) => `${data.value.origin}/l/${linkCode}`;
 
   const form = (
     <Surface class="mb-5">
@@ -432,7 +432,7 @@ export default component$(() => {
                     link.maxClicks !== null && link.clicks >= link.maxClicks;
                   return (
                     <Tr key={link.id}>
-                      <Td class="font-mono">/s/{link.code}</Td>
+                      <Td class="font-mono">/l/{link.code}</Td>
                       <Td class="max-w-0">
                         <a
                           href={link.url}
@@ -484,7 +484,7 @@ export default component$(() => {
                           <IconButton
                             size="sm"
                             variant="outline"
-                            label={`Open /s/${link.code}`}
+                            label={`Open /l/${link.code}`}
                             href={shortUrl(link.code)}
                             external
                           >
@@ -493,7 +493,7 @@ export default component$(() => {
                           <IconButton
                             size="sm"
                             variant="danger"
-                            label={`Delete /s/${link.code}`}
+                            label={`Delete /l/${link.code}`}
                             onClick$={() => {
                               pendingDelete.value = link;
                               deleteOpen.value = true;
@@ -520,7 +520,7 @@ export default component$(() => {
                     <div class="flex flex-wrap items-start gap-x-2.5 gap-y-2">
                       <div class="min-w-[9rem] flex-1">
                         <p class="text-ink truncate font-mono text-[13px] font-medium">
-                          /s/{link.code}
+                          /l/{link.code}
                         </p>
                         <p
                           class="text-ink-muted mt-0.5 truncate text-xs"
@@ -548,13 +548,13 @@ export default component$(() => {
                       <div class="ml-auto flex shrink-0 items-center gap-1">
                         <CopyButton
                           value={shortUrl(link.code)}
-                          title={`Copy /s/${link.code}`}
+                          title={`Copy /l/${link.code}`}
                           variant="secondary"
                         />
                         <IconButton
                           size="sm"
                           variant="outline"
-                          label={`Open /s/${link.code}`}
+                          label={`Open /l/${link.code}`}
                           href={shortUrl(link.code)}
                           external
                         >
@@ -563,7 +563,7 @@ export default component$(() => {
                         <IconButton
                           size="sm"
                           variant="danger"
-                          label={`Delete /s/${link.code}`}
+                          label={`Delete /l/${link.code}`}
                           onClick$={() => {
                             pendingDelete.value = link;
                             deleteOpen.value = true;
@@ -583,7 +583,7 @@ export default component$(() => {
 
       <Dialog open={deleteOpen} title="Delete this short link?" size="sm">
         <p class="text-ink-muted text-[13px] leading-5">
-          <span class="text-ink font-mono">/s/{pendingDelete.value?.code}</span>{" "}
+          <span class="text-ink font-mono">/l/{pendingDelete.value?.code}</span>{" "}
           stops working immediately and anyone following it will get an error.
           This cannot be undone.
         </p>
