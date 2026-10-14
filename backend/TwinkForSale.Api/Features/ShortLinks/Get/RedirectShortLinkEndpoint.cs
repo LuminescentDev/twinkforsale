@@ -32,6 +32,6 @@ public sealed class RedirectShortLinkEndpoint(AppDbContext dbContext) : Endpoint
         link.LastClicked = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(ct);
 
-        await SendRedirectAsync(link.Url, isPermanent: false);
+        await SendRedirectAsync(link.Url, isPermanent: false, allowRemoteRedirects: true);
     }
 }
