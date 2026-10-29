@@ -21,6 +21,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<VerificationToken> VerificationTokens => Set<VerificationToken>();
     public DbSet<ViewLog> ViewLogs => Set<ViewLog>();
+    public DbSet<Album> Albums => Set<Album>();
+    public DbSet<AlbumUpload> AlbumUploads => Set<AlbumUpload>();
+    public DbSet<SavedFilter> SavedFilters => Set<SavedFilter>();
+    public DbSet<UploadPreset> UploadPresets => Set<UploadPreset>();
+    public DbSet<FileRequest> FileRequests => Set<FileRequest>();
+    public DbSet<BioDraft> BioDrafts => Set<BioDraft>();
+    public DbSet<BioRevision> BioRevisions => Set<BioRevision>();
+    public DbSet<ShortLinkRevision> ShortLinkRevisions => Set<ShortLinkRevision>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +43,63 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         ConfigureSystem(modelBuilder);
         ConfigureBio(modelBuilder);
         ConfigureShortLinks(modelBuilder);
+        ConfigureCollections(modelBuilder);
+    }
+
+    private static void ConfigureCollections(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Album>(e =>
+        {
+            e.ToTable("albums");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<AlbumUpload>(e =>
+        {
+            e.ToTable("album_uploads");
+            e.HasKey(x => new { x.AlbumId, x.UploadId });
+            e.HasOne(x => x.Album).WithMany(x => x.Items).HasForeignKey(x => x.AlbumId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Upload).WithMany().HasForeignKey(x => x.UploadId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<SavedFilter>(e =>
+        {
+            e.ToTable("saved_filters");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<UploadPreset>(e =>
+        {
+            e.ToTable("upload_presets");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<UploadDomain>().WithMany().HasForeignKey(x => x.UploadDomainId).OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<FileRequest>(e =>
+        {
+            e.ToTable("file_requests");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Album>().WithMany().HasForeignKey(x => x.AlbumId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Upload>().HasOne<FileRequest>().WithMany().HasForeignKey(x => x.FileRequestId).OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<Upload>().HasIndex(x => new { x.UserId, x.DeletedAt });
+        modelBuilder.Entity<BioDraft>(e =>
+        {
+            e.ToTable("bio_drafts");
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.Document).HasColumnType("jsonb");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<BioRevision>(e =>
+        {
+            e.ToTable("bio_revisions");
+            e.Property(x => x.Document).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ShortLinkRevision>(e =>
+        {
+            e.ToTable("short_link_revisions");
+            e.HasOne<ShortLink>().WithMany().HasForeignKey(x => x.ShortLinkId).OnDelete(DeleteBehavior.Cascade);
+        });
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -169,7 +234,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         {
             entity.ToTable("api_keys");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => x.Key).IsUnique();
+            entity.Property(x => x.KeyHash).HasColumnName("Key");
+            entity.HasIndex(x => x.KeyHash).HasDatabaseName("IX_api_keys_Key").IsUnique();
             entity.Property(x => x.UserId).HasColumnName("userId");
             entity.Property(x => x.CreatedAt).HasColumnName("createdAt");
             entity.Property(x => x.LastUsed).HasColumnName("lastUsed");

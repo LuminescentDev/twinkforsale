@@ -14,6 +14,7 @@ public sealed class GetPublicBioEndpoint(AppDbContext dbContext) : EndpointWitho
 
     public override async Task HandleAsync(CancellationToken ct)
     {
+        HttpContext.Response.Headers.CacheControl = "no-store";
         var username = Route<string>("username");
         var settings = await dbContext.UserSettings.FirstOrDefaultAsync(x => x.BioUsername == username && x.BioIsPublic, ct);
         if (settings is null) { await SendNotFoundAsync(ct); return; }

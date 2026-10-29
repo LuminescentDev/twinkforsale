@@ -1,12 +1,9 @@
 using FastEndpoints;
-using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Infrastructure.Auth;
-using TwinkForSale.Api.Infrastructure.Database;
-using TwinkForSale.Api.Infrastructure.Storage;
 
 namespace TwinkForSale.Api.Features.Uploads.Delete;
 
-public sealed class DeleteUploadEndpoint(AppDbContext dbContext, IFileStorage fileStorage) : EndpointWithoutRequest<DeleteUploadResponse>
+public sealed class DeleteUploadEndpoint(UploadDeletion deletion) : EndpointWithoutRequest<DeleteUploadResponse>
 {
     public override void Configure()
     {
@@ -25,23 +22,11 @@ public sealed class DeleteUploadEndpoint(AppDbContext dbContext, IFileStorage fi
             return;
         }
 
-        var upload = await dbContext.Uploads.FirstOrDefaultAsync(x => x.Id == uploadId && x.UserId == userId, ct);
-        if (upload is null)
+        if (!await deletion.DeleteAsync(uploadId!, userId, ct, permanent: HttpContext.Request.Query["permanent"] == "true"))
         {
             await SendNotFoundAsync(ct);
             return;
         }
-
-        await fileStorage.DeleteAsync(upload.Filename, ct);
-
-        var settings = await dbContext.UserSettings.FirstOrDefaultAsync(x => x.UserId == userId, ct);
-        if (settings is not null)
-        {
-            settings.StorageUsed = Math.Max(0, settings.StorageUsed - upload.Size);
-        }
-
-        dbContext.Uploads.Remove(upload);
-        await dbContext.SaveChangesAsync(ct);
 
         await SendOkAsync(new DeleteUploadResponse(true), ct);
     }

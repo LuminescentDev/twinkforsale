@@ -1,5 +1,6 @@
 # Node modules and dependencies
 node_modules
+**/node_modules
 .pnpm-store
 
 # Git and version control
@@ -14,11 +15,12 @@ tmp
 frontend/tmp
 .qwik
 frontend/.qwik
+**/bin
+**/obj
 
 # Development files
 .env*
 !.env.example
-!.env.production
 
 # IDE and editor files
 .vscode

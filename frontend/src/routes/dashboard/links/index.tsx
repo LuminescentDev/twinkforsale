@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-icons-qwik";
+import { ShortLinkEditor } from "~/components/files/short-link-editor";
 import { isValidHttpUrl } from "~/lib/url-utils";
 import {
   api,
@@ -224,6 +225,7 @@ export default component$(() => {
         createdAt: new Date().toISOString(),
         expiresAt: null,
         lastClicked: null,
+        isPaused: false,
       },
       ...links.items,
     ];
@@ -476,6 +478,19 @@ export default component$(() => {
                       </Td>
                       <Td class="text-right">
                         <div class="flex items-center justify-end gap-1">
+                          <ShortLinkEditor
+                            link={link}
+                            onSaved$={$((url, paused) => {
+                              const item = links.items.find(
+                                (x) => x.id === link.id,
+                              );
+                              if (item) {
+                                item.url = url;
+                                item.isPaused = paused;
+                              }
+                            })}
+                          />
+                          {link.isPaused && <Badge>Paused</Badge>}
                           <CopyButton
                             value={shortUrl(link.code)}
                             label="Copy"
@@ -546,6 +561,19 @@ export default component$(() => {
                         </p>
                       </div>
                       <div class="ml-auto flex shrink-0 items-center gap-1">
+                        <ShortLinkEditor
+                          link={link}
+                          onSaved$={$((url, paused) => {
+                            const item = links.items.find(
+                              (x) => x.id === link.id,
+                            );
+                            if (item) {
+                              item.url = url;
+                              item.isPaused = paused;
+                            }
+                          })}
+                        />
+                        {link.isPaused && <Badge>Paused</Badge>}
                         <CopyButton
                           value={shortUrl(link.code)}
                           title={`Copy /l/${link.code}`}

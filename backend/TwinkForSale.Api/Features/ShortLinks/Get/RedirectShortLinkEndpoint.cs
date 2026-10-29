@@ -8,7 +8,8 @@ public sealed class RedirectShortLinkEndpoint(AppDbContext dbContext) : Endpoint
 {
     public override void Configure()
     {
-        Get("/l/{code}");
+        Verbs(Http.GET, Http.HEAD);
+        Routes("/l/{code}");
         AllowAnonymous();
         Summary(summary =>
         {
@@ -18,19 +19,32 @@ public sealed class RedirectShortLinkEndpoint(AppDbContext dbContext) : Endpoint
 
     public override async Task HandleAsync(CancellationToken ct)
     {
+        HttpContext.Response.Headers.CacheControl = "no-store";
         var code = Route<string>("code");
-        var link = await dbContext.ShortLinks.FirstOrDefaultAsync(x => x.Code == code, ct);
+        var link = await dbContext.ShortLinks.AsNoTracking().FirstOrDefaultAsync(x => x.Code == code, ct);
 
-        if (link is null || link.ExpiresAt < DateTimeOffset.UtcNow ||
+        if (link is null || link.IsPaused || link.ExpiresAt <= DateTimeOffset.UtcNow ||
             (link.MaxClicks is not null && link.Clicks >= link.MaxClicks))
         {
             await SendNotFoundAsync(ct);
             return;
         }
 
-        link.Clicks++;
-        link.LastClicked = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(ct);
+        if (!HttpMethods.IsHead(HttpContext.Request.Method))
+        {
+            var now = DateTimeOffset.UtcNow;
+            var updated = await dbContext.ShortLinks
+                .Where(x => x.Id == link.Id && !x.IsPaused && x.Url == link.Url && (x.ExpiresAt == null || x.ExpiresAt > now) &&
+                    (x.MaxClicks == null || x.Clicks < x.MaxClicks))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Clicks, x => x.Clicks + 1)
+                    .SetProperty(x => x.LastClicked, now), ct);
+            if (updated == 0)
+            {
+                await SendNotFoundAsync(ct);
+                return;
+            }
+        }
 
         await SendRedirectAsync(link.Url, isPermanent: false, allowRemoteRedirects: true);
     }

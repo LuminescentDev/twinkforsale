@@ -189,6 +189,7 @@ export const BioPageDisplay = component$<BioPageDisplayProps>(
                         }}
                         disabled={isPreview}
                         title={link.title}
+                        aria-label={link.title}
                       >
                         <BioLinkIcon
                           icon={link.icon}

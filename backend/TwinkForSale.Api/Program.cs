@@ -2,6 +2,7 @@ using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Infrastructure.Configuration;
 using TwinkForSale.Api.Infrastructure.Auth;
@@ -101,6 +102,19 @@ builder.Services.AddScoped<IFileStorage>(sp =>
         : sp.GetRequiredService<LocalFileStorage>();
 });
 builder.Services.AddScoped<UploadCodeGenerator>();
+builder.Services.AddScoped<UploadDeletion>();
+builder.Services.AddScoped<UploadAccess>();
+builder.Services.AddScoped<TwinkForSale.Api.Features.Bio.BioDraftService>();
+builder.Services.AddDataProtection();
+builder.Services.AddHostedService<TrashCleanupService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    foreach (var name in new[] { "file-password", "file-request" })
+        options.AddPolicy(name, context => RateLimitPartition.GetFixedWindowLimiter(
+            (context.Request.RouteValues["shortCode"] ?? context.Request.RouteValues["code"])?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 builder.Services.AddScoped<ShortLinkCodeGenerator>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddHttpClient();
@@ -129,6 +143,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.UseFastEndpoints();
 app.UseSwaggerGen();
 
@@ -196,3 +211,5 @@ static void AddIfModernEnvironmentMissing(
         values[configurationKey] = legacyValue;
     }
 }
+
+public partial class Program;

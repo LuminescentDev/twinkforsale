@@ -1,0 +1,807 @@
+{
+  "version": 1,
+  "page": {
+    "title": "twink.forsale: cute file hosting for the community",
+    "route": "/",
+    "description": "Invite-only file hosting with ShareX uploads, short links, custom Discord embeds, public bio pages and themes. Sign in with Discord to get started."
+  },
+  "architecture": {
+    "contract": "This page helps invited community members, and returning members, understand what twink.forsale does and how to start: sign in with Discord, wait for admin approval, upload from ShareX or the browser, and share a short link. The business outcome is more approved members who upload successfully. The primary conversion is 'Sign in with Discord' (or 'Open dashboard' when already signed in).",
+    "mode": "persuade_convert",
+    "novelty": "medium",
+    "grid": "12-column grid, 1200px max content width, 24px gutters (16px below 640px), 8px spacing rhythm. Section padding 96-128px desktop, 64-72px mobile. Reading text capped at 60ch. Full-bleed bands (hero, intro statement, links panel, footer) break out to the viewport edge while their content stays on the 12-column grid.",
+    "signatureRule": "From scalient-05-services: in a row of equal dark cards, exactly one card carries the accent fill with on-accent text and is rotated -3deg on desktop (1024px and wider), overlapping its neighbour's gutter by about 2% of row width. It is used once on the page (the 'Copy link' card in upload_sharing). Everywhere else the accent is limited to the primary button, one selected state and inline highlights inside product fragments.",
+    "rhythm": "Dark, dense, loud open (full-bleed hero) then a quiet centered statement, then alternating work sections: split heading and cards (process), card row with the tilt card, framed media panel (ShareX), split text and large media (embeds), three media cards (bios), split stat plus two media (themes), a rounded full-width list panel (links), big bold statement with small media (analytics), split FAQ, a two-column closing panel and the footer wordmark. Heavy sections alternate with airy ones so no two neighbours share the same geometry. Surface order: canvas, canvas, surface-subtle band, canvas, canvas, canvas, surface-subtle band, canvas, surface panel, canvas, canvas, surface-subtle panel, canvas."
+  },
+  "navigation": [
+    {
+      "label": "How it works",
+      "target": "#how-it-works"
+    },
+    {
+      "label": "Features",
+      "target": "#upload-sharing"
+    },
+    {
+      "label": "Bio pages",
+      "target": "#bio-pages"
+    },
+    {
+      "label": "Themes",
+      "target": "#themes"
+    },
+    {
+      "label": "FAQ",
+      "target": "#faq"
+    },
+    {
+      "label": "Sign in with Discord",
+      "target": "auth:discord (existing LoginButton / loginWithDiscord)"
+    }
+  ],
+  "navigationDesign": {
+    "layoutCase": "reference-navigation",
+    "layout": "Follows the waveyu-01-hero navigation: a transparent bar about 72px tall (7% of the 1045px reference height) sitting over the hero collage. The Syne 700 'twink.forsale' wordmark is at the left, about 24% of bar width. Four Inter 500 15px anchor links are centered with about 48px between them. The right side holds the primary action: the accent-filled 'Sign in with Discord' button with a Lucide LogIn icon, 6px radius, 44px tall (reference uses a pill; brand requires the 6px control radius). Signed-in users see 'Open dashboard' instead. The existing navigation component in src/components/layout/navigation.tsx is restyled for the root route only; dashboard routes keep their own app shell. After the page scrolls past 64px the bar becomes sticky on --ui-canvas at 92% opacity with a 1px divider bottom border. There is no blur.",
+    "behavior": [
+      "Anchor links scroll natively to section IDs with scroll-margin-top equal to bar height; smooth scrolling only when reduced motion is not set",
+      "The active section's link gets ink color and a 2px accent-text underline via IntersectionObserver on section headings",
+      "Background and border change over 150ms ease-out when crossing the 64px scroll threshold; no transform on the sticky bar or its ancestors",
+      "Focus-visible shows a 2px accent-text ring with a 2px offset on every link and button"
+    ],
+    "transformation": {
+      "compact": "Below 768px (matches waveyu mobile): wordmark left, a 44px icon button with a Lucide Menu icon and aria-label 'Open menu' on the right. The menu is a full-width disclosure panel below the bar on --ui-surface listing the four anchors at 48px row height, followed by a full-width 'Sign in with Discord' button. It closes on link click, Escape or outside click and returns focus to the toggle.",
+      "medium": "768-1023px: wordmark left, the anchors reduced to How it works, Features and FAQ, and the sign-in button right. Bio pages and Themes move into the footer and the in-page flow.",
+      "expanded": "1024px and wider: full bar as described, with links centered on the viewport."
+    }
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "layoutFamily": "hero",
+      "layoutCases": [
+        "waveyu-01-hero"
+      ],
+      "referenceDirectionId": "waveyu-01-hero",
+      "purpose": "Name the product, show what it is (uploads becoming links) and put Discord sign-in one click away.",
+      "userQuestion": "What is this and how do I get in?",
+      "stage": "orient",
+      "dependencies": [],
+      "evidence": [
+        "README: ShareX integration, short URLs, Discord OAuth, custom embeds",
+        "src/routes/index.tsx: existing LoginButton and signed-in Open Files / Upload branch",
+        "Existing copy: new accounts need admin approval before uploading"
+      ],
+      "copy": {
+        "eyebrow": "UPLOAD • SHORTEN • SHARE",
+        "heading": "twink.forsale",
+        "body": [
+          "Screenshots, but make them cute.",
+          "Upload from ShareX or your browser and get a short link you can paste anywhere. It's invite-only, so sign in with Discord and an admin will approve your account."
+        ],
+        "callsToAction": [
+          {
+            "label": "Sign in with Discord",
+            "target": "auth:discord"
+          },
+          {
+            "label": "Open dashboard",
+            "target": "/dashboard"
+          }
+        ]
+      },
+      "layout": "Reference 1505x1045 desktop, 779x2000 mobile. Full-bleed band, 100vh min on desktop (min 720px). In place of the aerial photo, a dense collage of 8 generated sample uploads (4:3 and square tiles, 8px radius, 12px gaps) covers the band edge to edge, with tiles cropped at all four edges like the reference's palms and rocks. A 70% --ui-canvas overlay sits on top, darkest in the center 50% so text contrast holds at 4.5:1 or better. Two tiles show Inter 500 data chips ('sunset.png', 'twink.forsale/f/a8Kd2'). Centered stack, horizontally centered at 50%: the eyebrow sits at 29% of section height (Inter 500 13px, 0.2em tracking, uppercase, dot separators in accent-text, reproducing the reference's tracked label), then a 64px 1px rule in ink at 40% opacity at 32%. The Syne 800 wordmark is at 35-43%, roughly 43% of section width, clamp(3rem, 8vw, 6.5rem), 1 line, -0.03em tracking. The subline 'Screenshots, but make them cute.' is Syne 600 at clamp(1.75rem, 3.4vw, 3rem), 1 line on desktop (reference 2 lines at a serif scale; this shorter line fits one), at 45-51%. The body is Inter 400 17px, max 56ch, 2 lines centered, at 56-60%. The primary button is 48px tall at 64-69%, with a Lucide LogIn icon and 6px radius (reference pill adapted to the control radius). The bottom feature row sits at 90-96%: 3 items, each a Lucide icon (MonitorUp, Link2, Palette) at 28px beside a 2-line label (Inter 600 13px uppercase title plus Inter 400 13px muted line), with 1px vertical dividers between them, about 56% of width total, centered. Items: 'SHAREX IN ONE CLICK / Screenshots upload as you take them', 'SHORT LINKS / Copy, paste, done', 'YOUR OWN EMBEDS / Colors and titles on Discord'. When signed in, the primary button reads 'Open dashboard' and a ghost 'Upload a file' (/upload) sits beside it with 12px between.",
+      "motion": {
+        "purpose": "spatial_continuity",
+        "trigger": "load",
+        "behavior": "On first paint the collage tiles fade from opacity 0 to 1 and rise 16px in a 60ms stagger capped at 240ms (tiles grouped into 4 waves). Then the eyebrow, wordmark, subline and body rise 24px with opacity in a 70ms stagger, and the button and feature row follow. Only opacity and transform are animated, and no transform is applied to the sticky nav ancestor. Without JS everything renders visible.",
+        "durationMs": 650,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "All elements render in their final state immediately with no transform or fade."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [
+        "hero_upload_collage_01",
+        "hero_upload_collage_02",
+        "hero_upload_collage_03",
+        "hero_upload_collage_04",
+        "hero_upload_collage_05",
+        "hero_upload_collage_06",
+        "hero_upload_collage_07",
+        "hero_upload_collage_08",
+        "syne_font"
+      ],
+      "transformation": {
+        "compact": "Below 640px (waveyu mobile): the band is 100svh tall (min 640px). The collage keeps 6 tiles in a 2-column crop and the overlay stays at 70%. The stack sits from 30% to 62% of height: eyebrow, wordmark at clamp(2.75rem, 13vw, 3.5rem) on 1 line, subline on 2 lines centered, body on 3-4 lines, and a full-width (max 320px) 48px button. The feature row stays as 3 columns at the bottom with icons stacked above a 2-line uppercase label (the muted line drops), with no vertical dividers, matching the mobile reference.",
+        "medium": "640-1023px: same centered stack, wordmark at about 10vw, body max 48ch, and a feature row of 3 items with dividers at 80% width.",
+        "expanded": "1024px and wider: full composition with the collage extending to all viewport edges and content centered in 1200px."
+      }
+    },
+    {
+      "id": "intro_statement",
+      "layoutFamily": "social_proof",
+      "layoutCases": [
+        "xodexdesign-02-about-clients"
+      ],
+      "referenceDirectionId": "xodexdesign-02-about-clients",
+      "purpose": "Say in one statement why this is more than a plain file host, and list the real tools it works with.",
+      "userQuestion": "Why use this instead of any other uploader?",
+      "stage": "qualify",
+      "dependencies": [
+        "hero"
+      ],
+      "evidence": [
+        "README: custom embeds, bio pages, themes, custom domains",
+        "Existing product integrations: Discord OAuth, ShareX config, browser upload, upload domains"
+      ],
+      "copy": {
+        "eyebrow": "A FILE HOST WITH A PERSONALITY",
+        "heading": "Drop a file, get a link, and make it look like yours. Embeds, bio pages and themes turn a plain upload into something you'd actually want to share.",
+        "body": [
+          "WORKS WITH"
+        ],
+        "callsToAction": []
+      },
+      "layout": "Reference 1727x910 desktop, 1027x1531 mobile. Full-width canvas band, content centered. The eyebrow sits at 14% of section height (Inter 500 13px, 0.24em tracking, uppercase, ink). The heading is a centered statement set as h2 in Inter 500 (the reference uses a neutral grotesk at text scale, not display type) at clamp(1.75rem, 3.4vw, 3.25rem), line-height 1.2, 4 lines on desktop within 76% of width. It runs from 25% to 63% of height. The phrases 'look like yours' and 'want to share' are set in --ui-ink-muted, reproducing the reference's gray emphasis words, not accent. A 100px 1px divider-color rule is centered at 68%. The 'WORKS WITH' label (Inter 600 12px, 0.2em tracking) is at 77%. A single row at 83%, spanning 78% of width, has 4 evenly spaced items, each a Lucide icon (MessageCircle, MonitorUp, Globe, AtSign) at 28px in muted color plus an Inter 600 13px 0.16em uppercase label: DISCORD, SHAREX, ANY BROWSER, YOUR OWN DOMAIN. These are real integrations, not partner logos, and there is no marquee. The last item does not fade out like the reference's cut-off logo.",
+      "motion": {
+        "purpose": "explanation",
+        "trigger": "scroll_enter",
+        "behavior": "When the statement block nears the viewport (threshold 0, rootMargin 0px 0px 10% 0px), each heading line (split into spans server-side by sentence) fades in and rises 12px with 80ms stagger. After the heading, the WORKS WITH items fade in left to right with 60ms stagger (240ms total). The observer unobserves immediately and the state never resets.",
+        "durationMs": 600,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Heading and items render visible with no transform."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 640px (mobile reference): eyebrow centered at top, heading 6-7 lines centered at clamp(1.5rem, 6.4vw, 2rem), a 150px rule with generous 56px spacing above and below, the label, then the 4 integrations in a 2x2 grid (the reference cuts the strip off; all 4 stay visible and readable here).",
+        "medium": "640-1023px: heading at 88% width, 5 lines; integrations in one row of 4 with smaller 12px labels.",
+        "expanded": "1024px and wider: full centered composition at 76% heading width."
+      }
+    },
+    {
+      "id": "how_it_works",
+      "layoutFamily": "how_it_works",
+      "layoutCases": [
+        "ritovex-06-process"
+      ],
+      "referenceDirectionId": "ritovex-06-process",
+      "purpose": "Explain the real path from signing in to sharing, including the approval step, so new members know what to expect.",
+      "userQuestion": "What happens after I click sign in?",
+      "stage": "explain",
+      "dependencies": [
+        "hero"
+      ],
+      "evidence": [
+        "Existing copy in src/routes/index.tsx: new accounts need approval before uploading",
+        "Upload page (/upload) and ShareX setup (/setup/sharex) routes exist",
+        "Short URLs generated per upload (README)"
+      ],
+      "copy": {
+        "eyebrow": "How it works",
+        "heading": "From sign-in to shared link in three steps",
+        "body": [
+          "01 Sign in with Discord. Log in with your Discord account. An admin reviews new accounts, and you can upload once yours is approved.",
+          "02 Upload your way. Drag files into the browser, or connect ShareX so screenshots upload the moment you take them.",
+          "03 Share the short link. Every upload gets its own short URL. Copy it and paste it into Discord, a DM or anywhere else."
+        ],
+        "callsToAction": [
+          {
+            "label": "Sign in with Discord",
+            "target": "auth:discord"
+          }
+        ]
+      },
+      "layout": "Reference 1520x1034 desktop, 779x2000 mobile. Section id 'how-it-works' on a --ui-surface-subtle band (the reference's light tinted canvas mapped to the theme). Two columns: left 45% (columns 1-5) and right 45% (columns 7-12), with column 6 as negative space. Left: the label with a Lucide Boxes icon (Inter 500 15px muted) at 15% of section height. The heading is Syne 700 at clamp(2.25rem, 4.5vw, 4rem), 2 lines ('From sign-in to / shared link in three steps' reflowing into 2-3 lines, max 12ch per line equivalent) at 20-33%. The CTA button (48px, accent fill, 6px radius) is at 38-44%. The rest of the left column is intentionally empty, as in the reference. Right: 3 stacked step cards on --ui-surface, each about 26% of section height, 24px apart, 16px radius (reference large-radius cards), 1px divider border and 36px padding. Each card has a Lucide icon at 48px top-left in ink (LogIn, Upload, Link2), a Syne 700 numeral '01' / '02' / '03' at 56px top-right in --ui-ink-muted at 35% opacity, an Inter 600 24px title at 55% of card height, and 2 lines of muted Inter 16px body. The signed-in state swaps the CTA to 'Open dashboard'.",
+      "motion": {
+        "purpose": "explanation",
+        "trigger": "scroll_enter",
+        "behavior": "Each step card is observed individually (threshold 0, rootMargin 0px 0px 10% 0px). When the card group first nears the viewport, cards slide in 32px from the right with opacity, 80ms apart (160ms total), in reading order. The left heading block is not animated because it is usually already visible. Unobserved after first run.",
+        "durationMs": 550,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Cards render in place immediately."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (ritovex mobile): label with icon, heading (2 lines at clamp(2rem, 8vw, 2.5rem)) and button stack centered at the top, followed by the 3 cards full width with 16px gaps. Card padding drops to 28px, the numeral to 44px, and each card keeps its icon, numeral, title and body. Step order is preserved.",
+        "medium": "768-1023px: heading block on top left-aligned with the button, and cards in a single column at 100% width below.",
+        "expanded": "1024px and wider: two-column split as described."
+      }
+    },
+    {
+      "id": "upload_sharing",
+      "layoutFamily": "feature",
+      "layoutCases": [
+        "scalient-05-services"
+      ],
+      "referenceDirectionId": "scalient-05-services",
+      "purpose": "Show the four real ways a file becomes a shareable link, with the page's signature pink tilt card on the most delightful one.",
+      "userQuestion": "How fast can I go from a file to a link?",
+      "stage": "evaluate",
+      "dependencies": [
+        "how_it_works"
+      ],
+      "evidence": [
+        "README: drag-and-drop upload, ShareX integration, automatic short URL generation",
+        "Existing capabilities list in src/routes/index.tsx"
+      ],
+      "copy": {
+        "heading": "Your link, copied before you blink.",
+        "body": [
+          "Uploads land, a short URL appears, and one click puts it on your clipboard.",
+          "Drag and drop. Drop images, documents and other files straight into the browser.",
+          "ShareX uploads. Screenshots upload the second you take them.",
+          "Short URLs. Every file gets its own short link automatically.",
+          "Copy link. One click and it's on your clipboard, ready to paste."
+        ],
+        "callsToAction": [
+          {
+            "label": "How ShareX works",
+            "target": "#sharex"
+          }
+        ]
+      },
+      "layout": "Reference 1505x1045 desktop, 667x2000 mobile. Section id 'upload-sharing' on the canvas. Top row: the heading is at the left, Syne 700 at clamp(2.5rem, 5.5vw, 5rem), 2 lines ('Your link, copied / before you blink.'), occupying 44% of width from 15% to 32% of section height. The lead sits at the top right at 77-95% of width: Inter 400 17px, 2 lines, with the ghost button 'How ShareX works' (1px control-border, Lucide ArrowRight, 6px radius) below it at 26-32%. The card row runs from 38% to 79% of section height: 4 cards, each about 22.5% of width with 1.5% gaps, 12px radius, --ui-surface fill and 1px divider border. Each card has 36px padding, a Lucide icon at 40px top-left (Upload, MonitorUp, Link, Copy), a Syne 700 26px title on 2 lines at 28-45% of card height, and the Inter 16px muted description pinned to the bottom. The 4th card ('Copy link') is the signature tilt card: accent fill, on-accent text, rotated -3deg, top edge 4% higher than siblings, overhanging the row's right edge by 2%, with one soft shadow (0 24px 48px rgba(0,0,0,.35)). Inside the tilt card, the description is followed by an Inter 500 tabular data chip 'twink.forsale/f/a8Kd2' with a small 'Copied' state. It is a real button that copies the example link text and announces 'Copied' via aria-live, labelled 'Copy example link'. The bottom 20% is empty canvas.",
+      "motion": {
+        "purpose": "spatial_continuity",
+        "trigger": "scroll_enter",
+        "behavior": "When the card row nears the viewport, cards 1-3 rise 24px with opacity at 80ms stagger. The tilt card follows at 240ms, arriving at rotation 0, then rotates to -3deg over 450ms with a soft overshoot, as if picked out of the stack. The copy chip's Copy icon swaps to Check over a 180ms opacity crossfade when pressed. Runs once.",
+        "durationMs": 550,
+        "easing": "cubic-bezier(0.34, 1.4, 0.64, 1)",
+        "reducedMotion": "Cards render in place with the tilt card already at -3deg on desktop; the copy feedback swaps the icon instantly."
+      },
+      "componentNeeds": [
+        "copy_link_chip"
+      ],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (scalient mobile): heading, lead and button centered at the top, then the 4 cards stacked full width with 20px gaps and no rotation. Card height becomes content-driven with icon, title and description stacked. The Copy link card keeps the accent fill (reference mobile drops its emphasis; the brand keeps it for accessible emphasis) and stays 4th in order.",
+        "medium": "768-1023px: heading and lead stacked left-aligned, cards in a 2x2 grid, and the tilt card unrotated but accent-filled in the bottom-right cell.",
+        "expanded": "1024px and wider: single row of 4 with the tilted final card."
+      }
+    },
+    {
+      "id": "sharex",
+      "layoutFamily": "feature",
+      "layoutCases": [
+        "meridian-05-playbook"
+      ],
+      "referenceDirectionId": "meridian-05-playbook",
+      "purpose": "Explain ShareX in plain language to people who have never heard of it and offer the one-click config download.",
+      "userQuestion": "What is ShareX and how do I connect it?",
+      "stage": "explain",
+      "dependencies": [
+        "upload_sharing"
+      ],
+      "evidence": [
+        "/setup/sharex route and src/lib/sharex-config.ts exist",
+        "Existing landing copy: 'Download a personal configuration and send screenshots straight to your account'"
+      ],
+      "copy": {
+        "eyebrow": "What's ShareX?",
+        "heading": "ShareX, set up in one click",
+        "body": [
+          "ShareX is a free Windows app that uploads your screenshots the moment you take them. Download your personal config, open it, and every capture goes straight to your twink.forsale account."
+        ],
+        "callsToAction": [
+          {
+            "label": "Download ShareX config",
+            "target": "/setup/sharex"
+          }
+        ]
+      },
+      "layout": "Reference 1774x887 desktop, 1070x1470 mobile. Section id 'sharex' on the canvas. One horizontal panel spanning 94.5% of width (x 2.7% to 97.3%), 65% of section height (y 17% to 82%), with an 8px outer radius. Left 32% of the panel is a frame band in --ui-accent-soft (a tinted pink echo of the reference's teal frame) with 26px padding. Inside it, a 16px-radius media window (about 92% x 90% of the band) on --ui-surface-subtle holds the native ShareX fragment: a file chip with a Lucide FileDown icon and 'twink.forsale.sxcu' in Inter 500 tabular, followed by a 3-row list ('Download your config', 'Double-click to open in ShareX', 'Take a screenshot') with Lucide Check circles, and a small 'Example' tag in the corner. Right 68% is a --ui-surface pane with 64px left padding. It holds the eyebrow at 15% of panel height (Inter 400 italic 17px muted, matching the reference's italic label), the heading in Syne 700 at clamp(2.25rem, 4.6vw, 4.5rem) on 1 line at 22-40%, the body in Inter 400 19px on 3 lines, max 60ch, at 45-62%, and the button at 73-86%. The button is 56px tall with an accent fill, 'Download ShareX config' at 20px side padding, and an inset 40px square of --ui-on-accent at 12% opacity containing a Lucide ArrowUpRight, reproducing the reference's split button. The page canvas shows above and below the panel.",
+      "motion": {
+        "purpose": "explanation",
+        "trigger": "scroll_enter",
+        "behavior": "When the panel nears the viewport, the .sxcu file chip drops in 16px from above with opacity. The 3 checklist rows then appear at 80ms steps, each check circle filling from outline to accent-text over 200ms, showing the setup order. The text pane is not animated. Runs once and keeps its final state.",
+        "durationMs": 550,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Chip and checked rows render in their final state."
+      },
+      "componentNeeds": [
+        "sharex_setup_fragment"
+      ],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (meridian mobile): the panel becomes a vertical card at 92% width with an 8px radius. The frame band moves to the top (about 36% of card height) with the media window inside and 24px padding. Below it the surface pane holds the eyebrow, heading on 2 lines at clamp(2rem, 9vw, 2.75rem), body on 4-5 lines, and the split button at full width (max 360px).",
+        "medium": "768-1023px: side-by-side kept with the frame band at 40%, heading on 2 lines and body at 17px.",
+        "expanded": "1024px and wider: full horizontal panel as described."
+      }
+    },
+    {
+      "id": "embeds",
+      "layoutFamily": "feature",
+      "layoutCases": [
+        "nubo-06-features"
+      ],
+      "referenceDirectionId": "nubo-06-features",
+      "purpose": "Show that link previews in Discord are customizable and that images keep their real proportions.",
+      "userQuestion": "What will my links look like when I share them in Discord?",
+      "stage": "evaluate",
+      "dependencies": [
+        "upload_sharing"
+      ],
+      "evidence": [
+        "src/routes/dashboard/embed: embedTitle, embedDescription, embedColor, embedAuthor, embedFooter, showFileInfo, showUploadDate settings",
+        "Upload width and height stored at upload time so embeds keep image proportions (project memory: embed-image-dimensions)"
+      ],
+      "copy": {
+        "eyebrow": "Discord embeds",
+        "heading": "Embeds that look like you.",
+        "body": [
+          "Choose the title, description, color, author and footer Discord shows when someone opens your link. Images keep their real proportions, so nothing gets squished.",
+          "Your color. Title and text. Author line. File info and date.",
+          "COLOR: #DB2777",
+          "TITLE: sunset.png",
+          "AUTHOR: juniper",
+          "FOOTER: shared on twink.forsale",
+          "FILE INFO: 2.4 MB, uploaded today",
+          "IMAGE: original 16:9 ratio",
+          "Example embed. Your settings apply the next time a link is shared."
+        ],
+        "callsToAction": []
+      },
+      "layout": "Reference 1505x1045 desktop, 1024x1536 mobile. Section id 'embeds' on the canvas. Two columns: left 45% (x 3% to 48%), right 47% (x 50.5% to 97.6%). Left column, top to bottom: the label with a 10px accent dot at 13% of height (Inter 500 14px, reference dot label adapted to sentence case). The heading is Syne 700 at clamp(2.5rem, 5.4vw, 5.25rem), 2 lines 'Embeds that / look like you.', with 'look like you.' in --ui-accent-text (the reference colors its second line), at 19-35%. The body is Inter 400 17px muted, 2-3 lines at 38-43%. An icon row at 47-58% has 4 items evenly spaced, each a 72px circle on --ui-surface-subtle holding a Lucide icon (Palette, Type, UserRound, Info) above a 2-line Inter 500 12px uppercase label. A spec table from 64% to 95% has 6 rows at about 5% height each, 1px divider-color rules between rows and above and below, a 22% label column (Inter 500 13px uppercase muted) and a value column (Inter 500 14px tabular ink). Right column: a large 16px-radius media frame at 11.5% to 59.5% of height (aspect about 1.42:1) on --ui-surface-subtle holds the native Discord embed preview: 4px left color bar in accent, author line, title as a link in accent-text, description, a correctly proportioned 16:9 sample image and a footer line. Below it at 60.5% to 74% are 4 equal thumbnails (8px radius, 1.1% gaps) showing the same embed cropped in 4 color options (#DB2777, #7C3AED, #0EA5E9, #16A34A) as 4px bars plus a tiny title. These colors are user-choosable embed values shown only inside fragments, not page accents. They are buttons (aria-pressed) that switch the large preview's bar and title color. The caption is at 78-84%, Inter 400 16px muted, 2 lines.",
+      "motion": {
+        "purpose": "spatial_continuity",
+        "trigger": "scroll_enter",
+        "behavior": "When the media frame nears the viewport, the embed content inside the fixed-size frame rises 20px with opacity (the frame itself never moves), then the thumbnails fade in with 60ms stagger (180ms). Pressing a thumbnail crossfades the preview's color bar and title color over 200ms ease-out.",
+        "durationMs": 600,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Frame content and thumbnails render in place; color changes apply instantly."
+      },
+      "componentNeeds": [
+        "discord_embed_preview"
+      ],
+      "assetNeeds": [
+        "embed_sample_image"
+      ],
+      "transformation": {
+        "compact": "Below 768px (nubo mobile): heading 2 lines at clamp(2.25rem, 10vw, 3rem), body, then the 4 icon items as a stacked list (circle icon left, uppercase label plus one-line value right, divider between rows), matching the mobile reference. The spec table is dropped in favor of the list, which carries the same facts (color, title, author, file info). The large embed frame is full width, then the 4 thumbnails in a row of 3-4 with the caption below.",
+        "medium": "768-1023px: text column on top (heading, body, icon row, spec table at full width), then the embed frame and thumbnails full width below.",
+        "expanded": "1024px and wider: two-column composition as described."
+      }
+    },
+    {
+      "id": "bio_pages",
+      "layoutFamily": "about",
+      "layoutCases": [
+        "cipher-security-05-team"
+      ],
+      "referenceDirectionId": "cipher-security-05-team",
+      "purpose": "Show what a public bio page can look like through three clearly labelled example profiles.",
+      "userQuestion": "What can I put on my public profile?",
+      "stage": "evaluate",
+      "dependencies": [
+        "embeds"
+      ],
+      "evidence": [
+        "src/routes/[username] public bio route",
+        "Existing landing copy: 'Publish a personal bio with links, Discord presence, Spotify, colors, and effects'",
+        "src/lib/bio.ts, bio-icons.ts, spotify.ts"
+      ],
+      "copy": {
+        "eyebrow": "/ Bio pages",
+        "heading": "A page that's all you",
+        "body": [
+          "Put your links, Discord presence, Spotify and colors on one public page at twink.forsale/yourname. The three below are examples, not real members.",
+          "Juniper. twink.forsale/juniper. Shares sketches, playlists and a very serious cat.",
+          "Rook. twink.forsale/rook. Streams on weekends, posts clips everywhere else.",
+          "Mika. twink.forsale/mika. Pixel art, pronouns, and a link to the good Discord."
+        ],
+        "callsToAction": []
+      },
+      "layout": "Reference 1505x1045 desktop, 779x2000 mobile. Section id 'bio-pages' on the canvas. Top row at 12-30% of section height: the label (Inter 500 14px accent-text, the reference's slash label kept in sentence case) above the heading in Syne 700 at clamp(2.5rem, 5vw, 4.75rem), 2 lines, spanning 52% of width. A 1px vertical divider-color rule sits at x 57%, 13% of section height tall. The body paragraph is to the right at x 60-93%: Inter 400 17px, 4-5 lines. The card row runs from 34% to 97%: 3 equal cards (31% width each, 2.3% gaps) with a 1px divider-color border, 8px radius and 16px padding. Each card has a media frame (square-ish, 51% of card height, 1px inner divider border, 8px radius) holding a generated illustrated avatar on a flat theme-colored background. There is no lime grid texture. Below the media: the name in Syne 700 32px, the handle 'twink.forsale/juniper' in an Inter 500 tabular accent-text line, a 48px x 3px accent rule, and a 3-4 line Inter 400 15px muted description. Each card also shows 3 small link rows (Lucide Music, Palette, MessageCircle with short labels) as a mini bio fragment beneath the description. A small 'Example' tag sits in each media frame's top-left corner.",
+      "motion": {
+        "purpose": "spatial_continuity",
+        "trigger": "scroll_enter",
+        "behavior": "Each card is observed individually. On first approach, the avatar inside each fixed media frame rises 20px and fades in, and the card text follows 80ms later. Cards cascade left to right at 80ms apart (160ms total). Frames never move, so there is no layout shift.",
+        "durationMs": 600,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Cards and avatars render in place."
+      },
+      "componentNeeds": [
+        "bio_example_card"
+      ],
+      "assetNeeds": [
+        "bio_avatar_juniper",
+        "bio_avatar_rook",
+        "bio_avatar_mika"
+      ],
+      "transformation": {
+        "compact": "Below 768px (cipher mobile): label, heading (3 lines), then the body under it without the vertical rule. Cards become horizontal rows inside one bordered list: media 40% width on the left and text on the right (name, handle, rule, description). Rows are separated by 1px divider rules, and the mini link rows are hidden to keep each row readable. The description stays.",
+        "medium": "768-1023px: heading and body stacked, cards in a 3-column row with shortened descriptions (2-3 lines) and the mini link rows hidden.",
+        "expanded": "1024px and wider: full 3-card row as described."
+      }
+    },
+    {
+      "id": "themes",
+      "layoutFamily": "about",
+      "layoutCases": [
+        "lexedge-02-about"
+      ],
+      "referenceDirectionId": "lexedge-02-about",
+      "purpose": "Show that personality is selectable: five real themes change the mood but not where anything is.",
+      "userQuestion": "Can I make it feel like mine?",
+      "stage": "evaluate",
+      "dependencies": [
+        "bio_pages"
+      ],
+      "evidence": [
+        "src/lib/theme-store.ts: themes dark, light, pastel, neon, valentine",
+        "DESIGN.md: themes change atmosphere, not structure"
+      ],
+      "copy": {
+        "eyebrow": "Themes",
+        "heading": "Five themes. Same easy layout.",
+        "body": [
+          "Switch between dark, light, pastel, neon and valentine in your settings. Colors and mood change, but buttons, menus and your files stay exactly where you left them.",
+          "5",
+          "Built-in themes",
+          "Preview a theme: Dark, Light, Pastel, Neon, Valentine"
+        ],
+        "callsToAction": [
+          {
+            "label": "Sign in with Discord",
+            "target": "auth:discord"
+          }
+        ]
+      },
+      "layout": "Reference 1638x960 desktop, 926x1700 mobile. Section id 'themes' on the canvas. Left rail at x 3.4-22%: a square-marker label at 12% of section height (8px accent square plus 'Themes', Inter 500 15px). The stat block sits from 60% to 78%: '5' in Syne 700 80px, a row of 5 swatch dots (16px circles in each theme's canvas and accent colors, replacing the reference's stars), and 'Built-in themes' in Inter 400 16px. This is a real count, not a rating. Heading from x 23.5% to 90% at 10-26%: Syne 700 at clamp(2.5rem, 4.6vw, 4.5rem), 2 lines, with 'Same easy layout.' in --ui-accent-text (standing in for the reference's italic second line, since Syne has no italic). Two media cards at y 31-78%: card A at x 23.5-44% and card B at x 45.3-65%, 20px radius, portrait (about 0.75:1). Card A shows a native Files view preview and card B a native bio page preview, both rendered in the selected theme's tokens with an 'Example' tag. Text column at x 68-96%: body Inter 400 18px on 5 lines at 34-51%, then the CTA at 56-63% as a 48px ghost button with a control border (reference dark pill mapped to secondary, since the page's primary pink is spent elsewhere in view). Bottom strip at 85-93%: the reference logo row becomes a radiogroup 'Preview a theme' of 5 options evenly across the full width, each a 20px swatch plus the theme name in Inter 500 20px muted. The selected option is ink with a 2px accent underline and aria-checked. It changes only the two preview cards, not the user's saved theme.",
+      "motion": {
+        "purpose": "state_change",
+        "trigger": "state_change",
+        "behavior": "Choosing a theme in the radiogroup (click, arrow keys or Space) crossfades both preview cards' token-driven colors over 200ms ease-out. The previous rendering fades out while the new one fades in, stacked in the same fixed box, so there is no layout change. The selection underline slides to the new option over 200ms.",
+        "durationMs": 200,
+        "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "reducedMotion": "Previews and underline update instantly."
+      },
+      "componentNeeds": [
+        "theme_preview_card"
+      ],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (lexedge mobile): label, heading 3 lines at clamp(2.25rem, 9vw, 3rem), then the stat block ('5', swatches, label). The two preview cards sit side by side at 49% each, then the body, the CTA and the theme radiogroup as a horizontally scrollable row of 5 with visible overflow cue and 44px targets.",
+        "medium": "768-1023px: heading full width, stat block and radiogroup in one row, the two preview cards side by side, and the body plus CTA below.",
+        "expanded": "1024px and wider: full four-zone composition as described."
+      }
+    },
+    {
+      "id": "links_domains",
+      "layoutFamily": "feature",
+      "layoutCases": [
+        "stodio-05-services"
+      ],
+      "referenceDirectionId": "stodio-05-services",
+      "purpose": "Cover short links, upload domains, subdomains and view limits as a scannable list with detail on demand.",
+      "userQuestion": "Can I control where my links point and how long they last?",
+      "stage": "evaluate",
+      "dependencies": [
+        "themes"
+      ],
+      "evidence": [
+        "src/routes/dashboard/links: short links with expiresDays",
+        "src/routes/dashboard/admin/domains: domains and subdomain support",
+        "Upload maxViews field in dashboard",
+        "README: custom domains and subdomains"
+      ],
+      "copy": {
+        "eyebrow": "Links and domains",
+        "heading": "Links that go where you want",
+        "body": [
+          "Shorten any URL, upload to the domain you like, and decide how long things stay up.",
+          "[01] Short links. Paste a long URL and get a short one back, with an optional expiry.",
+          "[02] Upload domains. Pick which domain your uploads use from the ones your admin has added.",
+          "[03] Subdomains. Put your own name in front of a domain that allows it.",
+          "[04] View limits. Let a file disappear after a set number of views."
+        ],
+        "callsToAction": []
+      },
+      "layout": "Reference 1436x1094 desktop, no mobile reference. Section id 'links-domains'. One rounded panel (24px radius) on --ui-surface spanning 98% of the viewport width (x 1%), with 54px inner padding scaled to 4% of width. Top zone at 9-27% of panel height: the label chip at 9-12% (Inter 500 13px on a --ui-surface-subtle chip with a 6px accent square; reference chip kept, sentence case). The heading is Syne 600 at clamp(2.25rem, 4vw, 3.75rem), 2 lines, spanning 48% of width with a 1.1em inline rounded media tile after 'go' (reference inline photo) holding the generated sticker image. The lead sits on the right at x 72-94%, Inter 400 17px muted, 3 lines, aligned to the heading's second line. A full-width 1px divider-color rule sits at 32%. The list takes the left 50% of width from 36% to 90%: 4 rows, each about 14% of panel height, separated by 1px dotted divider rules. Each row is a button (aria-expanded, aria-controls) with the title in Syne 600 at clamp(2.25rem, 4.4vw, 4.25rem) in --ui-ink-muted and a superscript index '[01]' in Inter 500 14px tabular after the word. The right 45% is the detail area, empty in the reference and used here for a fixed-size 16px-radius fragment frame (y 38-86%) showing the active row's example: a short link card ('twink.forsale/l/k3p9', 'Expires in 7 days'), a domain select listing example domains, a subdomain field 'juniper.' plus a domain, and a view counter '3 of 10 views'. All are labelled 'Example'. Row 1 is active by default, so content is visible without hovering, and the active row turns ink with its one-sentence description shown below the title.",
+      "motion": {
+        "purpose": "feedback",
+        "trigger": "hover",
+        "behavior": "Hovering, focusing or pressing a row sets it active. Its title color transitions from muted to ink over 200ms, its description expands via grid-template-rows 0fr to 1fr over 220ms, and the right fragment crossfades to the matching example over 200ms. The same happens on keyboard focus and tap, so nothing is hover-only.",
+        "durationMs": 200,
+        "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "reducedMotion": "Active state changes apply instantly with no height or opacity animation."
+      },
+      "componentNeeds": [
+        "link_feature_preview"
+      ],
+      "assetNeeds": [
+        "links_inline_sticker"
+      ],
+      "transformation": {
+        "compact": "Below 768px (derived): the panel goes to 96% width with 24px padding. The heading is 3 lines with the inline tile kept at 1em, then the lead and the rule. All 4 rows are expanded inline, each showing its title at clamp(1.75rem, 8vw, 2.25rem), its index, its sentence and its own small fragment directly beneath. There is no separate detail pane, and nothing depends on hover.",
+        "medium": "768-1023px: list at full width with rows expandable as an accordion (first open), and the active fragment shown inside the open row.",
+        "expanded": "1024px and wider: list left, detail frame right, as described."
+      }
+    },
+    {
+      "id": "analytics_files",
+      "layoutFamily": "about",
+      "layoutCases": [
+        "mitchy-03-about"
+      ],
+      "referenceDirectionId": "mitchy-03-about",
+      "purpose": "Cover views and downloads over time, search and filters, and storage limits, and show real live community totals when available.",
+      "userQuestion": "Can I keep track of my uploads and what's getting opened?",
+      "stage": "prove",
+      "dependencies": [
+        "links_domains"
+      ],
+      "evidence": [
+        "src/routes/dashboard/analytics and dashboard/uploads (search, filter)",
+        "Storage limits (README: storage monitoring with configurable limits)",
+        "usePublicStats loader in src/routes/index.tsx returns live totalUploads, totalViews and totalUsers from the backend"
+      ],
+      "copy": {
+        "eyebrow": "YOUR FILES",
+        "heading": "See what got opened, find anything you uploaded, and keep an eye on how much space you've used.",
+        "body": [
+          "Views and downloads over time, search and filters for every upload, and a storage bar that shows your limit before you hit it.",
+          "Files hosted: {publicStats.totalUploads}",
+          "Views served: {publicStats.totalViews}",
+          "Members: {publicStats.totalUsers}"
+        ],
+        "callsToAction": []
+      },
+      "layout": "Reference 1506x1046 desktop, 936x1680 mobile. Section id 'analytics-files' on --ui-surface-subtle. Label at 16% of section height: a 10px accent dot plus 'YOUR FILES' (Inter 500 14px uppercase, as in the reference). The heading takes x 2.3-54% at 24-60%: Syne 800 at clamp(2.5rem, 4.6vw, 4.5rem), 5 lines, -0.03em tracking, ink. The right column at x 75-97.6%: a small 16px-radius media frame at 22-44% (about 1.5:1) holds the native analytics fragment, with a 7-day views line (a truthful SVG line of example values, labelled 'Example'), a search input 'Search uploads' and a storage bar showing '1.2 GB of 5 GB' as an example. The body follows at 47-60% in Inter 400 16px, 5 lines. Bottom strip at 78-86% spans the full width: the reference's logo row becomes 3 live stat items separated by 1px accent vertical rules (reference orange rules become accent). Each item is a Syne 700 48px tabular number in muted ink plus an Inter 500 16px label. Numbers come from usePublicStats and are formatted with Intl.NumberFormat. If the loader fails or all values are 0, the whole strip is omitted rather than showing zeros.",
+      "motion": {
+        "purpose": "explanation",
+        "trigger": "scroll_enter",
+        "behavior": "When the media frame nears the viewport, the example views line draws from left to right (stroke-dashoffset to 0), then the storage bar fills to its example value over 500ms. The stat numbers in the bottom strip fade in with 80ms stagger. Numbers do not count up, so the real values are never shown as false intermediates.",
+        "durationMs": 700,
+        "easing": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "reducedMotion": "Line, bar and numbers render complete."
+      },
+      "componentNeeds": [
+        "analytics_fragment"
+      ],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (mitchy mobile): label, heading at clamp(2rem, 8.5vw, 2.75rem) on 5-6 lines, the media frame at full width (about 1.75:1), then the body. The stat strip becomes 3 items in a row with smaller 32px numbers, or wraps to 2 plus 1 below 380px, keeping the accent dividers.",
+        "medium": "768-1023px: heading full width, then the media frame and body side by side at 55/45, and the stat strip below.",
+        "expanded": "1024px and wider: full composition as described."
+      }
+    },
+    {
+      "id": "faq",
+      "layoutFamily": "faq",
+      "layoutCases": [
+        "fabrica-13-faq"
+      ],
+      "referenceDirectionId": "fabrica-13-faq",
+      "purpose": "Answer the access and trust questions (approval, ShareX, rules, reporting, privacy, domains) and link to the real policy pages.",
+      "userQuestion": "What are the rules, and why can't I upload yet?",
+      "stage": "de_risk",
+      "dependencies": [
+        "analytics_files"
+      ],
+      "evidence": [
+        "Routes /acceptable-use, /dmca, /privacy, /terms exist",
+        "Existing copy: new accounts need approval before uploading",
+        "Upload domains managed by admins (dashboard/admin/domains)"
+      ],
+      "copy": {
+        "heading": "FAQ.",
+        "body": [
+          "Straight answers about access, rules and your files.",
+          "Why can't I upload yet? twink.forsale is invite-only. After you sign in with Discord, an admin reviews your account, and you can upload as soon as it's approved.",
+          "What is ShareX, and do I need it? ShareX is a free Windows screenshot tool. It's optional, so you can always upload from the browser instead.",
+          "What am I allowed to upload? Anything that follows the acceptable use policy. Give it a read before your first upload.",
+          "How do I report something? Send a notice through the DMCA page and an admin will review it.",
+          "What happens to my data? The privacy policy explains what's stored and why.",
+          "Can I use my own domain? Uploads can use any domain your admin has added. Ask in the Discord if you'd like a new one."
+        ],
+        "callsToAction": [
+          {
+            "label": "Acceptable use policy",
+            "target": "/acceptable-use"
+          },
+          {
+            "label": "DMCA page",
+            "target": "/dmca"
+          },
+          {
+            "label": "Privacy policy",
+            "target": "/privacy"
+          }
+        ]
+      },
+      "layout": "Reference 1586x992 desktop, 859x1832 mobile. Section id 'faq' on the canvas. Left column x 3-47%: 'FAQ.' in Syne 800 at clamp(4.5rem, 9vw, 9rem) with -0.04em tracking at 20-33% of section height (the page's single monumental type moment), then the intro in Inter 400 17px muted on 2 lines at 38-43%. Right column x 50-97%: 6 stacked disclosure rows on --ui-surface with a 16px radius, 6px gaps, and a 1px divider border. Each row has a 26px padding header (question in Inter 500 20px ink, left) and a 28px round button on the right with a Lucide Plus in on-accent over an ink-filled circle (reference black circle mapped to ink). The whole header is the button, with aria-expanded and aria-controls. The first row is open by default, showing its answer in Inter 400 16px muted on 2-3 lines, as in the reference. Answers that reference policies include inline text links (accent-text, underlined) to /acceptable-use, /dmca and /privacy. The row's rest height is about 8.5% of section height and the open row about 19%.",
+      "motion": {
+        "purpose": "state_change",
+        "trigger": "press",
+        "behavior": "Clicking a header or pressing Enter or Space toggles its panel. Height animates via grid-template-rows 0fr to 1fr over 250ms and the Plus icon rotates 45deg to read as a close mark over 200ms. Multiple rows may stay open. State is carried by aria-expanded, not by motion.",
+        "durationMs": 250,
+        "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "reducedMotion": "Panels open and close instantly and the icon swaps without rotation."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [],
+      "transformation": {
+        "compact": "Below 768px (fabrica mobile): 'FAQ.' at clamp(4rem, 22vw, 6rem) left-aligned, the intro below, then the 6 rows at full width with 20px padding and questions at 18-19px wrapping to 2 lines where needed. The icon button stays 28px within a 44px hit area.",
+        "medium": "768-1023px: heading and intro above, rows full width below.",
+        "expanded": "1024px and wider: split as described."
+      }
+    },
+    {
+      "id": "closing_cta",
+      "layoutFamily": "cta",
+      "layoutCases": [
+        "avoora-12-contact"
+      ],
+      "referenceDirectionId": "avoora-12-contact",
+      "purpose": "Repeat the primary action with a summary of what members get and a path into the Discord community for anyone still waiting on an invite.",
+      "userQuestion": "I'm convinced, so what do I do now?",
+      "stage": "act",
+      "dependencies": [
+        "faq"
+      ],
+      "evidence": [
+        "Existing footer Discord invite: https://discord.gg/RJ9Cedxvqe",
+        "Feature list verified in earlier sections",
+        "Admin approval flow (existing landing copy)"
+      ],
+      "copy": {
+        "heading": "Let's get you uploading",
+        "body": [
+          "Join the community",
+          "What you get: Browser and ShareX uploads. Short links. Custom Discord embeds. A public bio page. Five themes.",
+          "Access: Invite-only, approved by an admin.",
+          "Rules: Read the acceptable use policy.",
+          "Ready when you are",
+          "Sign in with Discord, then check back once an admin approves your account."
+        ],
+        "callsToAction": [
+          {
+            "label": "Sign in with Discord",
+            "target": "auth:discord"
+          },
+          {
+            "label": "Join the Discord",
+            "target": "https://discord.gg/RJ9Cedxvqe"
+          },
+          {
+            "label": "Acceptable use policy",
+            "target": "/acceptable-use"
+          }
+        ]
+      },
+      "layout": "Reference 1505x1045 desktop, 667x2000 mobile. Section id 'get-started' on the canvas. Centered heading at 12-19% of section height in Syne 700 at clamp(2.5rem, 4.6vw, 4.25rem), 1 line. This is one of only two centered sections. A full-width 1px divider rule at 22%. Panel at y 27-92%, x 3-97%, on --ui-surface-subtle with an 8px radius, split by a 1px vertical divider at 50%. Left half (32px padding): row 1 has 'Join the community' in Inter 600 22px left and a single 48px square icon link on the right with a Discord brand mark (brand icon, since Lucide has none) plus a visible 'Join the Discord' text label, replacing the reference's 4 social icons. A divider follows. Row 2 has a 4:5 media tile (17% of panel width, 8px radius) holding the generated community sticker image, beside 'What you get' in Inter 600 22px and a 5-item list, each with an 8px accent square marker and Inter 400 17px muted text (the reference's square bullets). Another divider. Row 3 has two columns: 'Access' / 'Invite-only, approved by an admin.' and 'Rules' / 'Read the acceptable use policy' as an accent-text link. Right half (40px padding): 'Ready when you are' in Inter 600 26px and the one-line sub in muted Inter 17px. Deviation: the reference's form fields are replaced by the real action because there is no contact form. A full-width 56px primary 'Sign in with Discord' button sits at the position of the reference's submit button, preceded by a 3-row read-only status list (Lucide LogIn 'Sign in', Lucide Clock 'Admin approval', Lucide Upload 'Start uploading') in bordered 56px rows that mirror the reference's input rhythm. For a signed-in user the heading reads the same, and the right half shows 'Open dashboard' (primary) and 'Upload a file' (ghost, /upload).",
+      "motion": {
+        "purpose": "feedback",
+        "trigger": "press",
+        "behavior": "Buttons and links give direct feedback: background-color and color transition over 150ms ease-out on hover, a 1px downward translate over 120ms on press, and a 2px accent-text focus ring. No entrance animation; this section stays still so the action is immediately usable.",
+        "durationMs": 150,
+        "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "reducedMotion": "Color changes remain and the press translate is removed."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [
+        "cta_community_image",
+        "discord_brand_icon"
+      ],
+      "transformation": {
+        "compact": "Below 768px (avoora mobile): heading left-aligned on 2 lines ('Let's get you / uploading'), then a single-column panel in order: community row with the Discord link, full-width image (about 1.4:1), the 'What you get' list, a divider, then 'Ready when you are' with the status rows and the full-width sign-in button. The Access and Rules lines move to the end. The primary action stays inside the first viewport-height of the panel after the list.",
+        "medium": "768-1023px: two columns kept at 45/55 with the image shrunk to 30% of the left column width.",
+        "expanded": "1024px and wider: full split panel as described."
+      }
+    },
+    {
+      "id": "footer",
+      "layoutFamily": "footer",
+      "layoutCases": [
+        "ritovex-11-footer"
+      ],
+      "referenceDirectionId": "ritovex-11-footer",
+      "purpose": "Give quick links to product routes, page sections, legal pages and the Discord community, closing on the brand wordmark.",
+      "userQuestion": "Where do I find the rules, my dashboard or the community?",
+      "stage": "continue",
+      "dependencies": [
+        "closing_cta"
+      ],
+      "evidence": [
+        "Routes: /dashboard, /upload, /setup/sharex, /terms, /privacy, /acceptable-use, /dmca",
+        "Discord invite used in src/components/layout/footer.tsx"
+      ],
+      "copy": {
+        "heading": "Come say hi in the Discord.",
+        "body": [
+          "Product: Dashboard, Upload, ShareX setup",
+          "Explore: How it works, Bio pages, Themes, FAQ",
+          "Legal: Terms, Privacy, Acceptable use, DMCA",
+          "Say hi: Join the Discord, Invite-only, approved by admins",
+          "© 2026 twink.forsale",
+          "twink.forsale"
+        ],
+        "callsToAction": [
+          {
+            "label": "Join the Discord",
+            "target": "https://discord.gg/RJ9Cedxvqe"
+          },
+          {
+            "label": "Dashboard",
+            "target": "/dashboard"
+          },
+          {
+            "label": "Upload",
+            "target": "/upload"
+          },
+          {
+            "label": "ShareX setup",
+            "target": "/setup/sharex"
+          },
+          {
+            "label": "Terms",
+            "target": "/terms"
+          },
+          {
+            "label": "Privacy",
+            "target": "/privacy"
+          },
+          {
+            "label": "Acceptable use",
+            "target": "/acceptable-use"
+          },
+          {
+            "label": "DMCA",
+            "target": "/dmca"
+          }
+        ]
+      },
+      "layout": "Reference 1505x1045 desktop, 780x2000 mobile. Full-bleed --ui-surface band with 72px side padding. Top row at 11-20% of height: 'Come say hi in the Discord.' in Inter 500 34px, 1-2 lines, on the left 45%. On the right, x 50-95%, the reference's underlined newsletter input becomes a single full-width link row: 'discord.gg/RJ9Cedxvqe' in Inter 400 20px muted on the left, 'Join the Discord' plus a Lucide Send icon on the right, and a 1px ink underline. There is no fake email field. Link columns at 30-54%: 4 columns at x 5%, 28%, 51% and 75% with headings in Inter 600 22px and links in Inter 400 18px at 44px line spacing. The 4th column uses Lucide icon rows (MessageCircle 'Join the Discord', ShieldCheck 'Invite-only, approved by admins'). A 1px divider rule at 60%. A bottom row at 66-70% has the copyright on the left and a Discord brand icon link on the right. The wordmark 'twink.forsale' sits at 74-95% in Syne 800 spanning 91% of width (font-size fitted via clamp so it fills the width), filled with horizontal stripes: a repeating-linear-gradient of --ui-ink-muted and --ui-accent-text bands 6px each with 4px gaps, clipped to the text. The text is aria-hidden, since the name also appears in the copyright line. This is the one textured type moment.",
+      "motion": {
+        "purpose": "spatial_continuity",
+        "trigger": "scroll_enter",
+        "behavior": "When the wordmark container nears the viewport, the striped letters slide up 40px from inside an overflow-clipped baseline container while fading from 0 to 1. Runs once and never replays on scroll up.",
+        "durationMs": 700,
+        "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "reducedMotion": "Wordmark renders in place."
+      },
+      "componentNeeds": [],
+      "assetNeeds": [
+        "discord_brand_icon"
+      ],
+      "transformation": {
+        "compact": "Below 768px (ritovex mobile): the heading on 2 lines, the Discord link row full width, then Product, Explore and Legal as 3 columns (2 plus 1 below 420px so link text stays at 16px or larger), 'Say hi' as its own block with icon rows, the divider, the centered copyright and icon link, and the wordmark filling 94% width.",
+        "medium": "768-1023px: top row stacked, link columns in 2x2, and the wordmark full width.",
+        "expanded": "1024px and wider: full layout as described."
+      }
+    }
+  ],
+  "responsive": [
+    "Breakpoints: compact below 768px, medium 768-1023px, expanded 1024px and wider, plus a small-phone check at 360px",
+    "No horizontal page scroll at 320px or wider. The only intentional horizontal scroller is the themes radiogroup at compact, with visible overflow",
+    "Touch targets at least 44x44px on compact, including FAQ icons, theme options, embed color thumbnails and nav toggle",
+    "Source order equals visual order at every width. The primary sign-in action appears in the hero, how_it_works and closing_cta at every width",
+    "Hover-revealed content (links_domains detail, card hover states) is always visible or tap-activated on compact",
+    "Display type uses clamp() so the hero wordmark, 'FAQ.' and the footer wordmark never overflow; the footer wordmark is fitted to container width",
+    "Images use width/height attributes and aspect-ratio boxes so no layout shift occurs while collage, avatars and embed images load"
+  ],
+  "interactions": [
+    "Sign in with Discord: existing LoginButton / loginWithDiscord in src/lib/auth-client.ts with a return path of /dashboard. Signed-in users get Open dashboard and Upload a file instead (useCurrentUser)",
+    "Copy example link (upload_sharing tilt card): copies 'twink.forsale/f/a8Kd2' via the Clipboard API, swaps Copy to Check for 1.5s and announces 'Copied' in an aria-live polite region; on failure it announces 'Couldn't copy' and selects the text",
+    "Embed color thumbnails: buttons with aria-pressed that change the preview's color bar and title color",
+    "Theme preview radiogroup: roving tabindex with arrow-key navigation. It changes only the two preview cards and never writes the user's theme setting",
+    "Links and domains list: row buttons with aria-expanded controlling description and preview. Hover, focus and tap all activate; row 1 is active by default",
+    "FAQ disclosures: button headers with aria-expanded and aria-controls, independent toggles, first row open by default",
+    "Mobile nav disclosure: focus moves to the first link on open, Escape closes, focus returns to the toggle",
+    "All reveal animations: one IntersectionObserver per visual group (threshold 0, rootMargin 0px 0px 10% 0px), unobserved after first run. Elements already in view at init are never hidden. Cleanup disconnects observers and cancels only owned animations"
+  ],
+  "acceptanceCriteria": [
+    "Each section reproduces its reference composition map (column split, heading box and line count, media count and placement) at desktop and mobile widths, compared side by side with the reference images",
+    "The hero shows the wordmark, the subline, the one supporting paragraph with the invite-only note, and the Discord sign-in button above the fold at 1440x900 and 390x844",
+    "Pink is used only for primary actions, focus and selected states, the single tilt card, and inline highlights in fragments. No gradient text, glow or glassmorphism appears",
+    "Syne and Inter both load: document.fonts.check('800 48px Syne') and document.fonts.check('400 16px Inter') return true after document.fonts.ready, with a matching FontFace present",
+    "All product fragments, bio profiles, theme previews and the analytics chart carry a visible 'Example' tag, and the bio section states that the profiles are examples",
+    "The live stats strip shows real usePublicStats values or is omitted entirely when the loader fails or returns zeros. No invented metrics, testimonials or partner logos appear anywhere",
+    "Browser evidence: the hero entrance animation runs on load. The how_it_works, upload_sharing (tilt), embeds, bio_pages, analytics_files and footer reveals run once after scrolling. Rapidly scrolling down and up twice, reloading at a mid-page position, resizing and toggling reduced motion during playback leave every visited section visible with no replay",
+    "With prefers-reduced-motion: reduce, all content is visible immediately with no transforms and all controls still work",
+    "Keyboard only: every link, button, disclosure, radiogroup and nav item is reachable in order with a visible 2px focus ring. Text contrast is at least 4.5:1 and control borders at least 3:1 in both dark and light themes",
+    "npm run build passes for the frontend, and the /dashboard, /setup/sharex and auth flows are unchanged"
+  ]
+}

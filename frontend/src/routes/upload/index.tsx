@@ -22,6 +22,9 @@ import {
   Ban,
 } from "lucide-icons-qwik";
 import { api, serverAuth } from "~/lib/api-client";
+import { library } from "~/lib/library-api";
+import { stripImageMetadata } from "~/lib/image-edit";
+import { ScreenshotTools } from "~/components/files/screenshot-tools";
 import { getCurrentUser } from "~/lib/auth-client";
 import { uploadFileWithProgress, isAbortError } from "~/lib/upload-transport";
 import { formatBytes } from "~/lib/utils";
@@ -40,6 +43,8 @@ import {
   Badge,
   ProgressBar,
   Meter,
+  Select,
+  Checkbox,
 } from "~/components/ui";
 
 export const useUploadContext = routeLoader$(async (requestEvent) => {
@@ -58,6 +63,7 @@ export const useUploadContext = routeLoader$(async (requestEvent) => {
   ]);
 
   return {
+    presets: (await library.presets(auth)).presets,
     maxFileSize: settings?.maxFileSize ?? 10_485_760,
     maxUploads: settings?.maxUploads ?? 100,
     uploadCount: summary?.totalUploads ?? 0,
@@ -132,6 +138,8 @@ export default component$(() => {
 
   const dragging = useSignal(false);
   const advancedOpen = useSignal(false);
+  const presetId = useSignal("");
+  const stripMetadata = useSignal(false);
   const inputRef = useSignal<HTMLInputElement>();
 
   const expirationDays = useSignal<string>(
@@ -208,14 +216,21 @@ export default component$(() => {
 
     const form = new FormData();
     form.append("file", file);
-    if (expirationDays.value.trim()) {
-      form.append("expirationDays", expirationDays.value.trim());
-    }
-    if (maxViews.value.trim()) {
-      form.append("maxViews", maxViews.value.trim());
-    }
+    form.append("expirationDays", expirationDays.value.trim());
+    form.append("maxViews", maxViews.value.trim());
+    if (presetId.value) form.append("presetId", presetId.value);
 
     try {
+      if (stripMetadata.value && file.type.startsWith("image/")) {
+        const prepared = await stripImageMetadata(file);
+        if (prepared.size > ctx.value.maxFileSize)
+          throw new Error(
+            "The image exceeds your file size limit after metadata removal.",
+          );
+        form.set("file", prepared);
+        item.size = prepared.size;
+        item.name = prepared.name;
+      }
       const result = await uploadFileWithProgress(form, {
         signal: controller.signal,
         onProgress: ({ loaded }) => {
@@ -388,6 +403,51 @@ export default component$(() => {
       )}
 
       {/* Drop / select surface */}
+      <div class="mb-4 grid gap-3">
+        <Field label="Upload preset" for="upload-preset">
+          <Select
+            id="upload-preset"
+            value={presetId.value}
+            disabled={active.value}
+            onChange$={(_, el) => {
+              presetId.value = el.value;
+              const preset = ctx.value.presets.find((p) => p.id === el.value);
+              expirationDays.value =
+                (preset
+                  ? preset.expirationDays
+                  : ctx.value.defaultExpirationDays
+                )?.toString() || "";
+              maxViews.value =
+                (preset
+                  ? preset.maxViews
+                  : ctx.value.defaultMaxViews
+                )?.toString() || "";
+              stripMetadata.value = preset?.stripMetadata || false;
+            }}
+          >
+            <option value="">Account defaults</option>
+            {ctx.value.presets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <fieldset disabled={active.value}>
+          <Checkbox
+            showLabel
+            label="Remove image metadata (PNG, JPEG, WebP)"
+            checked={stripMetadata.value}
+            onChange$={(v) => (stripMetadata.value = v)}
+          />
+        </fieldset>
+        <p class="text-ink-muted text-xs">
+          Metadata removal exports images as PNG. Animated images become still.{" "}
+          <a class="text-accent-text underline" href="/dashboard/presets">
+            Manage presets
+          </a>
+        </p>
+      </div>
       <div
         onDragOver$={(event) => {
           event.preventDefault();
@@ -434,6 +494,7 @@ export default component$(() => {
         />
       </div>
 
+      <ScreenshotTools onReady$={addFiles} />
       {/* Advanced options, disclosed rather than always present */}
       <div class="mt-4">
         <button
@@ -457,7 +518,7 @@ export default component$(() => {
             class="border-edge rounded-surface mt-2 grid gap-4 border p-4 sm:grid-cols-2"
           >
             <Field
-              label="Delete after"
+              label="Expire after"
               for="expiration-days"
               help={
                 ctx.value.defaultExpirationDays

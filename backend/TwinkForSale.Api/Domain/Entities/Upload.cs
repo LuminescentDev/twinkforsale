@@ -20,6 +20,18 @@ public sealed class Upload
     public int Downloads { get; set; }
     public DateTimeOffset? LastViewed { get; set; }
     public DateTimeOffset? LastDownloaded { get; set; }
+    public string? DisplayName { get; set; }
+    public bool IsFavorite { get; set; }
+    public string[] Tags { get; set; } = [];
+    public string AccessMode { get; set; } = "public";
+    public string? PasswordHash { get; set; }
+    public bool IsRevoked { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public bool IsPending { get; set; }
+    public string? FileRequestId { get; set; }
+    public string? EmbedTitle { get; set; }
+    public string? EmbedDescription { get; set; }
+    public string? EmbedColor { get; set; }
 
     public User? User { get; set; }
     public ICollection<ViewLog> ViewLogs { get; set; } = [];

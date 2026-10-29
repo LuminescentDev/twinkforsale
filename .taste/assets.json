@@ -1,0 +1,499 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "hero_upload_collage_01",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a sample upload of a kitten playing with a weed between cobblestones, reading as a typical cute photo someone would share",
+      "requirements": [
+        "Tile shown at 8px radius under a 70% canvas overlay",
+        "CC0, so no attribution required"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Black and white kitten, left-center, reaching for a plant on grey cobblestones. Centered crop at 1704x1278. Busy enough to read as a real upload and dark enough to sit under the overlay.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=85952329",
+        "license": "CC0 1.0 (Wikimedia Commons, 'A curious kitten (Pixabay)')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_01.jpg"
+    },
+    {
+      "id": "hero_upload_collage_02",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a pink sunset cloud, the brand's warm pink carried through a real photo",
+      "requirements": [
+        "Replaced the first candidate (neon signage with real brand logos) after inspection",
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Towering peach and pink cumulus cloud against a violet sky, filling the frame. There's no horizon and no text. Centered crop at 1332x999.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=17233246",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Big pink cloud Oia')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_02.jpg"
+    },
+    {
+      "id": "hero_upload_collage_03",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage square tile: a prism splitting light into a rainbow, a quiet queer-coded color moment",
+      "requirements": [
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Glass prism top-center on black, with the rainbow spectrum running diagonally to the lower right. The large dark field suits the overlay. 1280x1280.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=125361066",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Prism flat rainbow (cropped)')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_03.jpg"
+    },
+    {
+      "id": "hero_upload_collage_04",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a cherry-blossom landscape, a pastel travel photo as a sample upload",
+      "requirements": [
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Row of pink-white cherry trees along a canal under a blue sky, with the horizon at about 45%. Centered crop at 1432x1074.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=14896700",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Cherry blossom in Fukuokazeki sakura park')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_04.jpg"
+    },
+    {
+      "id": "hero_upload_collage_05",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a calm pink-and-blue sky reflected in still water",
+      "requirements": [
+        "Replaced a murky frog photo after inspection",
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Rocky hill across the middle third with a pink-tinted sky above and a mirror reflection below. Low-detail edges crop cleanly at the band's borders. 1704x1278.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=85878181",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Pink clouds and Åkullen hill reflected in Brofjorden at Govik')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_05.jpg"
+    },
+    {
+      "id": "hero_upload_collage_06",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage square tile: fanned rainbow notebooks, a bright object photo",
+      "requirements": [
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Stack of notebooks fanned diagonally in rainbow order from green to pink across the frame, with no text. 1280x1280.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=99572060",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Notebooks-rainbow')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_06.jpg"
+    },
+    {
+      "id": "hero_upload_collage_07",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a pink, white and lilac tulip bouquet on black",
+      "requirements": [
+        "Replaced a night shop photo showing a real business name after inspection",
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Top-down bouquet centered on a pure black background. The dark surround blends into the canvas overlay. 1920x1440.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=14060928",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Bunch tulip Paris 2011')"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_07.jpg"
+    },
+    {
+      "id": "hero_upload_collage_08",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Hero collage tile: a sleeping tabby cat, the classic screenshot-worthy pet photo",
+      "requirements": [
+        "CC0 via WordPress Photo Directory"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "hero"
+      ],
+      "aspectRatio": "4:3",
+      "composition": "Tabby cat asleep on its back, head lower-left, across a beige blanket. Full frame at 2048x1536, with the face in the left third.",
+      "source": {
+        "kind": "external",
+        "reference": "https://wordpress.org/photos/photo/3565b94f9b/",
+        "license": "CC0 1.0 (WordPress Photo Directory)"
+      },
+      "destination": "frontend/public/landing/hero_upload_collage_08.jpg"
+    },
+    {
+      "id": "syne_font",
+      "kind": "font",
+      "status": "ready",
+      "purpose": "Syne display family, requested by the hero for its wordmark and subline. The same file also sets section headings, tilt-card titles, step numerals, feature-list rows and the footer wordmark across the page",
+      "requirements": [
+        "Variable font with a wght axis covering 400-800. The brand uses 600, 700 and 800",
+        "Load via @font-face from /fonts/Syne[wght].ttf with font-display: swap and verify document.fonts.check('800 48px Syne')",
+        "OFL license shipped alongside as Syne-OFL.txt",
+        "Load it globally for the landing page, because display headings in later sections use the same family"
+      ],
+      "role": "font",
+      "sectionIds": [
+        "hero"
+      ],
+      "source": {
+        "kind": "external",
+        "reference": "https://github.com/google/fonts/tree/main/ofl/syne",
+        "license": "SIL Open Font License 1.1 (frontend/public/fonts/Syne-OFL.txt)"
+      },
+      "destination": "frontend/public/fonts/Syne[wght].ttf"
+    },
+    {
+      "id": "inter_font",
+      "kind": "font",
+      "status": "ready",
+      "purpose": "Local Inter variable font for body, controls, labels and tabular data values, replacing the remote Google Fonts import so load can be verified",
+      "requirements": [
+        "Variable font with opsz and wght axes. The brand uses 400, 500 and 600",
+        "Use font-variant-numeric: tabular-nums for short URLs, file names and stats",
+        "OFL license shipped as Inter-OFL.txt"
+      ],
+      "role": "font",
+      "sectionIds": [
+        "hero",
+        "intro_statement",
+        "how_it_works",
+        "upload_sharing",
+        "sharex",
+        "embeds",
+        "bio_pages",
+        "themes",
+        "links_domains",
+        "analytics_files",
+        "faq",
+        "closing_cta",
+        "footer"
+      ],
+      "source": {
+        "kind": "external",
+        "reference": "https://github.com/google/fonts/tree/main/ofl/inter",
+        "license": "SIL Open Font License 1.1 (frontend/public/fonts/Inter-OFL.txt)"
+      },
+      "destination": "frontend/public/fonts/Inter[opsz,wght].ttf"
+    },
+    {
+      "id": "copy_link_chip",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Button inside the pink tilt card that copies the example short link 'twink.forsale/f/a8Kd2' and announces 'Copied'",
+      "requirements": [
+        "Native Qwik button with aria-label 'Copy example link'",
+        "Clipboard API, swapping Lucide Copy to Check for 1.5s with a 180ms opacity crossfade",
+        "aria-live polite region announces 'Copied'. On failure it announces 'Couldn't copy' and selects the text",
+        "Inter 500 tabular text on an on-accent-tinted chip, 6px radius"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "upload_sharing"
+      ]
+    },
+    {
+      "id": "sharex_setup_fragment",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Native illustrative ShareX setup fragment inside the pink-tinted frame band",
+      "requirements": [
+        "File chip with Lucide FileDown and 'twink.forsale.sxcu'",
+        "Three checklist rows ('Download your config', 'Double-click to open in ShareX', 'Take a screenshot') with Lucide check circles that fill on reveal",
+        "Visible 'Example' tag",
+        "Built from --ui tokens with a 16px-radius media window"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "sharex"
+      ]
+    },
+    {
+      "id": "discord_embed_preview",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Native Discord-style embed preview with color bar, author, title, description, correctly proportioned 16:9 image and footer, plus 4 color option buttons",
+      "requirements": [
+        "Uses embed_sample_image at its native 16:9 ratio with width/height attributes",
+        "Four thumbnails as aria-pressed buttons (#DB2777, #7C3AED, #0EA5E9, #16A34A) that switch the bar and title color with a 200ms crossfade",
+        "Visible 'Example embed' caption",
+        "Example values: author 'juniper', title 'sunset.png', footer 'shared on twink.forsale'"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "embeds"
+      ]
+    },
+    {
+      "id": "embed_sample_image",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Sample upload shown inside the Discord embed preview to show images keep their true 16:9 proportions",
+      "requirements": [
+        "Displayed at exactly 16:9 with width=1920 height=1080 attributes",
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "embeds"
+      ],
+      "aspectRatio": "16:9",
+      "composition": "Vivid orange-pink sunset over the sea, with a stone pier leading from the lower left toward the horizon at about 55% height. 1920x1080.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/w/index.php?curid=54183619",
+        "license": "CC0 1.0 (Wikimedia Commons, 'Sunset-Pariaman')"
+      },
+      "destination": "frontend/public/landing/embed_sample_image.jpg"
+    },
+    {
+      "id": "bio_example_card",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Card for an illustrative public bio profile with framed avatar, name, handle, accent rule, description and mini link rows",
+      "requirements": [
+        "Visible 'Example' tag in the media frame",
+        "Media frame with 8px radius and 1px divider border, avatar revealed inside a fixed frame",
+        "Handle in Inter 500 tabular accent-text, and three mini link rows with Lucide Music, Palette and MessageCircle",
+        "Compact layout becomes a horizontal row with media at 40% and link rows hidden"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "bio_pages"
+      ]
+    },
+    {
+      "id": "bio_avatar_juniper",
+      "kind": "illustration",
+      "status": "ready",
+      "purpose": "Avatar for the fictional example profile 'Juniper': a cartoon grey cat with a red bow, matching the 'very serious cat' description",
+      "requirements": [
+        "Illustrated animal, not a real person or real member",
+        "CC0 public-domain clip art"
+      ],
+      "role": "editorial_illustration",
+      "sectionIds": [
+        "bio_pages"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Sitting grey cartoon cat centered on an off-white ground with generous margin, so it crops cleanly into a square media frame. 1024x1024.",
+      "source": {
+        "kind": "external",
+        "reference": "https://www.rawpixel.com/image/10096118/image-cat-cartoon-illustrations",
+        "license": "CC0 1.0 (rawpixel public domain, via Openverse)"
+      },
+      "destination": "frontend/public/landing/bio_avatar_juniper.jpg"
+    },
+    {
+      "id": "bio_avatar_rook",
+      "kind": "illustration",
+      "status": "ready",
+      "purpose": "Avatar for the fictional example profile 'Rook': a hand-colored raven engraving that makes a pun on the name",
+      "requirements": [
+        "Public-domain engraving, not a real person",
+        "A small printed caption 'The Raven. (Corvus Corax.)' sits at the bottom edge. Build may crop it with object-position center 40% or leave it as period detail"
+      ],
+      "role": "editorial_illustration",
+      "sectionIds": [
+        "bio_pages"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Black raven standing on a rocky mound, centered slightly right, on a cream engraved background. 1007x1007.",
+      "source": {
+        "kind": "external",
+        "reference": "https://www.rawpixel.com/image/16372243/image-cartoon-animal-bird",
+        "license": "CC0 1.0 (rawpixel public domain, via Openverse)"
+      },
+      "destination": "frontend/public/landing/bio_avatar_rook.jpg"
+    },
+    {
+      "id": "bio_avatar_mika",
+      "kind": "illustration",
+      "status": "ready",
+      "purpose": "Avatar for the fictional example profile 'Mika': a cute cartoon bunny that fits the pixel-art and pronouns persona",
+      "requirements": [
+        "Illustrated animal, not a real person",
+        "CC0 public-domain clip art"
+      ],
+      "role": "editorial_illustration",
+      "sectionIds": [
+        "bio_pages"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "White bunny face with pink ears and cheeks peeking over an edge, centered on an off-white ground. 1024x1024.",
+      "source": {
+        "kind": "external",
+        "reference": "https://www.rawpixel.com/image/9216156/image-cartoon-illustrations-animal",
+        "license": "CC0 1.0 (rawpixel public domain, via Openverse)"
+      },
+      "destination": "frontend/public/landing/bio_avatar_mika.jpg"
+    },
+    {
+      "id": "theme_preview_card",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Two native portrait preview cards (a Files view and a bio page) rendered in a selected theme's tokens, driven by a 5-option theme radiogroup",
+      "requirements": [
+        "Read theme values from src/lib/theme-store.ts (dark, light, pastel, neon, valentine) without writing the user's saved theme",
+        "Stack two renderings in a fixed box and crossfade over 200ms, with no layout change",
+        "Visible 'Example' tag, 20px radius, portrait about 0.75:1",
+        "Radiogroup with roving tabindex and arrow keys, plus 44px targets on compact"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "themes"
+      ]
+    },
+    {
+      "id": "link_feature_preview",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Native detail fragment for the links and domains list: short link card, domain select, subdomain field and view counter, one per active row",
+      "requirements": [
+        "Example values: 'twink.forsale/l/k3p9' expiring in 7 days, a list of example domains, 'juniper.' plus a domain, '3 of 10 views'",
+        "Visible 'Example' tag in a fixed-size frame with 16px radius and a 200ms crossfade between rows",
+        "Rows are buttons with aria-expanded. Hover, focus and tap all activate, and row 1 is active by default",
+        "On compact, each fragment renders inline under its row"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "links_domains"
+      ]
+    },
+    {
+      "id": "links_inline_sticker",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Small rounded inline media tile inside the 'Links that go where you want' heading, the playful sticker moment carried over from the reference's inline photo",
+      "requirements": [
+        "Rendered at about 1.1em square with a rounded radius and decorative alt=\"\"",
+        "Replaced a rawpixel heart PNG with a baked-in checkerboard after inspection",
+        "CC0"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "links_domains"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Top-down swirled blue-and-cream lollipop filling the square on a white napkin. The bold swirl stays legible at 40-60px. 1280x1280.",
+      "source": {
+        "kind": "external",
+        "reference": "https://commons.wikimedia.org/wiki/File:Front_View_of_a_Swirled_Lollipop_on_the_Napkin.jpg",
+        "license": "CC0 1.0 (Wikimedia Commons, via Openverse)"
+      },
+      "destination": "frontend/public/landing/links_inline_sticker.jpg"
+    },
+    {
+      "id": "analytics_fragment",
+      "kind": "component",
+      "status": "needed",
+      "purpose": "Native analytics fragment in a small media frame: example 7-day views line, 'Search uploads' input and storage bar '1.2 GB of 5 GB'",
+      "requirements": [
+        "Truthful inline SVG line of clearly example values, labelled 'Example', with no headline totals",
+        "Line draws via stroke-dashoffset on reveal and the storage bar fills over 500ms. Reduced motion shows them complete",
+        "The live stats strip below uses real usePublicStats values and is omitted when unavailable or all zero"
+      ],
+      "role": "component",
+      "sectionIds": [
+        "analytics_files"
+      ]
+    },
+    {
+      "id": "cta_community_image",
+      "kind": "image",
+      "status": "ready",
+      "purpose": "Portrait media tile in the closing panel: two hands raising pink and mango bubble teas, a warm hangout feeling for 'Join the community'",
+      "requirements": [
+        "Hands only with no identifiable faces. A street background with a temple is visible at the top",
+        "CC0 via WordPress Photo Directory"
+      ],
+      "role": "photography",
+      "sectionIds": [
+        "closing_cta"
+      ],
+      "aspectRatio": "4:5",
+      "composition": "Two hands in the lower-middle holding pink and yellow bubble tea cups toward the center, with ornate architecture in the upper half. 1536x1920. Safe to crop to about 1.4:1 on compact around 60% height.",
+      "source": {
+        "kind": "external",
+        "reference": "https://wordpress.org/photos/photo/183695e2ea/",
+        "license": "CC0 1.0 (WordPress Photo Directory)"
+      },
+      "destination": "frontend/public/landing/cta_community_image.jpg"
+    },
+    {
+      "id": "discord_brand_icon",
+      "kind": "icon",
+      "status": "ready",
+      "purpose": "Discord brand mark for the community link in the closing panel and footer, since Lucide has no brand icons",
+      "requirements": [
+        "Inline or img SVG with fill set to currentColor, always paired with the visible text 'Join the Discord' or an aria-label",
+        "Icon from Simple Icons (CC0). Use follows Discord's brand guidelines and stays unmodified"
+      ],
+      "role": "logo",
+      "sectionIds": [
+        "closing_cta",
+        "footer"
+      ],
+      "aspectRatio": "1:1",
+      "composition": "Single-color Discord glyph in a 24x24 viewBox, centered",
+      "source": {
+        "kind": "external",
+        "reference": "https://simpleicons.org/?q=discord",
+        "license": "CC0 1.0 (Simple Icons). The Discord mark is a trademark of Discord Inc."
+      },
+      "destination": "frontend/public/landing/discord.svg"
+    }
+  ]
+}

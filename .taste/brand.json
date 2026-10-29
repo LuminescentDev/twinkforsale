@@ -1,0 +1,337 @@
+{
+  "version": 1,
+  "foundation": {
+    "strategy": "extend",
+    "existingAssets": [
+      "frontend/src/global.css: role tokens --ui-canvas, --ui-surface, --ui-ink, --ui-accent (#db2777), --ui-accent-hover (#ec4899), --ui-accent-text (#f472b6), plus radius tokens --radius-control 6px, --radius-surface 8px, --radius-dialog 12px",
+      "frontend/src/lib/theme-store.ts: user themes dark (default, canvas #0e1016), light (#f6f7f9), pastel (#fbf5fc), neon (#07070c), valentine (#fdf3f5)",
+      "frontend/src/global.css: Inter loaded from Google Fonts as the app UI font",
+      "frontend/src/lib/cute-words.ts: the existing source of playful copy",
+      "frontend/src/lib/global-particle-store.ts: optional particle effect",
+      "Lucide icons, the established icon library",
+      "frontend/public/favicon.svg: the default Qwik favicon, not a twink.forsale logo",
+      "DESIGN.md and PRODUCT_DESIGN_BRIEF.md: the product's visual and verbal principles"
+    ],
+    "assetActions": [
+      {
+        "asset": "Pink accent #db2777 with hover #ec4899 and text tint #f472b6",
+        "action": "protect",
+        "reason": "DESIGN.md names pink as the signature brand color, and the app already uses these exact values in every theme."
+      },
+      {
+        "asset": "Theme system (dark, light, pastel, neon, valentine)",
+        "action": "preserve",
+        "reason": "Themes are a real product feature. The landing page must follow the active theme through the role tokens, and the themes showcase must use these real theme names."
+      },
+      {
+        "asset": "Inter as the UI and body face",
+        "action": "preserve",
+        "reason": "The dashboard and all controls already use Inter, so body text and controls stay continuous between the landing page and the app. Inter also sets technical values such as short URLs and file names, using tabular numerals."
+      },
+      {
+        "asset": "Edge-strong token #3d4557",
+        "action": "evolve",
+        "reason": "At 1.66-1.98:1 against the dark surfaces it's too faint to be the only boundary of an interactive control. It stays as a decorative divider, and the landing page's control borders use a derived value of at least 3:1."
+      },
+      {
+        "asset": "Radius tokens 6/8/12px",
+        "action": "evolve",
+        "reason": "Controls keep 6px and surfaces keep 8px. The landing page adds a 16px radius only for large media or product frames, matching the reference media corners."
+      },
+      {
+        "asset": "Lucide icons",
+        "action": "preserve",
+        "reason": "This is the established icon system. The brief forbids emoji icons."
+      },
+      {
+        "asset": "Wordmark 'twink.forsale'",
+        "action": "create",
+        "reason": "No logo exists and the favicon is the Qwik default. Use an honest text wordmark in the display face and do not invent a symbol."
+      },
+      {
+        "asset": "Particles and glow effects from old theme tokens (button gradients, glass)",
+        "action": "retire",
+        "reason": "This applies only to the landing page. The brief and DESIGN.md ban glow, glassmorphism and gradient text. The app tokens stay untouched."
+      }
+    ],
+    "lockedDecisions": [
+      "Accent #db2777, accent hover #ec4899, and accent text #f472b6 on dark (from global.css)",
+      "Dark canvas #0e1016, surface #171b24, surface-alt #1d222c, divider #2b3240, text #f1f3f8, and muted text #99a3b5 as the default theme",
+      "Light canvas #f6f7f9, text #14171f, and accent #db2777",
+      "The page renders in whichever user theme is active, using --ui-* role tokens; layout does not change between themes",
+      "Lucide is the only icon family and no emoji are used as icons",
+      "Inter stays the UI and body face for continuity with the dashboard",
+      "Use real theme names (dark, light, pastel, neon, valentine) instead of the README's kawaii/cyberpunk",
+      "No invented metrics, testimonials, partner logos or ratings. The references' logo strips and 4.8-star block are recomposed with real product facts or omitted"
+    ],
+    "assumptions": [
+      "The system uses exactly two families: Syne (first drawn sans) for display and Inter (existing) for everything else. No separate monospace family is added; technical values such as short URLs, file names, domains and config keys use Inter 500 with tabular numerals to set them apart",
+      "The existing edge-strong value #3d4557 is not locked as the control border because it falls below the 3:1 non-text contrast minimum on dark canvas and surfaces. Input and ghost-button borders use a runtime-derived control border of at least 3:1, and #3d4557 remains a decorative divider only",
+      "Sample uploads, bio profiles and embed previews are illustrative. They carry a short 'Example' label so they aren't mistaken for real users",
+      "There is no logo, so the wordmark is typographic only",
+      "The reference sections are adapted so logo strips become a row of real capabilities, and the team portrait cards become cards for example public bio pages"
+    ]
+  },
+  "creativeDirection": {
+    "summary": "This is a file utility with a queer wink. It uses the dark canvas and signature pink from the dashboard, a big, bouncy Syne display face, and real-looking product fragments (upload queue, short link, Discord embed, bio page) as the imagery. Most of the fun comes from copy, one tilted pink card per section group, and snappy motion. The page never uses decoration for its own sake.",
+    "traits": [
+      {
+        "quality": "Playful in its type and copy",
+        "boundary": "not childish, not kaomoji in headings or controls, and no emoji icons"
+      },
+      {
+        "quality": "Product-led: every visual shows a real feature state",
+        "boundary": "not abstract blobs, fake dashboards or stock charts"
+      },
+      {
+        "quality": "Confident contrast between dark and light sections, with pink as the only chromatic beacon",
+        "boundary": "not multicolor, not gradient-washed, and no neon glow"
+      },
+      {
+        "quality": "Immediately usable: Discord sign-in is always one click away",
+        "boundary": "not hidden behind animation and not buried under feature tours"
+      }
+    ],
+    "productiveTension": "Bold, expressive Syne headlines and a tilted pink card against strictly quiet, familiar Inter controls and precise data. The personality sits in the headlines while the page underneath still reads as a dependable tool.",
+    "signatureDevice": {
+      "description": "The pink tilt card, adapted from the Scalient services composition. In a row of equal dark cards, exactly one card (the most delightful capability, such as 'Copy link') uses the accent fill with on-accent text and is rotated -3deg on desktop, looking as if it was just picked out of the stack. On mobile it sits straight in the stack but keeps the accent fill.",
+      "status": "candidate",
+      "invariants": [
+        "At most one tilt card per section, and only in card-row sections (process, features, themes)",
+        "Fill is the accent #db2777 (or --ui-accent in the active theme) with --ui-on-accent text; no gradient and no glow",
+        "Rotation is -3deg on desktop at 1024px and wider, and 0deg below that",
+        "It must still read as the same card type: same padding, radius and icon size as its siblings",
+        "The rotation animates in from 0deg as part of the section reveal, and not with reduced motion"
+      ]
+    },
+    "restraint": "Pink appears in exactly three places on each screen: the primary button, the one tilt card or active selection, and inline highlights inside product fragments (the copied link, embed color bar). Headings stay ink-colored. The only exception is one accent-colored word per section heading at most.",
+    "avoid": [
+      "Gradient text, glow shadows, glassmorphism and blurred color blobs",
+      "Particles on the landing page",
+      "Emoji or kaomoji as icons or in headings (a single kaomoji is allowed in closing microcopy)",
+      "Fake partner logo strips, star ratings, user counts or testimonials",
+      "Cards wrapping plain paragraphs",
+      "Every card a different color",
+      "Pill-shaped everything: buttons use the 6px control radius",
+      "Centering every section: only the hero and the closing call to action center",
+      "Control borders below 3:1 contrast; the decorative divider color is never the only edge of an input or ghost button",
+      "A third typeface family, including a separate monospace font"
+    ]
+  },
+  "colorPalette": [
+    {
+      "name": "Light Canvas",
+      "value": "#F6F7F9",
+      "usage": "Dominant. canvas token in the light theme."
+    },
+    {
+      "name": "Light Surface",
+      "value": "#FDFDFF",
+      "usage": "Dominant. surface token in the light theme."
+    },
+    {
+      "name": "Light Surface alt",
+      "value": "#E3EBFD",
+      "usage": "Supporting. surface alt token in the light theme."
+    },
+    {
+      "name": "Light Text",
+      "value": "#14171F",
+      "usage": "Semantic. text token in the light theme."
+    },
+    {
+      "name": "Light Text muted",
+      "value": "#494D56",
+      "usage": "Semantic. text muted token in the light theme."
+    },
+    {
+      "name": "Light Divider",
+      "value": "#D1D7E5",
+      "usage": "Semantic. divider token in the light theme."
+    },
+    {
+      "name": "Light Control border",
+      "value": "#626978",
+      "usage": "Semantic. control border token in the light theme."
+    },
+    {
+      "name": "Light Accent",
+      "value": "#DB2777",
+      "usage": "Sparse accent. accent token in the light theme."
+    },
+    {
+      "name": "Light Accent hover",
+      "value": "#BF0063",
+      "usage": "Semantic. accent hover token in the light theme."
+    },
+    {
+      "name": "Light On accent",
+      "value": "#FFFFFF",
+      "usage": "Semantic. on accent token in the light theme."
+    },
+    {
+      "name": "Light Accent text",
+      "value": "#7C003E",
+      "usage": "Sparse accent. accent text token in the light theme."
+    },
+    {
+      "name": "Light Focus ring",
+      "value": "#A61858",
+      "usage": "Semantic. focus ring token in the light theme."
+    },
+    {
+      "name": "Dark Canvas",
+      "value": "#0E1016",
+      "usage": "Dominant. canvas token in the dark theme."
+    },
+    {
+      "name": "Dark Surface",
+      "value": "#171B24",
+      "usage": "Dominant. surface token in the dark theme."
+    },
+    {
+      "name": "Dark Surface alt",
+      "value": "#1D222C",
+      "usage": "Supporting. surface alt token in the dark theme."
+    },
+    {
+      "name": "Dark Text",
+      "value": "#F1F3F8",
+      "usage": "Semantic. text token in the dark theme."
+    },
+    {
+      "name": "Dark Text muted",
+      "value": "#99A3B5",
+      "usage": "Semantic. text muted token in the dark theme."
+    },
+    {
+      "name": "Dark Divider",
+      "value": "#2B3240",
+      "usage": "Semantic. divider token in the dark theme."
+    },
+    {
+      "name": "Dark Control border",
+      "value": "#818692",
+      "usage": "Semantic. control border token in the dark theme."
+    },
+    {
+      "name": "Dark Accent",
+      "value": "#DB2777",
+      "usage": "Sparse accent. accent token in the dark theme."
+    },
+    {
+      "name": "Dark Accent hover",
+      "value": "#EC4899",
+      "usage": "Semantic. accent hover token in the dark theme."
+    },
+    {
+      "name": "Dark On accent",
+      "value": "#020202",
+      "usage": "Semantic. on accent token in the dark theme."
+    },
+    {
+      "name": "Dark Accent text",
+      "value": "#F472B6",
+      "usage": "Sparse accent. accent text token in the dark theme."
+    },
+    {
+      "name": "Dark Focus ring",
+      "value": "#F46699",
+      "usage": "Semantic. focus ring token in the dark theme."
+    }
+  ],
+  "typefaces": [
+    {
+      "family": "Syne",
+      "source": "Google Fonts (https://fonts.google.com/specimen/Syne), OFL from github.com/google/fonts/tree/main/ofl/syne",
+      "roles": [
+        "wordmark",
+        "hero headline",
+        "section headings",
+        "tilt-card titles",
+        "large step numerals",
+        "feature list rows"
+      ],
+      "weights": [
+        600,
+        700,
+        800
+      ]
+    },
+    {
+      "family": "Inter",
+      "source": "Existing project font, already imported in frontend/src/global.css from Google Fonts",
+      "roles": [
+        "body",
+        "lead paragraphs",
+        "buttons and controls",
+        "navigation",
+        "labels and [01] index markers",
+        "short URLs, file names, domains and config keys (500 weight, tabular numerals)",
+        "FAQ answers",
+        "footer"
+      ],
+      "weights": [
+        400,
+        500,
+        600
+      ]
+    }
+  ],
+  "interfaceDirection": "Spacing uses an 8px rhythm. Sections get 96-128px of vertical padding on desktop and 64-72px on mobile. The content width is 1200px max with 24px gutters. Reading text stays within 60ch, and hero and display headlines may run wider. Type scale: hero Syne 800 at clamp(3rem, 8vw, 6.5rem) with tight -0.03em tracking and two-line breaks. Section headings are Syne 700 at clamp(2.25rem, 4.5vw, 4rem), set left-aligned with a short Inter lead to the right (Scalient, Ritovex, Fabrica pattern). Monumental 'FAQ.' style type is allowed once. Labels are Inter 500 at 14px, sentence case, with a small accent square marker (Lexedge/Mitchy), not uppercase eyebrows everywhere. Technical values (short links, file names, domains) are Inter 500 with tabular numerals inside a subtle surface-alt chip, so they read as data without a third font. Surfaces alternate between the canvas and full-bleed bands. Dark sections use --ui-surface cards with a 1px divider-color border, which is decorative since the card is not itself a control. One band on --ui-surface-subtle breaks up the sequence. Theme changes swap colors, never the structure. Cards only group an interactive or media unit: process steps with Lucide icon plus big muted Syne numeral top-right (Ritovex), feature cards with icon, title, and description pinned to the bottom (Scalient), bio example cards with a framed media top and text below (Cipher), and FAQ disclosures as stacked rounded rows with a round plus button (Fabrica). Radius is 6px on controls, 8px on cards, and 16px on large media or product frames. No drop shadows except a single soft shadow under the tilt card. Buttons: the primary is accent fill with on-accent text, 44px minimum height, and a Discord or arrow Lucide icon. The secondary is a ghost with a 1px border in the derived control-border color, which is at least 3:1 against its background. Inputs in product fragments use the same control border. Hover darkens or lightens the fill with no scaling. Focus is a 2px accent-text ring with a 2px offset. Pressed moves down 1px. Disabled uses 50% opacity with a not-allowed cursor. The feature list (Stodio pattern) uses large muted Syne rows with small Inter [01] indexes. The hovered or focused row turns ink and shows its product fragment on the right, and on mobile every row is expanded inline. The footer (Ritovex pattern) has link columns, a divider, then a huge striped 'twink.forsale' wordmark in Syne 800 filling the width, using horizontal accent-tinted stripes via a repeating linear background clipped to the text. This is the one allowed textured type moment, and it isn't a gradient text effect on normal headings.",
+  "imageDirection": {
+    "summary": "The imagery is the product itself: faithful HTML/CSS fragments of the real upload queue, copied short link, Discord embed, public bio page, analytics sparkline and theme swatches, built from the app's own tokens and labeled 'Example'. The hero borrows the Waveyu full-bleed composition, and instead of an aerial photo it uses a dense, softly dimmed collage of original sample uploads (screenshots, pastel photos and sticker-like art, all generated) behind the centered headline.",
+    "subjects": [
+      "Hero collage of about 12 original generated sample uploads (screenshot crops, pastel room photos, cat photos, sticker art, a meme-style frame without real people), with file names and short links in Inter data chips on some tiles",
+      "Upload fragment: a drag-and-drop zone with a three-item queue showing progress, done and copied states",
+      "Short link fragment: https://twink.forsale/f/a8Kd2 in an Inter data chip with a Copy button in its copied state",
+      "Discord embed fragment: pink color bar, custom title and description, and a correctly proportioned sample image",
+      "Public bio page fragment: an illustrative avatar (generated, non-real person or illustrated), display name, and 4 link rows with Lucide icons",
+      "Analytics fragment: a small real-looking 7-day views line from the dashboard chart style, labeled Example, with no headline numbers",
+      "ShareX fragment: a downloaded .sxcu file chip and a three-step connect list",
+      "Theme swatches: five mini previews of the landing layout in dark, light, pastel, neon and valentine"
+    ],
+    "treatment": "Fragments use real tokens (surface, edge, 8px radius) inside a 16px-radius frame with 16-24px inner padding, and never appear as flat screenshots. Generated collage images are square or 4:3 at 8px radius, desaturated slightly, and dimmed under a 70% canvas overlay behind hero text so contrast holds. No perspective tilts on fragments. Only the tilt card rotates.",
+    "avoid": [
+      "Stock photos of people at laptops",
+      "Fake dashboards with invented totals",
+      "Isometric illustrations, 3D blobs and abstract SVG filler",
+      "Images of real people or real Discord users",
+      "Screenshots with any readable personal data",
+      "Neon-grid cyberpunk ornament borrowed from the Cipher reference: keep its card structure, drop its lime grid texture"
+    ]
+  },
+  "motionDirection": {
+    "summary": "Motion is quick and cheeky: things arrive like uploads landing. It explains the flow (upload, then link, then share) and gives crisp feedback. Everything is native CSS plus Web Animations and one IntersectionObserver per visual group. Reveals run once, content is visible by default without JS, and prefers-reduced-motion shows the final states immediately.",
+    "principles": [
+      "Hero entrance on first load: the collage tiles fade from opacity 0 to 1 and rise 16px in a 60ms stagger capped at 240ms, then the headline lines rise 24px with opacity, then the lead and Discord button; tiles 500ms, text 600-700ms, ease-out cubic-bezier(0.22,1,0.36,1); reduced motion shows the final state with no transform",
+      "Process steps reveal when each card group nears the viewport (threshold 0, rootMargin 0px 0px 10% 0px): cards slide in 32px from the right, 80ms stagger, 550ms, strong ease-out; the tilt card then rotates from 0 to -3deg over 450ms with a soft overshoot (cubic-bezier(0.34,1.4,0.64,1)); reduced motion places the card at -3deg immediately",
+      "Upload fragment explains the flow when it first enters the viewport: queue rows appear one by one at 80ms steps, their progress bars fill over 700ms ease-in-out, and the short link row flips to its copied state over 200ms; it plays once and keeps its final state; reduced motion shows the completed queue",
+      "Media reveals in the bio and embed fragments: the frame's inner content moves up 20px and fades in inside its fixed-size 16px frame over 600ms, ease-out; the frame itself never moves, so there's no layout shift; reduced motion is instant",
+      "Feature list row interaction on hover or focus: the row text transitions color from muted to ink and the matching fragment crossfades in over 200ms ease-out; keyboard focus triggers the same thing, and on mobile all rows are already expanded",
+      "Direct feedback on buttons and the copy action: background-color and color transition over 150ms ease-out, press translates 1px down over 120ms, and the copy button swaps its Lucide Copy icon for Check with a 180ms opacity swap and announces 'Copied' through aria-live",
+      "FAQ disclosures on click or Enter: the panel height animates via grid-template-rows 0fr to 1fr over 250ms ease-out, and the plus icon rotates 45deg over 200ms; state is conveyed by aria-expanded, not by motion alone",
+      "Footer wordmark reveal when it enters the viewport: the striped letters slide up 40px from a clipped baseline container over 700ms, strong ease-out, once only; reduced motion shows it in place"
+    ],
+    "avoid": [
+      "transition: all",
+      "Scale-from-zero or bounce-in entrances",
+      "Perpetual floating, drifting particles or looping marquee logo strips",
+      "Scroll-jacking, parallax or pinned scroll scenes",
+      "Replaying reveals on scroll up or on re-render",
+      "Global opacity:0 reveal classes that hide content without JS",
+      "Hover-only information: every hover detail is also visible on focus and on touch"
+    ]
+  },
+  "voice": {
+    "summary": "Warm, cheeky and short, like a friend who is good with computers. Headlines can wink ('Screenshots, but make them cute.' / 'Your link, copied before you blink.'). Body copy stays plain and explains specialized terms in one sentence (What's ShareX? A free Windows tool that uploads screenshots the moment you take them). Buttons say exactly what happens: 'Sign in with Discord', 'Open dashboard', 'Download ShareX config'. Invite-only status is stated honestly and kindly: 'twink.forsale is invite-only. Sign in and an admin will approve your account.'",
+    "avoid": [
+      "Generic SaaS phrases like 'Transform your workflow', 'Unlock', or 'Built for the future'",
+      "Kaomoji or emoji in headings, buttons or error text",
+      "Invented social proof, user counts, uptime or speed claims",
+      "In-jokes that need insider context to understand",
+      "Unexplained jargon such as API key, .sxcu or embed metadata without a one-line gloss",
+      "ALL-CAPS body copy or tracked-out uppercase labels everywhere"
+    ]
+  }
+}

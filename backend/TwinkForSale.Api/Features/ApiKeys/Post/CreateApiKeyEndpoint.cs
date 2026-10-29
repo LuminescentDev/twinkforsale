@@ -25,11 +25,13 @@ public sealed class CreateApiKeyEndpoint(AppDbContext dbContext) : Endpoint<Crea
         }
 
         var name = string.IsNullOrWhiteSpace(req.Name) ? "API Key" : req.Name.Trim();
+        var secret = $"tfs_{Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant()}";
         var apiKey = new ApiKey
         {
             UserId = userId,
             Name = name,
-            Key = $"tfs_{Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant()}",
+            KeyHash = ApiKeySecrets.Hash(secret),
+            MaskedKey = ApiKeySecrets.Mask(secret),
             CreatedAt = DateTimeOffset.UtcNow,
             IsActive = true
         };
@@ -37,7 +39,8 @@ public sealed class CreateApiKeyEndpoint(AppDbContext dbContext) : Endpoint<Crea
         dbContext.ApiKeys.Add(apiKey);
         await dbContext.SaveChangesAsync(ct);
 
-        await SendAsync(new CreateApiKeyResponse(apiKey.Id, apiKey.Name, apiKey.Key, apiKey.CreatedAt), StatusCodes.Status201Created, ct);
+        HttpContext.Response.Headers.CacheControl = "no-store";
+        await SendAsync(new CreateApiKeyResponse(apiKey.Id, apiKey.Name, secret, apiKey.CreatedAt), StatusCodes.Status201Created, ct);
     }
 }
 

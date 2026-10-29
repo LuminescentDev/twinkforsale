@@ -17,12 +17,21 @@ public sealed class UpdateSettingsEndpoint(AppDbContext dbContext) : Endpoint<Up
 
     public override async Task HandleAsync(UpdateSettingsRequest req, CancellationToken ct)
     {
+        if (req.MaxUploads is not null || req.MaxFileSize is not null ||
+            req.MaxStorageLimit is not null || req.MaxShortLinks is not null)
+        {
+            await SendAsync(new UpdateSettingsResponse(false), StatusCodes.Status403Forbidden, ct);
+            return;
+        }
+
+        if (req.DefaultExpirationDays is <= 0 or > 36500 || req.DefaultMaxViews is <= 0)
+        {
+            await SendAsync(new UpdateSettingsResponse(false), StatusCodes.Status400BadRequest, ct);
+            return;
+        }
+
         var settings = await GetOrCreateSettingsAsync(ct);
 
-        if (req.MaxUploads is > 0) settings.MaxUploads = req.MaxUploads.Value;
-        if (req.MaxFileSize is > 0) settings.MaxFileSize = req.MaxFileSize.Value;
-        settings.MaxStorageLimit = req.MaxStorageLimit;
-        if (req.MaxShortLinks is > 0) settings.MaxShortLinks = req.MaxShortLinks.Value;
         settings.UploadDomainId = req.UploadDomainId;
         settings.CustomSubdomain = req.CustomSubdomain;
         if (req.UseCustomWords is not null) settings.UseCustomWords = req.UseCustomWords.Value;

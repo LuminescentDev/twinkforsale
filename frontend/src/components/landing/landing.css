@@ -1,0 +1,258 @@
+/* Landing page only. Every rule resolves to the active theme's --ui-* roles,
+   so the page follows whichever palette the visitor picked. */
+
+.lp-root {
+  /* Interactive borders need 3:1 against their surface; the decorative
+     divider token is too faint for that job. */
+  --lp-control-border: color-mix(in srgb, var(--ui-ink-muted) 70%, var(--ui-canvas));
+}
+
+/* Hero entrance: plays from first paint, so nothing is hidden after the
+   page has already rendered. */
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes lp-tile {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.lp-hero-in {
+  animation: lp-rise 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+.lp-hero-tile {
+  animation: lp-tile 500ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+.lp-hero-scrim {
+  background:
+    radial-gradient(
+      ellipse 60% 58% at 50% 48%,
+      color-mix(in srgb, var(--ui-canvas) 90%, transparent),
+      color-mix(in srgb, var(--ui-canvas) 72%, transparent)
+    );
+}
+
+.lp-ghost {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--lp-control-border);
+  border-radius: var(--radius-control);
+  padding-inline: 1.25rem;
+  color: var(--ui-ink);
+  font-size: 15px;
+  font-weight: 500;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.lp-ghost:hover {
+  background-color: var(--ui-surface-hover);
+  border-color: var(--ui-ink-muted);
+}
+
+.lp-ghost:focus-visible {
+  outline: 2px solid var(--ui-accent-text);
+  outline-offset: 2px;
+}
+
+.lp-control {
+  border: 1px solid var(--lp-control-border);
+  border-radius: var(--radius-control);
+}
+
+.lp-press {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: 150ms, 150ms, 150ms, 120ms;
+  transition-timing-function: ease-out;
+}
+
+.lp-press:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.lp-swap {
+  transition: opacity 180ms ease-out;
+}
+
+.lp-plus {
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.lp-example {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1;
+  border-radius: 4px;
+  background: var(--ui-canvas);
+  padding: 0.125rem 0.5rem;
+  color: var(--ui-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lp-inline-link {
+  color: var(--ui-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+}
+
+.lp-inline-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.lp-inline-link:focus-visible {
+  outline: 2px solid var(--ui-accent-text);
+  outline-offset: 2px;
+}
+
+/* Disclosure panels animate their height through grid rows. Closed panels
+   are hidden from focus once they finish collapsing. */
+.lp-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.lp-disclosure > div {
+  min-height: 0;
+  visibility: hidden;
+  transition: visibility 0s linear 250ms;
+}
+
+.lp-disclosure[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.lp-disclosure[data-open="true"] > div {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+@media (max-width: 767px) {
+  .lp-disclosure-compact-open {
+    grid-template-rows: 1fr;
+  }
+
+  .lp-disclosure-compact-open > div {
+    visibility: visible;
+  }
+}
+
+/* The signature tilt card: picked out of the stack on wide screens only. */
+@media (min-width: 1024px) {
+  .lp-tilt {
+    position: relative;
+    z-index: 1;
+    margin-right: -2%;
+    transform: translateY(-4%) rotate(-3deg);
+    box-shadow: 0 24px 48px rgb(0 0 0 / 0.35);
+  }
+}
+
+.lp-embed-bar {
+  transition: background-color 200ms ease-out;
+}
+
+.lp-embed-title {
+  transition: color 200ms ease-out;
+}
+
+/* Theme preview cards read the selected palette from --p-* variables. */
+.lp-preview-card,
+.lp-p-row,
+.lp-p-subtle,
+.lp-p-button {
+  transition:
+    background-color 200ms ease-out,
+    border-color 200ms ease-out,
+    color 200ms ease-out;
+}
+
+.lp-preview-card {
+  background: var(--p-canvas);
+  border-color: var(--p-edge);
+}
+
+.lp-p-ink {
+  color: var(--p-ink);
+}
+
+.lp-p-muted {
+  color: var(--p-muted);
+}
+
+.lp-p-accent {
+  color: var(--p-accent-text);
+}
+
+.lp-p-subtle {
+  background: var(--p-subtle);
+}
+
+.lp-p-row {
+  background: var(--p-surface);
+  color: var(--p-muted);
+}
+
+.lp-p-selected {
+  background: color-mix(in srgb, var(--p-accent) 20%, var(--p-surface));
+}
+
+.lp-p-button {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+}
+
+.lp-scroll-x {
+  scrollbar-width: thin;
+}
+
+.lp-footer-cta {
+  border-color: var(--ui-ink);
+}
+
+/* The one textured type moment: horizontal stripes clipped to the wordmark. */
+/* Sized against its own container so the wide display face always fits. */
+.lp-wordmark-fit {
+  container-type: inline-size;
+}
+
+.lp-wordmark {
+  font-size: 10cqi;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--ui-ink-muted) 0 6px,
+    transparent 6px 10px,
+    var(--ui-accent-text) 10px 16px,
+    transparent 16px 20px
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-in,
+  .lp-hero-tile {
+    animation: none;
+  }
+
+  .lp-press:active:not(:disabled) {
+    transform: none;
+  }
+}

@@ -82,6 +82,63 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.ToTable("accounts", (string)null);
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Album", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ShowOnBio")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("albums", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.AlbumUpload", b =>
+                {
+                    b.Property<string>("AlbumId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UploadId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AlbumId", "UploadId");
+
+                    b.HasIndex("UploadId");
+
+                    b.ToTable("album_uploads", (string)null);
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.ApiKey", b =>
                 {
                     b.Property<string>("Id")
@@ -95,13 +152,18 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("isActive");
 
-                    b.Property<string>("Key")
+                    b.Property<string>("KeyHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("Key");
 
                     b.Property<DateTimeOffset?>("LastUsed")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("lastUsed");
+
+                    b.Property<string>("MaskedKey")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -114,12 +176,30 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
-                        .IsUnique();
+                    b.HasIndex("KeyHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_api_keys_Key");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("api_keys", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioDraft", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("bio_drafts", (string)null);
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioLink", b =>
@@ -166,6 +246,29 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.HasIndex("UserId", "Order");
 
                     b.ToTable("bio_links", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioRevision", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("bio_revisions", (string)null);
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioView", b =>
@@ -288,6 +391,106 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.ToTable("download_logs", (string)null);
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.FileRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlbumId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("MaxFileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("MaxFiles")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubmittedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("file_requests", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.SavedFilter", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("FavoritesOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Search")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Sort")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tag")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("saved_filters", (string)null);
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Session", b =>
                 {
                     b.Property<string>("Id")
@@ -336,6 +539,9 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expiresAt");
 
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("LastClicked")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("lastClicked");
@@ -360,6 +566,29 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("short_links", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.ShortLinkRevision", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ShortLinkId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShortLinkId");
+
+                    b.ToTable("short_link_revisions", (string)null);
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.SystemAlert", b =>
@@ -477,21 +706,43 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("AccessMode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("createdAt");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletionKey")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("deletionKey");
 
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("text");
+
                     b.Property<int>("Downloads")
                         .HasColumnType("integer");
+
+                    b.Property<string>("EmbedColor")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmbedDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmbedTitle")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expiresAt");
+
+                    b.Property<string>("FileRequestId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Filename")
                         .IsRequired()
@@ -499,6 +750,15 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
 
                     b.Property<int?>("Height")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPending")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LastDownloaded")
                         .HasColumnType("timestamp with time zone")
@@ -522,6 +782,9 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("originalName");
 
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
                     b.Property<string>("ShortCode")
                         .IsRequired()
                         .HasColumnType("text")
@@ -529,6 +792,10 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
+
+                    b.Property<string[]>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.Property<string>("Url")
                         .IsRequired()
@@ -549,13 +816,15 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.HasIndex("DeletionKey")
                         .IsUnique();
 
+                    b.HasIndex("FileRequestId");
+
                     b.HasIndex("ShortCode")
                         .IsUnique();
 
                     b.HasIndex("Url")
                         .IsUnique();
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "DeletedAt");
 
                     b.ToTable("uploads", (string)null);
                 });
@@ -599,6 +868,49 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("upload_domains", (string)null);
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.UploadPreset", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmbedColor")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmbedDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmbedTitle")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ExpirationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxViews")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("StripMetadata")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UploadDomainId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploadDomainId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("upload_presets", (string)null);
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.User", b =>
@@ -894,6 +1206,34 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Album", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.AlbumUpload", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.Album", "Album")
+                        .WithMany("Items")
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.Upload", "Upload")
+                        .WithMany()
+                        .HasForeignKey("UploadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Album");
+
+                    b.Navigation("Upload");
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.ApiKey", b =>
                 {
                     b.HasOne("TwinkForSale.Api.Domain.Entities.User", "User")
@@ -905,6 +1245,15 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioDraft", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioLink", b =>
                 {
                     b.HasOne("TwinkForSale.Api.Domain.Entities.User", "User")
@@ -914,6 +1263,15 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioRevision", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.BioView", b =>
@@ -938,6 +1296,30 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.Navigation("Upload");
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.FileRequest", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.Album", null)
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.SavedFilter", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Session", b =>
                 {
                     b.HasOne("TwinkForSale.Api.Domain.Entities.User", "User")
@@ -959,6 +1341,15 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.ShortLinkRevision", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.ShortLink", null)
+                        .WithMany()
+                        .HasForeignKey("ShortLinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.SystemEvent", b =>
                 {
                     b.HasOne("TwinkForSale.Api.Domain.Entities.User", "User")
@@ -971,12 +1362,31 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Upload", b =>
                 {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.FileRequest", null)
+                        .WithMany()
+                        .HasForeignKey("FileRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TwinkForSale.Api.Domain.Entities.User", "User")
                         .WithMany("Uploads")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.UploadPreset", b =>
+                {
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.UploadDomain", null)
+                        .WithMany()
+                        .HasForeignKey("UploadDomainId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TwinkForSale.Api.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.User", b =>
@@ -1016,6 +1426,11 @@ namespace TwinkForSale.Api.Infrastructure.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Upload");
+                });
+
+            modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Album", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("TwinkForSale.Api.Domain.Entities.Upload", b =>

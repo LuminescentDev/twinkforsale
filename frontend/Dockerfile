@@ -5,6 +5,7 @@ WORKDIR /app
 RUN npm install -g pnpm@10.13.1
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY patches ./patches
 COPY frontend ./frontend
 RUN pnpm install --filter twink-for-sale --frozen-lockfile
 

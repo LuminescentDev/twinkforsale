@@ -1,5 +1,8 @@
 import {
   Folder,
+  Images,
+  Inbox,
+  Trash2,
   Upload,
   Link2,
   IdCard,
@@ -30,6 +33,8 @@ export interface NavItem {
  */
 export const primaryNav: NavItem[] = [
   { href: "/dashboard", label: "Files", icon: Folder, exact: true },
+  { href: "/dashboard/albums", label: "Albums", icon: Images },
+  { href: "/dashboard/requests", label: "File requests", icon: Inbox },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/links", label: "Short Links", icon: Link2 },
   { href: "/dashboard/bio", label: "Bio", icon: IdCard },
@@ -38,6 +43,8 @@ export const primaryNav: NavItem[] = [
 
 /** Configuration, reached less often than the primary destinations. */
 export const secondaryNav: NavItem[] = [
+  { href: "/dashboard/cleanup", label: "Storage cleanup", icon: Trash2 },
+  { href: "/dashboard/presets", label: "Upload presets", icon: SlidersHorizontal },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/setup/sharex", label: "ShareX Setup", icon: Wrench },
 ];

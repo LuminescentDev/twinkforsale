@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using TwinkForSale.Api.Domain.Entities;
 using TwinkForSale.Api.Infrastructure.Configuration;
+using TwinkForSale.Api.Infrastructure.Auth;
 using TwinkForSale.Api.Infrastructure.Database;
 using TwinkForSale.Api.Infrastructure.Storage;
 
@@ -12,7 +13,8 @@ namespace TwinkForSale.Api.Features.Uploads.Get;
 public sealed class ServeUploadEndpoint(
     AppDbContext dbContext,
     IFileStorage fileStorage,
-    IOptions<AppOptions> appOptions) : EndpointWithoutRequest
+    IOptions<AppOptions> appOptions,
+    UploadAccess access) : EndpointWithoutRequest
 {
     private static readonly string[] BotUserAgentMarkers =
     [
@@ -41,15 +43,17 @@ public sealed class ServeUploadEndpoint(
 
     public override async Task HandleAsync(CancellationToken ct)
     {
+        HttpContext.Response.Headers.CacheControl = "no-store";
         var shortCode = Route<string>("shortCode");
         var upload = await dbContext.Uploads
+            .AsNoTracking()
             .Include(x => x.User)
             .ThenInclude(x => x!.Settings)
             .FirstOrDefaultAsync(x => x.ShortCode == shortCode, ct);
 
-        if (upload is null ||
-            upload.ExpiresAt < DateTimeOffset.UtcNow ||
-            (upload.MaxViews is not null && upload.Views >= upload.MaxViews.Value))
+        var isOwnerPreview = upload is not null && HttpContext.Request.Query["preview"] == "true" &&
+            upload.UserId is not null && User.GetUserId() == upload.UserId;
+        if (upload is null || (!isOwnerPreview && !UploadAccess.IsAvailable(upload)))
         {
             await SendNotFoundAsync(ct);
             return;
@@ -58,49 +62,58 @@ public sealed class ServeUploadEndpoint(
         var isDirect = HttpContext.Request.Query.TryGetValue("direct", out var direct) &&
             string.Equals(direct, "true", StringComparison.OrdinalIgnoreCase);
         var isHead = HttpContext.Request.Method.Equals(HttpMethods.Head, StringComparison.OrdinalIgnoreCase);
+        var isDownload = HttpContext.Request.Query["download"] == "true";
+        if (!access.CanRead(upload, HttpContext))
+        {
+            if (isDirect || isDownload || isHead) { await SendForbiddenAsync(ct); return; }
+            HttpContext.Response.Headers.ContentSecurityPolicy = "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+            HttpContext.Response.Headers.XContentTypeOptions = "nosniff";
+            var loginUrl = $"{appOptions.Value.FrontendUrl.TrimEnd('/')}/auth/discord/login?returnTo=%2Ff%2F{Uri.EscapeDataString(upload.ShortCode)}";
+            var gate = upload.AccessMode == "password"
+                ? $"<h1>Password required</h1><form method=\"post\" action=\"/f/{Html(upload.ShortCode)}/unlock\"><label>Password <input name=\"password\" type=\"password\" required maxlength=\"200\" autocomplete=\"current-password\"></label><button>Open file</button></form>"
+                : $"<h1>Members only</h1><p>Sign in with an approved account to open this file.</p><a href=\"{Html(loginUrl)}\">Sign in</a>";
+            await SendStringAsync($"<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Protected file</title>{gate}</html>", 403, "text/html; charset=utf-8", ct);
+            return;
+        }
         var referrer = HttpContext.Request.Headers.Referer.ToString();
-        var isInternalDashboardView = referrer.Contains("/dashboard", StringComparison.OrdinalIgnoreCase) ||
-            referrer.Contains("/uploads", StringComparison.OrdinalIgnoreCase) ||
-            referrer.Contains("/admin", StringComparison.OrdinalIgnoreCase);
         var ipAddress = GetClientIpAddress();
         var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
         var isBotOrCrawler = IsBotOrCrawler(userAgent);
 
-        var stream = await fileStorage.OpenReadAsync(upload.Filename, ct);
+        // A crawler must not retrieve limited file bytes without consuming a view.
+        // Its metadata preview is still available, but omits the limited image.
+        if (isBotOrCrawler && upload.MaxViews is not null && (isDirect || isDownload))
+        {
+            await SendNotFoundAsync(ct);
+            return;
+        }
+
+        await using var stream = await fileStorage.OpenReadAsync(upload.Filename, ct);
         if (stream is null)
         {
             await SendNotFoundAsync(ct);
             return;
         }
 
-        if (isDirect || !isBotOrCrawler)
+        if (!isBotOrCrawler && !isHead && !isOwnerPreview)
         {
-            if (isHead)
+            var now = DateTimeOffset.UtcNow;
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            var updated = await dbContext.Uploads
+                .Where(x => x.Id == upload.Id && x.DeletedAt == null && !x.IsPending && !x.IsRevoked &&
+                    x.AccessMode == upload.AccessMode && x.PasswordHash == upload.PasswordHash && (x.ExpiresAt == null || x.ExpiresAt > now) &&
+                    (x.MaxViews == null || x.Views < x.MaxViews))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Views, x => x.Views + 1)
+                    .SetProperty(x => x.LastViewed, now)
+                    .SetProperty(x => x.Downloads, x => x.Downloads + (isDownload ? 1 : 0))
+                    .SetProperty(x => x.LastDownloaded, x => isDownload ? now : x.LastDownloaded), ct);
+            if (updated == 0)
             {
-                SendFileHeaders(stream, upload);
-                await stream.DisposeAsync();
+                await SendNotFoundAsync(ct);
                 return;
             }
 
-            dbContext.DownloadLogs.Add(new DownloadLog
-            {
-                UploadId = upload.Id,
-                IpAddress = ipAddress,
-                UserAgent = string.IsNullOrWhiteSpace(userAgent) ? null : userAgent,
-                Referer = string.IsNullOrWhiteSpace(referrer) ? null : referrer
-            });
-            upload.Downloads++;
-            upload.LastDownloaded = DateTimeOffset.UtcNow;
-
-            await dbContext.SaveChangesAsync(ct);
-            await SendFileAsync(stream, upload, ct);
-            return;
-        }
-
-        await stream.DisposeAsync();
-
-        if (!isInternalDashboardView)
-        {
             dbContext.ViewLogs.Add(new ViewLog
             {
                 UploadId = upload.Id,
@@ -108,11 +121,30 @@ public sealed class ServeUploadEndpoint(
                 UserAgent = string.IsNullOrWhiteSpace(userAgent) ? null : userAgent,
                 Referer = string.IsNullOrWhiteSpace(referrer) ? null : referrer
             });
-            upload.Views++;
-            upload.LastViewed = DateTimeOffset.UtcNow;
+            if (isDownload)
+            {
+                dbContext.DownloadLogs.Add(new DownloadLog
+                {
+                    UploadId = upload.Id,
+                    IpAddress = ipAddress,
+                    UserAgent = string.IsNullOrWhiteSpace(userAgent) ? null : userAgent,
+                    Referer = string.IsNullOrWhiteSpace(referrer) ? null : referrer
+                });
+            }
+            await dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
         }
 
-        await dbContext.SaveChangesAsync(ct);
+        if (isDirect || isDownload || !isBotOrCrawler)
+        {
+            SendFileHeaders(stream, upload, isDownload);
+            HttpContext.MarkResponseStart();
+            if (!isHead)
+            {
+                await stream.CopyToAsync(HttpContext.Response.Body, ct);
+            }
+            return;
+        }
 
         var stats = upload.User?.Settings?.ShowUserStats == true && upload.UserId is not null
             ? await GetUserStatsAsync(upload.UserId, ct)
@@ -121,45 +153,34 @@ public sealed class ServeUploadEndpoint(
 
         HttpContext.Response.StatusCode = StatusCodes.Status200OK;
         HttpContext.Response.ContentType = "text/html; charset=utf-8";
-        HttpContext.Response.Headers.CacheControl = "public, max-age=300";
-        await HttpContext.Response.WriteAsync(html, ct);
-    }
-
-    private async Task SendFileAsync(Stream stream, Upload upload, CancellationToken ct)
-    {
-        SendFileHeaders(stream, upload);
-
-        await using (stream)
+        HttpContext.MarkResponseStart();
+        if (!isHead)
         {
-            await stream.CopyToAsync(HttpContext.Response.Body, ct);
+            await HttpContext.Response.WriteAsync(html, ct);
         }
     }
 
-    private void SendFileHeaders(Stream stream, Upload upload)
+    private void SendFileHeaders(Stream stream, Upload upload, bool download)
     {
         HttpContext.Response.StatusCode = StatusCodes.Status200OK;
         HttpContext.Response.ContentType = string.IsNullOrWhiteSpace(upload.MimeType)
             ? "application/octet-stream"
             : upload.MimeType;
         HttpContext.Response.Headers.ContentLength = stream.CanSeek ? stream.Length : upload.Size;
-        HttpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{EscapeHeaderValue(upload.OriginalName)}\"";
-        HttpContext.Response.Headers.CacheControl = upload.MimeType.Equals("image/gif", StringComparison.OrdinalIgnoreCase)
-            ? "public, max-age=31536000, immutable"
-            : "public, max-age=31536000";
-
-        if (upload.MimeType.Equals("image/gif", StringComparison.OrdinalIgnoreCase))
-        {
-            HttpContext.Response.Headers.XContentTypeOptions = "nosniff";
-            HttpContext.Response.Headers.AcceptRanges = "bytes";
-        }
+        var disposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue(download ? "attachment" : "inline");
+        disposition.SetHttpFileName(upload.DisplayName ?? upload.OriginalName);
+        HttpContext.Response.Headers.ContentDisposition = disposition.ToString();
+        HttpContext.Response.Headers.XContentTypeOptions = "nosniff";
+        HttpContext.Response.Headers.ContentSecurityPolicy = "sandbox; default-src 'none'; style-src 'unsafe-inline'; media-src 'self'; img-src 'self' data:";
     }
 
     private string GenerateDiscordEmbed(Upload upload, UserStats? stats)
     {
         var settings = upload.User?.Settings;
-        var title = ReplacePlaceholders(settings?.EmbedTitle, upload, stats) ?? "File Upload";
-        var embedDescription = ReplacePlaceholders(settings?.EmbedDescription, upload, stats) ?? "Uploaded via twink.forsale";
-        var embedColor = string.IsNullOrWhiteSpace(settings?.EmbedColor) ? "#8B5CF6" : settings.EmbedColor!;
+        var title = ReplacePlaceholders(upload.EmbedTitle ?? settings?.EmbedTitle, upload, stats) ?? "File Upload";
+        var embedDescription = ReplacePlaceholders(upload.EmbedDescription ?? settings?.EmbedDescription, upload, stats) ?? "Uploaded via twink.forsale";
+        var embedColor = (upload.EmbedColor ?? settings?.EmbedColor) is { Length: 7 } color && color[0] == '#' && color.Skip(1).All(Uri.IsHexDigit)
+            ? color : "#8B5CF6";
         var embedAuthor = ReplacePlaceholders(settings?.EmbedAuthor, upload, stats) ?? upload.User?.Name;
         var embedFooter = ReplacePlaceholders(settings?.EmbedFooter, upload, stats) ?? "twink.forsale";
         var showFileInfo = settings?.ShowFileInfo != false;
@@ -173,7 +194,7 @@ public sealed class ServeUploadEndpoint(
         var descriptionHtml = Html(embedDescription);
         if (showFileInfo)
         {
-            descriptionHtml += $"<br><br>&#128193; <strong>{Html(upload.OriginalName)}</strong><br>&#128207; {FormatBytes(upload.Size)} &bull; {Html(upload.MimeType)}";
+            descriptionHtml += $"<br><br>&#128193; <strong>{Html(upload.DisplayName ?? upload.OriginalName)}</strong><br>&#128207; {FormatBytes(upload.Size)} &bull; {Html(upload.MimeType)}";
         }
 
         if (showUploadDate)
@@ -189,7 +210,7 @@ public sealed class ServeUploadEndpoint(
         var plainDescription = embedDescription;
         if (showFileInfo)
         {
-            plainDescription += $"\n{upload.OriginalName}\n{FormatBytes(upload.Size)} - {upload.MimeType}";
+            plainDescription += $"\n{upload.DisplayName ?? upload.OriginalName}\n{FormatBytes(upload.Size)} - {upload.MimeType}";
         }
 
         if (showUploadDate)
@@ -199,8 +220,8 @@ public sealed class ServeUploadEndpoint(
 
         var uploadUrl = $"{baseUrl}/f/{Uri.EscapeDataString(upload.ShortCode)}";
         var directUrl = $"{uploadUrl}?direct=true";
-        var preview = upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-            ? $"<img src=\"{Attr(directUrl)}\" alt=\"{Attr(upload.OriginalName)}\" />"
+        var preview = upload.MaxViews is null && upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            ? $"<img src=\"{Attr(directUrl)}\" alt=\"{Attr(upload.DisplayName ?? upload.OriginalName)}\" />"
             : "<div style=\"font-size: 48px; margin-bottom: 16px;\">&#128196;</div>";
         var authorMeta = string.IsNullOrWhiteSpace(embedAuthor)
             ? string.Empty
@@ -224,10 +245,10 @@ public sealed class ServeUploadEndpoint(
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{Attr(title)}}">
   <meta name="twitter:description" content="{{Attr(plainDescription)}}">
-  <meta property="og:image" content="{{Attr(directUrl)}}">
+  {{(upload.MaxViews is null ? $"<meta property=\"og:image\" content=\"{Attr(directUrl)}\">" : string.Empty)}}
   <meta property="og:image:width" content="{{upload.Width ?? 498}}">
   <meta property="og:image:height" content="{{upload.Height ?? 498}}">
-  <meta name="twitter:image" content="{{Attr(directUrl)}}">
+  {{(upload.MaxViews is null ? $"<meta name=\"twitter:image\" content=\"{Attr(directUrl)}\">" : string.Empty)}}
   <meta name="twitter:image:alt" content="{{Attr(title)}}">
   {{authorMeta}}
   <link rel="alternate" href="{{Attr($"{baseUrl}/api/oembed?url={Uri.EscapeDataString(uploadUrl)}")}}" type="application/json+oembed" title="{{Attr(title)}}">
@@ -255,7 +276,7 @@ public sealed class ServeUploadEndpoint(
     <div class="file-preview">
       {{preview}}
       <div class="file-info">
-        <strong>{{Html(upload.OriginalName)}}</strong><br>
+        <strong>{{Html(upload.DisplayName ?? upload.OriginalName)}}</strong><br>
         {{FormatBytes(upload.Size)}} &bull; {{Html(upload.MimeType)}}<br>
         {{upload.Views}} views - {{upload.Downloads}} downloads
       </div>
@@ -296,7 +317,7 @@ public sealed class ServeUploadEndpoint(
         if (string.IsNullOrWhiteSpace(value)) return value;
 
         return value
-            .Replace("{filename}", upload.OriginalName, StringComparison.Ordinal)
+            .Replace("{filename}", upload.DisplayName ?? upload.OriginalName, StringComparison.Ordinal)
             .Replace("{filesize}", FormatBytes(upload.Size), StringComparison.Ordinal)
             .Replace("{filetype}", upload.MimeType, StringComparison.Ordinal)
             .Replace("{uploaddate}", upload.CreatedAt.ToLocalTime().ToString("d"), StringComparison.Ordinal)
@@ -324,8 +345,6 @@ public sealed class ServeUploadEndpoint(
     private static string Html(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 
     private static string Attr(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
-
-    private static string EscapeHeaderValue(string value) => value.Replace("\"", "'", StringComparison.Ordinal);
 
     private string? GetClientIpAddress()
     {

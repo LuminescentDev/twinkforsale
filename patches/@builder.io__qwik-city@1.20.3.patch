@@ -1,0 +1,69 @@
+diff --git a/lib/index.d.ts b/lib/index.d.ts
+index b55e9c0e74d602b3f4ca5ca75a9ab42818af840a..059a737d5ccefeaa3915926487c88cbd1dfed95b 100644
+--- a/lib/index.d.ts
++++ b/lib/index.d.ts
+@@ -815,16 +815,16 @@ export declare const zod$: ZodConstructor;
+ export declare type ZodConstructor = {
+     <T extends z_2.ZodRawShape>(schema: T): ZodDataValidator<z_2.ZodObject<T>>;
+     <T extends z_2.ZodRawShape>(schema: (zod: typeof z_2.z, ev: RequestEvent) => T): ZodDataValidator<z_2.ZodObject<T>>;
+-    <T extends z_2.Schema>(schema: T): ZodDataValidator<T>;
+-    <T extends z_2.Schema>(schema: (zod: typeof z_2.z, ev: RequestEvent) => T): ZodDataValidator<T>;
++    <T extends z_2.ZodType>(schema: T): ZodDataValidator<T>;
++    <T extends z_2.ZodType>(schema: (zod: typeof z_2.z, ev: RequestEvent) => T): ZodDataValidator<T>;
+ };
+ 
+ /** @public */
+ declare type ZodConstructorQRL = {
+     <T extends z_2.ZodRawShape>(schema: QRL<T>): ZodDataValidator<z_2.ZodObject<T>>;
+     <T extends z_2.ZodRawShape>(schema: QRL<(zod: typeof z_2.z, ev: RequestEvent) => T>): ZodDataValidator<z_2.ZodObject<T>>;
+-    <T extends z_2.Schema>(schema: QRL<T>): ZodDataValidator<T>;
+-    <T extends z_2.Schema>(schema: QRL<(zod: typeof z_2.z, ev: RequestEvent) => T>): ZodDataValidator<T>;
++    <T extends z_2.ZodType>(schema: QRL<T>): ZodDataValidator<T>;
++    <T extends z_2.ZodType>(schema: QRL<(zod: typeof z_2.z, ev: RequestEvent) => T>): ZodDataValidator<T>;
+ };
+ 
+ /** @public */
+diff --git a/lib/index.qwik.cjs b/lib/index.qwik.cjs
+index 9265b139feb57ab643c311039152396087f189a6..289299970cf85fc7d310ee4ea4d240844772c3e3 100644
+--- a/lib/index.qwik.cjs
++++ b/lib/index.qwik.cjs
+@@ -1533,7 +1533,7 @@ const zodQrl = (qrl) => {
+           if (typeof obj === "function") {
+             obj = obj(z__namespace, ev);
+           }
+-          if (obj instanceof z__namespace.Schema) {
++          if (obj instanceof z__namespace.ZodType) {
+             return obj;
+           } else {
+             return z__namespace.object(obj);
+@@ -1551,7 +1551,7 @@ const zodQrl = (qrl) => {
+             success: false,
+             status: 400,
+             error: {
+-              formErrors: result.error.flatten().formErrors,
++              formErrors: z.flattenError(result.error).formErrors,
+               fieldErrors: flattenZodIssues(result.error.issues)
+             }
+           };
+diff --git a/lib/index.qwik.mjs b/lib/index.qwik.mjs
+index 406e5ebbcccae89796bf6a77507b11a9935eb592..5b6ee57b77e0b26cad519af69152f67351f459a5 100644
+--- a/lib/index.qwik.mjs
++++ b/lib/index.qwik.mjs
+@@ -1514,7 +1514,7 @@ const zodQrl = (qrl) => {
+           if (typeof obj === "function") {
+             obj = obj(z, ev);
+           }
+-          if (obj instanceof z.Schema) {
++          if (obj instanceof z.ZodType) {
+             return obj;
+           } else {
+             return z.object(obj);
+@@ -1532,7 +1532,7 @@ const zodQrl = (qrl) => {
+             success: false,
+             status: 400,
+             error: {
+-              formErrors: result.error.flatten().formErrors,
++              formErrors: z.flattenError(result.error).formErrors,
+               fieldErrors: flattenZodIssues(result.error.issues)
+             }
+           };

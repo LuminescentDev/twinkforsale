@@ -1,7 +1,14 @@
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
+using MetadataExtractor;
+using MetadataExtractor.Formats.Bmp;
+using MetadataExtractor.Formats.Exif;
+using MetadataExtractor.Formats.Gif;
+using MetadataExtractor.Formats.Jpeg;
+using MetadataExtractor.Formats.Png;
+using MetadataExtractor.Formats.Photoshop;
+using MetadataExtractor.Formats.WebP;
 using System.Security.Claims;
 using TwinkForSale.Api.Domain.Entities;
 using TwinkForSale.Api.Infrastructure.Auth;
@@ -33,6 +40,8 @@ public sealed class CreateUploadEndpoint(
 
     public override async Task HandleAsync(CancellationToken ct)
     {
+        string? uploadedKey = null;
+        var committed = false;
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -50,8 +59,18 @@ public sealed class CreateUploadEndpoint(
                 return;
             }
 
+            if (file.Length == 0 ||
+                !TryParseLimit(form["expirationDays"], 36500, out var expirationDays) ||
+                !TryParseLimit(form["maxViews"], int.MaxValue, out var maxViews))
+            {
+                await SendAsync(new CreateUploadResponse(Error: "Provide a non-empty file and positive expiration/view limits."), StatusCodes.Status400BadRequest, ct);
+                return;
+            }
+
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            // Serialize quota changes for a user across browser, ShareX, and API uploads.
+            await dbContext.Users.FromSqlInterpolated($"SELECT * FROM users WHERE \"Id\" = {userId} FOR UPDATE").ToListAsync(ct);
             var user = await dbContext.Users
-                .Include(x => x.Uploads)
                 .Include(x => x.Settings)
                 .ThenInclude(x => x!.UploadDomain)
                 .FirstAsync(x => x.Id == userId, ct);
@@ -65,8 +84,21 @@ public sealed class CreateUploadEndpoint(
             }
 
             var settings = user.Settings ?? new UserSettings { UserId = user.Id };
+            UploadPreset? preset = null;
+            UploadDomain? presetDomain = null;
+            if (!string.IsNullOrWhiteSpace(form["presetId"]))
+            {
+                var presetId = form["presetId"].ToString();
+                preset = await dbContext.UploadPresets.FirstOrDefaultAsync(x => x.Id == presetId && x.UserId == userId, ct);
+                if (preset is null) { await SendAsync(new CreateUploadResponse(Error: "Upload preset not found."), 400, ct); return; }
+                if (preset.UploadDomainId is not null)
+                {
+                    presetDomain = await dbContext.UploadDomains.FirstOrDefaultAsync(x => x.Id == preset.UploadDomainId && x.IsActive, ct);
+                    if (presetDomain is null) { await SendAsync(new CreateUploadResponse(Error: "The preset domain is no longer active."), 400, ct); return; }
+                }
+            }
             var maxUploads = settings.MaxUploads;
-            if (user.Uploads.Count >= maxUploads)
+            if (await dbContext.Uploads.CountAsync(x => x.UserId == userId, ct) >= maxUploads)
             {
                 await SendAsync(new CreateUploadResponse(Error: "Upload limit exceeded."), StatusCodes.Status429TooManyRequests, ct);
                 return;
@@ -79,7 +111,7 @@ public sealed class CreateUploadEndpoint(
             }
 
             var storageLimit = settings.MaxStorageLimit ?? appOptions.Value.BaseStorageLimit;
-            if (settings.StorageUsed + file.Length > storageLimit)
+            if (file.Length > storageLimit - settings.StorageUsed)
             {
                 await SendAsync(new CreateUploadResponse(Error: "Storage quota exceeded."), StatusCodes.Status413PayloadTooLarge, ct);
                 return;
@@ -93,23 +125,23 @@ public sealed class CreateUploadEndpoint(
             var uploadResult = await fileStorage.UploadAsync(file, storageKey, user.Id, ct);
             if (!uploadResult.Success || string.IsNullOrWhiteSpace(uploadResult.Key))
             {
-                await SendAsync(new CreateUploadResponse(Error: uploadResult.Error ?? "File upload failed."), StatusCodes.Status500InternalServerError, ct);
+                logger.LogError("Storage rejected an upload: {Error}", uploadResult.Error);
+                await SendAsync(new CreateUploadResponse(Error: "File storage is unavailable. Please try again."), StatusCodes.Status500InternalServerError, ct);
                 return;
             }
+            uploadedKey = uploadResult.Key;
 
-            var expirationDays = ParseNullableInt(form["expirationDays"]);
-            var maxViews = ParseNullableInt(form["maxViews"]);
-            DateTimeOffset? expiresAt = expirationDays is > 0
-                ? DateTimeOffset.UtcNow.AddDays(expirationDays.Value)
-                : settings.DefaultExpirationDays is > 0
-                    ? DateTimeOffset.UtcNow.AddDays(settings.DefaultExpirationDays.Value)
-                    : null;
+            var effectiveDays = form.ContainsKey("expirationDays") ? expirationDays : preset is not null ? preset.ExpirationDays : settings.DefaultExpirationDays;
+            DateTimeOffset? expiresAt = effectiveDays is > 0 ? DateTimeOffset.UtcNow.AddDays(effectiveDays.Value) : null;
 
             var baseUrl = GetRequestBaseUrl();
             var uploadBaseUrl = GetUploadBaseUrl(settings, baseUrl);
+            if (presetDomain is not null)
+                uploadBaseUrl = $"https://{(presetDomain.SupportsSubdomains && !string.IsNullOrWhiteSpace(settings.CustomSubdomain) ? settings.CustomSubdomain.Trim() + "." : "")}{presetDomain.Domain.Trim().Trim('/')}";
             var fileUrl = $"{uploadBaseUrl}/f/{shortCode}";
 
-            var mimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+            var mimeType = Microsoft.Net.Http.Headers.MediaTypeHeaderValue.TryParse(file.ContentType, out var parsedType)
+                ? parsedType.MediaType.Value!.ToLowerInvariant() : "application/octet-stream";
             var (width, height) = await TryGetImageDimensionsAsync(file, mimeType, ct);
 
             var upload = new Upload
@@ -123,7 +155,10 @@ public sealed class CreateUploadEndpoint(
                 DeletionKey = deletionKey,
                 UserId = user.Id,
                 ExpiresAt = expiresAt,
-                MaxViews = maxViews ?? settings.DefaultMaxViews,
+                MaxViews = form.ContainsKey("maxViews") ? maxViews : preset is not null ? preset.MaxViews : settings.DefaultMaxViews,
+                EmbedTitle = preset?.EmbedTitle,
+                EmbedDescription = preset?.EmbedDescription,
+                EmbedColor = preset?.EmbedColor,
                 Width = width,
                 Height = height
             };
@@ -136,16 +171,40 @@ public sealed class CreateUploadEndpoint(
             }
 
             await dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            committed = true;
 
             await SendAsync(new CreateUploadResponse(
                 Url: fileUrl,
                 DeletionUrl: $"{baseUrl}/delete/{deletionKey}",
                 ThumbnailUrl: upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? fileUrl : null), StatusCodes.Status201Created, ct);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (InvalidDataException)
+        {
+            await SendAsync(new CreateUploadResponse(Error: "Invalid upload data."), StatusCodes.Status400BadRequest, ct);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Upload failed.");
-            await SendAsync(new CreateUploadResponse(Error: $"Upload failed: {ex.GetType().Name}: {ex.Message}"), StatusCodes.Status500InternalServerError, ct);
+            await SendAsync(new CreateUploadResponse(Error: "Upload failed. Please try again."), StatusCodes.Status500InternalServerError, ct);
+        }
+        finally
+        {
+            if (uploadedKey is not null && !committed)
+            {
+                try
+                {
+                    await fileStorage.DeleteAsync(uploadedKey, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Could not remove an uncommitted upload.");
+                }
+            }
         }
     }
 
@@ -194,8 +253,32 @@ public sealed class CreateUploadEndpoint(
         try
         {
             await using var stream = file.OpenReadStream();
-            var info = await Image.IdentifyAsync(stream, ct);
-            return (info.Width, info.Height);
+            ct.ThrowIfCancellationRequested();
+            var directories = ImageMetadataReader.ReadMetadata(stream);
+            foreach (var directory in directories)
+            {
+                var tags = directory switch
+                {
+                    JpegDirectory => (JpegDirectory.TagImageWidth, JpegDirectory.TagImageHeight),
+                    PngDirectory => (PngDirectory.TagImageWidth, PngDirectory.TagImageHeight),
+                    GifHeaderDirectory => (GifHeaderDirectory.TagImageWidth, GifHeaderDirectory.TagImageHeight),
+                    WebPDirectory => (WebPDirectory.TagImageWidth, WebPDirectory.TagImageHeight),
+                    BmpHeaderDirectory => (BmpHeaderDirectory.TagImageWidth, BmpHeaderDirectory.TagImageHeight),
+                    PsdHeaderDirectory => (PsdHeaderDirectory.TagImageWidth, PsdHeaderDirectory.TagImageHeight),
+                    ExifIfd0Directory => (ExifDirectoryBase.TagImageWidth, ExifDirectoryBase.TagImageHeight),
+                    _ => (0, 0)
+                };
+                if (tags != (0, 0) && directory.TryGetInt32(tags.Item1, out var width) &&
+                    directory.TryGetInt32(tags.Item2, out var height) && width > 0 && height != 0 && height != int.MinValue)
+                {
+                    return (width, Math.Abs(height));
+                }
+            }
+            return (null, null);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -204,9 +287,13 @@ public sealed class CreateUploadEndpoint(
         }
     }
 
-    private static int? ParseNullableInt(string? value)
+    private static bool TryParseLimit(string? value, int maximum, out int? result)
     {
-        return int.TryParse(value, out var result) ? result : null;
+        result = null;
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        if (!int.TryParse(value, out var parsed) || parsed <= 0 || parsed > maximum) return false;
+        result = parsed;
+        return true;
     }
 
     private static string CleanFilename(string fileName)

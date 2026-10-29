@@ -29,6 +29,8 @@ import {
   ArrowDown,
   ExternalLink,
 } from "lucide-icons-qwik";
+import { BioRevisions } from "~/components/bio/revisions";
+import { library } from "~/lib/library-api";
 import { api, serverAuth, ApiError } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
 import { DEFAULT_BIO_LIMITS } from "~/lib/bio-limits";
@@ -114,8 +116,9 @@ export const useBioData = routeLoader$(async (requestEvent) => {
       bioShowDiscord: bio?.showDiscord ?? false,
       bioDiscordConfig: bio?.discordConfig ?? null,
     },
+    history: await library.revisions(auth),
     bioLinks: bio?.links ?? [],
-    bioLimits: DEFAULT_BIO_LIMITS,
+    bioLimits: bio?.limits ?? DEFAULT_BIO_LIMITS,
     baseUrl: requestEvent.url.origin,
   };
 });
@@ -171,7 +174,7 @@ export const useUpdateBio = routeAction$(
           message: res.error || "Could not save your bio page.",
         });
       }
-      return { success: true, message: "Bio page saved." };
+      return { success: true, message: "Bio draft saved." };
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 500;
       return requestEvent.fail(status, {
@@ -742,7 +745,7 @@ export default component$(() => {
               loading={updateBio.isRunning}
               disabled={!isDirty.value}
             >
-              Save changes
+              Save draft
             </Button>
           </Form>
         </div>
@@ -754,6 +757,11 @@ export default component$(() => {
         </Callout>
       )}
 
+      <BioRevisions
+        dirty={isDirty.value && saveState.value !== "saved"}
+        hasDraft={bioData.value.history.hasDraft}
+        revisions={bioData.value.history.revisions}
+      />
       <EditorLayout previewLabel="bio page" hasNav mode={mode}>
         <LocalNav
           q:slot="nav"
@@ -845,10 +853,10 @@ export default component$(() => {
 
                 <Switch
                   checked={isPublic.value}
-                  label="Publish this page"
+                  label="Make the published page public"
                   help={
                     username.value
-                      ? "Anyone with the address can see it. Turn this off to take it offline."
+                      ? "When you publish this draft, anyone with the address can see the page. Turn this off and publish to take it offline."
                       : "Set a username first — a page cannot be published without an address."
                   }
                   disabled={!username.value}
@@ -858,7 +866,7 @@ export default component$(() => {
                 {publicUrl && (
                   <div class="border-edge bg-surface-subtle rounded-control flex flex-wrap items-center gap-2 border px-2 py-1.5">
                     <Badge tone={isPublic.value ? "success" : "neutral"}>
-                      {isPublic.value ? "Published" : "Not published"}
+                      {isPublic.value ? "Draft: public" : "Draft: private"}
                     </Badge>
                     <code class="text-ink min-w-0 flex-1 truncate font-mono text-xs">
                       {publicUrl}

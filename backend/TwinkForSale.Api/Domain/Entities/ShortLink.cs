@@ -11,6 +11,7 @@ public sealed class ShortLink
     public int Clicks { get; set; }
     public DateTimeOffset? LastClicked { get; set; }
     public string? UserId { get; set; }
+    public bool IsPaused { get; set; }
 
     public User? User { get; set; }
 }

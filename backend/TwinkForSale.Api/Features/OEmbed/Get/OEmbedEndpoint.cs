@@ -16,6 +16,7 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
 
     public override async Task HandleAsync(CancellationToken ct)
     {
+        HttpContext.Response.Headers.CacheControl = "no-store";
         var requestUrl = Query<string>("url", isRequired: false);
         if (string.IsNullOrWhiteSpace(requestUrl))
         {
@@ -35,18 +36,20 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
             .ThenInclude(x => x!.Settings)
             .FirstOrDefaultAsync(x => x.ShortCode == shortCode, ct);
 
-        if (upload is null)
+        if (upload is null || upload.DeletedAt != null || upload.IsPending || upload.IsRevoked || upload.AccessMode != "public" || upload.ExpiresAt <= DateTimeOffset.UtcNow ||
+            (upload.MaxViews is not null && upload.Views >= upload.MaxViews))
         {
             await SendAsync(new { error = "Upload not found" }, StatusCodes.Status404NotFound, ct);
             return;
         }
 
         var settings = upload.User?.Settings;
+        var canonicalUrl = $"{appOptions.Value.BaseUrl.TrimEnd('/')}/f/{Uri.EscapeDataString(upload.ShortCode)}";
         var userStats = settings?.ShowUserStats == true && upload.UserId is not null
             ? await GetUserStatsAsync(upload.UserId, ct)
             : null;
 
-        var title = ReplacePlaceholders(settings?.EmbedTitle, upload, userStats, upload.User?.Name) ?? "File Upload";
+        var title = ReplacePlaceholders(upload.EmbedTitle ?? settings?.EmbedTitle, upload, userStats, upload.User?.Name) ?? "File Upload";
         var author = ReplacePlaceholders(settings?.EmbedAuthor, upload, userStats, upload.User?.Name) ?? upload.User?.Name;
         var providerName = ReplacePlaceholders(settings?.EmbedFooter, upload, userStats, upload.User?.Name) ?? "twink.forsale";
 
@@ -69,12 +72,12 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
         if (!string.IsNullOrWhiteSpace(author))
         {
             response["author_name"] = author;
-            response["author_url"] = requestUrl;
+            response["author_url"] = canonicalUrl;
         }
 
-        if (upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        if (upload.MaxViews is null && upload.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            var thumbnailUrl = $"{requestUrl.TrimEnd('?')}{(requestUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?")}direct=true";
+            var thumbnailUrl = $"{canonicalUrl}?direct=true";
             response["thumbnail_url"] = thumbnailUrl;
             response["thumbnail_width"] = upload.Width ?? 400;
             response["thumbnail_height"] = upload.Height ?? 300;
@@ -82,7 +85,7 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
             if (upload.MimeType.Equals("image/gif", StringComparison.OrdinalIgnoreCase))
             {
                 response["type"] = "video";
-                response["html"] = $"<img src=\"{thumbnailUrl}\" alt=\"{System.Net.WebUtility.HtmlEncode(title)}\" style=\"max-width:100%;height:auto;\" />";
+                response["html"] = $"<img src=\"{System.Net.WebUtility.HtmlEncode(thumbnailUrl)}\" alt=\"{System.Net.WebUtility.HtmlEncode(title)}\" style=\"max-width:100%;height:auto;\" />";
                 response["width"] = upload.Width ?? 400;
                 response["height"] = upload.Height ?? 300;
             }
@@ -101,9 +104,10 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
 
     private static string? ExtractShortCode(string requestUrl)
     {
-        if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out var uri)) return null;
+        if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return null;
         var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 && parts[0] == "f" ? parts[1] : null;
+        return parts.Length == 2 && parts[0] == "f" ? parts[1] : null;
     }
 
     private static string? ReplacePlaceholders(string? value, Domain.Entities.Upload upload, UserStats? stats, string? username)
@@ -111,7 +115,7 @@ public sealed class OEmbedEndpoint(AppDbContext dbContext, IOptions<AppOptions> 
         if (string.IsNullOrWhiteSpace(value)) return value;
 
         return value
-            .Replace("{filename}", upload.OriginalName, StringComparison.Ordinal)
+            .Replace("{filename}", upload.DisplayName ?? upload.OriginalName, StringComparison.Ordinal)
             .Replace("{filesize}", FormatBytes(upload.Size), StringComparison.Ordinal)
             .Replace("{filetype}", upload.MimeType, StringComparison.Ordinal)
             .Replace("{uploaddate}", upload.CreatedAt.ToLocalTime().ToString("d"), StringComparison.Ordinal)

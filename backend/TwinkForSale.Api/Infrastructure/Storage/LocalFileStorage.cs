@@ -19,8 +19,18 @@ public sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostE
 
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
-        await using var destination = File.Create(destinationPath);
-        await file.CopyToAsync(destination, cancellationToken);
+        var created = false;
+        try
+        {
+            await using var destination = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            created = true;
+            await file.CopyToAsync(destination, cancellationToken);
+        }
+        catch
+        {
+            if (created) File.Delete(destinationPath);
+            throw;
+        }
 
         return FileUploadResult.Succeeded(relativeKey.Replace(Path.DirectorySeparatorChar, '/'));
     }
@@ -40,15 +50,13 @@ public sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostE
 
     public Task<bool> DeleteAsync(string key, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(GetRootPath(), key.Replace('/', Path.DirectorySeparatorChar));
-
-        if (!File.Exists(path))
+        foreach (var path in GetCandidatePaths(key))
         {
-            return Task.FromResult(false);
+            if (!File.Exists(path)) continue;
+            File.Delete(path);
+            return Task.FromResult(true);
         }
-
-        File.Delete(path);
-        return Task.FromResult(true);
+        return Task.FromResult(false);
     }
 
     private string GetRootPath()
@@ -61,11 +69,17 @@ public sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostE
 
     private IEnumerable<string> GetCandidatePaths(string key)
     {
-        var root = GetRootPath();
-        var normalizedKey = key.Replace('/', Path.DirectorySeparatorChar);
+        var root = Path.GetFullPath(GetRootPath());
+        var normalizedKey = key.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+        var resolved = Path.GetFullPath(Path.Combine(root, normalizedKey));
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!resolved.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, comparison))
+        {
+            throw new InvalidDataException("Invalid storage path.");
+        }
         var filename = Path.GetFileName(normalizedKey);
 
-        yield return Path.Combine(root, normalizedKey);
+        yield return resolved;
         yield return Path.Combine(root, "anonymous", filename);
 
         var parts = normalizedKey.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);

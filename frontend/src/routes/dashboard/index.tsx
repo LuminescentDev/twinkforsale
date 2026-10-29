@@ -5,7 +5,9 @@ import {
   useSignal,
   useComputed$,
   useStore,
+  useTask$,
 } from "@builder.io/qwik";
+import { isServer } from "@builder.io/qwik/build";
 import { routeLoader$, routeAction$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
@@ -21,6 +23,8 @@ import {
   Download,
 } from "lucide-icons-qwik";
 import { ImagePreviewContext } from "~/lib/image-preview-store";
+import { SavedFilters } from "~/components/files/saved-filters";
+import { library } from "~/lib/library-api";
 import { FileTypeIcon } from "~/components/file-type-icon";
 import { api, serverAuth, type UploadListItem } from "~/lib/api-client";
 import { getCurrentUser } from "~/lib/auth-client";
@@ -30,7 +34,6 @@ import {
   getServerUploadsViewMode,
 } from "~/lib/cookie-utils";
 import {
-  fileKind,
   fileKindLabels,
   fileTypeLabel,
   formatRelativeDate,
@@ -110,15 +113,33 @@ export const useFiles = routeLoader$(async (requestEvent) => {
   const [uploadsRes, summary] = user.isApproved
     ? await Promise.all([
         api.dashboard.uploads(auth).then(
-          (r) => ({ uploads: r.uploads ?? [], failed: false }),
-          () => ({ uploads: [] as UploadListItem[], failed: true }),
+          (r) => ({ ...r, failed: false }),
+          () => ({
+            uploads: [] as UploadListItem[],
+            total: 0,
+            filteredTotal: 0,
+            page: 1,
+            pageSize: 50,
+            failed: true,
+          }),
         ),
         api.dashboard.summary(auth).catch(() => null),
       ])
-    : [{ uploads: [] as UploadListItem[], failed: false }, null];
+    : [
+        {
+          uploads: [] as UploadListItem[],
+          total: 0,
+          filteredTotal: 0,
+          page: 1,
+          pageSize: 50,
+          failed: false,
+        },
+        null,
+      ];
 
   return {
-    uploads: uploadsRes.uploads,
+    files: uploadsRes,
+    savedFilters: user.isApproved ? (await library.filters(auth)).filters : [],
     loadFailed: uploadsRes.failed,
     isApproved: user.isApproved,
     // Set when a guarded route bounced the user back here.
@@ -146,6 +167,18 @@ export default component$(() => {
   const sortKey = useSignal<SortKey>("date");
   const sortDir = useSignal<"asc" | "desc">("desc");
   const viewMode = useSignal(data.value.viewMode);
+  const tag = useSignal("");
+  const favorites = useSignal(false);
+  const period = useSignal("all");
+  const files = useSignal(data.value.files);
+  const page = useSignal(1);
+  const loading = useSignal(false);
+  const loadFailed = useSignal(data.value.loadFailed);
+  const refresh = useSignal(0);
+  const previousFilters = useSignal('["","all","date","desc","",false,"all"]');
+  const loadedRequest = useSignal(
+    '["","all","date","desc","",false,"all",1,0]',
+  );
 
   const selection = useStore<{ ids: string[] }>({ ids: [] });
   const deleteOpen = useSignal(false);
@@ -155,48 +188,111 @@ export default component$(() => {
   const partialFailure = useSignal<number>(0);
 
   const allFiles = useComputed$(() =>
-    data.value.uploads.filter((u) => !removed.ids.includes(u.id)),
+    files.value.uploads.filter((u) => !removed.ids.includes(u.id)),
   );
 
-  const visible = useComputed$(() => {
-    const query = search.value.trim().toLowerCase();
-    const kind = kindFilter.value;
-    let list = allFiles.value;
+  const visible = allFiles;
+  const pageLabel = useComputed$(
+    () =>
+      `Page ${files.value.page} of ${Math.ceil(files.value.filteredTotal / files.value.pageSize)}`,
+  );
 
-    if (kind !== "all")
-      list = list.filter((u) => fileKind(u.mimeType) === kind);
-    if (query) {
-      list = list.filter(
-        (u) =>
-          u.originalName.toLowerCase().includes(query) ||
-          u.shortCode.toLowerCase().includes(query) ||
-          u.mimeType.toLowerCase().includes(query),
-      );
+  useTask$(({ track, cleanup }) => {
+    const query = track(() => search.value.trim());
+    const kind = track(() => kindFilter.value);
+    const sort = track(() => sortKey.value);
+    const direction = track(() => sortDir.value);
+    const currentTag = track(() => tag.value.trim());
+    const favoritesOnly = track(() => favorites.value);
+    const currentPeriod = track(() => period.value);
+    let currentPage = track(() => page.value);
+    const revision = track(() => refresh.value);
+    if (isServer || !data.value.isApproved) return;
+
+    const filters = JSON.stringify([
+      query,
+      kind,
+      sort,
+      direction,
+      currentTag,
+      favoritesOnly,
+      currentPeriod,
+    ]);
+    if (previousFilters.value !== filters) {
+      previousFilters.value = filters;
+      currentPage = 1;
+      page.value = 1;
+    }
+    const request = JSON.stringify([
+      query,
+      kind,
+      sort,
+      direction,
+      currentTag,
+      favoritesOnly,
+      currentPeriod,
+      currentPage,
+      revision,
+    ]);
+    if (loadedRequest.value === request) {
+      loading.value = false;
+      loadFailed.value = files.value.failed;
+      return;
     }
 
-    const dir = sortDir.value === "asc" ? 1 : -1;
-    return [...list].sort((a, b) => {
-      switch (sortKey.value) {
-        case "name":
-          return a.originalName.localeCompare(b.originalName) * dir;
-        case "size":
-          return (a.size - b.size) * dir;
-        case "views":
-          return (a.views - b.views) * dir;
-        case "downloads":
-          return (a.downloads - b.downloads) * dir;
-        default:
-          return (
-            (new Date(a.createdAt).getTime() -
-              new Date(b.createdAt).getTime()) *
-            dir
-          );
+    const controller = new AbortController();
+    loading.value = true;
+    selection.ids = [];
+    const timer = setTimeout(async () => {
+      try {
+        const result = await api.uploads.list(
+          { signal: controller.signal },
+          {
+            search: query,
+            kind,
+            sort,
+            direction,
+            page: currentPage,
+            tag: currentTag,
+            favoritesOnly,
+            period: currentPeriod,
+          },
+        );
+        if (controller.signal.aborted) return;
+        files.value = { ...result, failed: false };
+        removed.ids = [];
+        loadFailed.value = false;
+        loadedRequest.value = JSON.stringify([
+          query,
+          kind,
+          sort,
+          direction,
+          currentTag,
+          favoritesOnly,
+          currentPeriod,
+          result.page,
+          revision,
+        ]);
+        page.value = result.page;
+      } catch {
+        if (!controller.signal.aborted) loadFailed.value = true;
+      } finally {
+        if (!controller.signal.aborted) loading.value = false;
       }
+    }, 250);
+    cleanup(() => {
+      clearTimeout(timer);
+      controller.abort();
     });
   });
 
   const isFiltered = useComputed$(
-    () => search.value.trim().length > 0 || kindFilter.value !== "all",
+    () =>
+      search.value.trim().length > 0 ||
+      kindFilter.value !== "all" ||
+      !!tag.value ||
+      favorites.value ||
+      period.value !== "all",
   );
 
   const selectedFiles = useComputed$(() =>
@@ -258,10 +354,16 @@ export default component$(() => {
     }
 
     const { deleted, failed } = result.value;
+    files.value = {
+      ...files.value,
+      total: Math.max(0, files.value.total - deleted.length),
+      filteredTotal: Math.max(0, files.value.filteredTotal - deleted.length),
+    };
     removed.ids = [...removed.ids, ...deleted];
     // Anything that failed stays selected so it can be retried directly.
     selection.ids = failed;
     deleteOpen.value = false;
+    if (failed.length === 0) refresh.value++;
 
     if (failed.length === 0) {
       toast.success(
@@ -313,7 +415,7 @@ export default component$(() => {
         </Callout>
       )}
 
-      {data.value.loadFailed && (
+      {loadFailed.value && (
         <Callout tone="danger" title="Could not load your files" class="mb-4">
           The server did not respond. Reload the page to try again — nothing has
           been deleted.
@@ -321,7 +423,7 @@ export default component$(() => {
             q:slot="actions"
             size="sm"
             variant="secondary"
-            onClick$={() => location.reload()}
+            onClick$={() => refresh.value++}
           >
             Reload
           </Button>
@@ -337,6 +439,16 @@ export default component$(() => {
       )}
 
       {/* Toolbar, or the selection bar while a selection exists. */}
+      <SavedFilters
+        initial={data.value.savedFilters}
+        search={search}
+        kind={kindFilter}
+        sort={sortKey}
+        direction={sortDir}
+        tag={tag}
+        favorites={favorites}
+        period={period}
+      />
       <div class="mb-3">
         {hasSelection ? (
           <SelectionBar
@@ -357,6 +469,22 @@ export default component$(() => {
             <Button
               size="sm"
               variant="secondary"
+              href={`/dashboard/albums?files=${selection.ids.join(",")}`}
+            >
+              Add to album
+            </Button>
+            {selection.ids.length === 1 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                href={`/dashboard/files/${selection.ids[0]}`}
+              >
+                File settings
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
               onClick$={() => (deleteOpen.value = true)}
               class="text-danger hover:text-danger"
             >
@@ -371,7 +499,11 @@ export default component$(() => {
               label="Search files"
               placeholder="Search by name, code or type"
               class="min-w-[11rem] flex-1"
-              resultSummary={`${visible.value.length} of ${allFiles.value.length} files shown`}
+              resultSummary={
+                loading.value
+                  ? "Loading files"
+                  : `${files.value.filteredTotal} matching files`
+              }
             />
 
             <div class="w-[8.5rem] shrink-0">
@@ -440,223 +572,332 @@ export default component$(() => {
         )}
       </div>
 
-      {/* Collection */}
-      {allFiles.value.length === 0 ? (
-        <Surface flush>
-          <EmptyState
-            icon={FolderOpen}
-            title={
-              data.value.loadFailed
-                ? "Files unavailable"
-                : data.value.isApproved
-                  ? "No files yet"
-                  : "Uploads not available yet"
-            }
-            description={
-              data.value.loadFailed
-                ? "We could not reach the server, so your files could not be listed."
-                : data.value.isApproved
-                  ? "Upload a file from here, or set up ShareX to send screenshots straight from your desktop."
-                  : "Once an administrator approves your account, the files you upload appear here."
-            }
-          >
-            {!data.value.loadFailed && data.value.isApproved && (
-              <>
-                <Button variant="primary" href="/upload">
-                  Upload a file
-                </Button>
-                <Button variant="secondary" href="/setup/sharex">
-                  Set up ShareX
-                </Button>
-              </>
-            )}
-          </EmptyState>
-        </Surface>
-      ) : visible.value.length === 0 ? (
-        <Surface flush>
-          <EmptyState
-            icon={SearchX}
-            title="No files match"
-            description={
-              search.value.trim()
-                ? `Nothing matches “${search.value.trim()}”${kindFilter.value !== "all" ? ` in ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()}` : ""}. ${allFiles.value.length} files are hidden by the current search and filter.`
-                : `No ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()} in your ${allFiles.value.length} files.`
-            }
-          >
-            <Button
-              variant="secondary"
-              onClick$={() => {
-                search.value = "";
-                kindFilter.value = "all";
-              }}
+      {loading.value && (
+        <p role="status" class="text-ink-muted mb-2 text-sm">
+          Loading files?
+        </p>
+      )}
+      <div aria-busy={loading.value} inert={loading.value || loadFailed.value}>
+        {/* Collection */}
+        {files.value.total === 0 ? (
+          <Surface flush>
+            <EmptyState
+              icon={FolderOpen}
+              title={
+                loadFailed.value
+                  ? "Files unavailable"
+                  : data.value.isApproved
+                    ? "No files yet"
+                    : "Uploads not available yet"
+              }
+              description={
+                loadFailed.value
+                  ? "We could not reach the server, so your files could not be listed."
+                  : data.value.isApproved
+                    ? "Upload a file from here, or set up ShareX to send screenshots straight from your desktop."
+                    : "Once an administrator approves your account, the files you upload appear here."
+              }
             >
-              Clear search and filters
-            </Button>
-          </EmptyState>
-        </Surface>
-      ) : (
-        <>
-          {isFiltered.value && (
-            <p class="text-ink-muted mb-2 text-xs" aria-live="polite">
-              Showing {visible.value.length} of {allFiles.value.length} files
-            </p>
-          )}
+              {!loadFailed.value && data.value.isApproved && (
+                <>
+                  <Button variant="primary" href="/upload">
+                    Upload a file
+                  </Button>
+                  <Button variant="secondary" href="/setup/sharex">
+                    Set up ShareX
+                  </Button>
+                </>
+              )}
+            </EmptyState>
+          </Surface>
+        ) : visible.value.length === 0 ? (
+          <Surface flush>
+            <EmptyState
+              icon={SearchX}
+              title="No files match"
+              description={
+                search.value.trim()
+                  ? `Nothing matches “${search.value.trim()}”${kindFilter.value !== "all" ? ` in ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()}` : ""}. ${files.value.total} files are hidden by the current search and filter.`
+                  : kindFilter.value === "all"
+                    ? "No files match the selected favorites, tag, or period."
+                    : `No ${fileKindLabels[kindFilter.value as FileKind].toLowerCase()} in your ${files.value.total} files.`
+              }
+            >
+              <Button
+                variant="secondary"
+                onClick$={() => {
+                  search.value = "";
+                  kindFilter.value = "all";
+                  tag.value = "";
+                  favorites.value = false;
+                  period.value = "all";
+                }}
+              >
+                Clear search and filters
+              </Button>
+            </EmptyState>
+          </Surface>
+        ) : (
+          <>
+            {isFiltered.value && (
+              <p class="text-ink-muted mb-2 text-xs" aria-live="polite">
+                {files.value.filteredTotal} matching files
+              </p>
+            )}
 
-          {viewMode.value === "grid" ? (
-            <GridView
-              files={visible.value}
-              origin={data.value.origin}
-              selectedIds={selection.ids}
-              onToggle$={toggleOne}
-              onPreview$={openImage}
-            />
-          ) : (
-            <>
-              {/* Desktop table */}
-              <Surface flush class="hidden overflow-hidden md:block">
-                <Table label="Your files" minWidth="880px">
-                  <Thead>
-                    <Tr hover={false}>
-                      <Th class="w-9 pr-0">
-                        <Checkbox
-                          checked={allVisibleSelected}
-                          indeterminate={
-                            !allVisibleSelected &&
-                            visibleIds.some((id) => selection.ids.includes(id))
-                          }
-                          label="Select all shown files"
-                          onChange$={toggleAllVisible}
-                        />
-                      </Th>
-                      <SortHeader
-                        active={sortKey.value === "name"}
-                        direction={sortDir.value}
-                        onClick$={() => toggleSort("name")}
-                      >
-                        File
-                      </SortHeader>
-                      <SortHeader
-                        class="w-24"
-                        active={sortKey.value === "size"}
-                        direction={sortDir.value}
-                        onClick$={() => toggleSort("size")}
-                      >
-                        Size
-                      </SortHeader>
-                      <SortHeader
-                        class="w-28"
-                        active={sortKey.value === "views"}
-                        direction={sortDir.value}
-                        onClick$={() => toggleSort("views")}
-                      >
-                        Activity
-                      </SortHeader>
-                      <SortHeader
-                        class="w-28"
-                        active={sortKey.value === "date"}
-                        direction={sortDir.value}
-                        onClick$={() => toggleSort("date")}
-                      >
-                        Uploaded
-                      </SortHeader>
-                      <Th class="w-36">Limits</Th>
-                      <Th class="w-44 text-right">Actions</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
+            {viewMode.value === "grid" ? (
+              <GridView
+                files={visible.value}
+                origin={data.value.origin}
+                selectedIds={selection.ids}
+                onToggle$={toggleOne}
+                onPreview$={openImage}
+              />
+            ) : (
+              <>
+                {/* Desktop table */}
+                <Surface flush class="hidden overflow-hidden md:block">
+                  <Table label="Your files" minWidth="880px">
+                    <Thead>
+                      <Tr hover={false}>
+                        <Th class="w-9 pr-0">
+                          <Checkbox
+                            checked={allVisibleSelected}
+                            indeterminate={
+                              !allVisibleSelected &&
+                              visibleIds.some((id) =>
+                                selection.ids.includes(id),
+                              )
+                            }
+                            label="Select all shown files"
+                            onChange$={toggleAllVisible}
+                          />
+                        </Th>
+                        <SortHeader
+                          active={sortKey.value === "name"}
+                          direction={sortDir.value}
+                          onClick$={() => toggleSort("name")}
+                        >
+                          File
+                        </SortHeader>
+                        <SortHeader
+                          class="w-24"
+                          active={sortKey.value === "size"}
+                          direction={sortDir.value}
+                          onClick$={() => toggleSort("size")}
+                        >
+                          Size
+                        </SortHeader>
+                        <SortHeader
+                          class="w-28"
+                          active={sortKey.value === "views"}
+                          direction={sortDir.value}
+                          onClick$={() => toggleSort("views")}
+                        >
+                          Activity
+                        </SortHeader>
+                        <SortHeader
+                          class="w-28"
+                          active={sortKey.value === "date"}
+                          direction={sortDir.value}
+                          onClick$={() => toggleSort("date")}
+                        >
+                          Uploaded
+                        </SortHeader>
+                        <Th class="w-36">Limits</Th>
+                        <Th class="w-44 text-right">Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {visible.value.map((upload) => {
+                        const selected = selection.ids.includes(upload.id);
+                        const expiry = describeExpiry(upload.expiresAt);
+                        return (
+                          <Tr key={upload.id} selected={selected}>
+                            <Td class="pr-0">
+                              <Checkbox
+                                checked={selected}
+                                label={`Select ${upload.originalName}`}
+                                onChange$={(checked) =>
+                                  toggleOne(upload.id, checked)
+                                }
+                              />
+                            </Td>
+                            <Td>
+                              <div class="flex min-w-0 items-center gap-2.5">
+                                <FileTypeIcon
+                                  upload={upload}
+                                  size="sm"
+                                  onClick$={$(() => openImage(upload))}
+                                />
+                                <div class="min-w-0">
+                                  <p
+                                    class="text-ink truncate font-medium"
+                                    title={upload.originalName}
+                                  >
+                                    {upload.originalName}
+                                  </p>
+                                  <p class="text-ink-muted truncate text-xs">
+                                    {fileTypeLabel(upload.mimeType)} ·{" "}
+                                    <span class="font-mono">
+                                      /{upload.shortCode}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                            </Td>
+                            <TdMeta>{formatBytes(upload.size, 1)}</TdMeta>
+                            <TdMeta>
+                              <span class="flex items-center gap-2.5">
+                                <span
+                                  class="flex items-center gap-1"
+                                  title={`${upload.views} views`}
+                                >
+                                  <Eye class="h-3 w-3" aria-hidden="true" />
+                                  {upload.views}
+                                </span>
+                                <span
+                                  class="flex items-center gap-1"
+                                  title={`${upload.downloads} downloads`}
+                                >
+                                  <Download
+                                    class="h-3 w-3"
+                                    aria-hidden="true"
+                                  />
+                                  {upload.downloads}
+                                </span>
+                              </span>
+                            </TdMeta>
+                            <TdMeta>
+                              <span
+                                title={formatAbsoluteDate(upload.createdAt)}
+                              >
+                                {formatRelativeDate(upload.createdAt)}
+                              </span>
+                            </TdMeta>
+                            <Td>
+                              <div class="flex flex-wrap gap-1">
+                                {expiry && (
+                                  <Badge
+                                    tone={
+                                      expiry === "Expired" ? "error" : "warning"
+                                    }
+                                  >
+                                    {expiry}
+                                  </Badge>
+                                )}
+                                {upload.maxViews !== null && (
+                                  <Badge
+                                    tone={
+                                      upload.views >= upload.maxViews
+                                        ? "error"
+                                        : "neutral"
+                                    }
+                                  >
+                                    {upload.views}/{upload.maxViews} views
+                                  </Badge>
+                                )}
+                                {!expiry && upload.maxViews === null && (
+                                  <span class="text-ink-muted text-xs">
+                                    None
+                                  </span>
+                                )}
+                              </div>
+                            </Td>
+                            <Td class="text-right">
+                              <div class="flex items-center justify-end gap-1">
+                                <CopyButton
+                                  value={`${data.value.origin}/f/${upload.shortCode}`}
+                                  label="Copy link"
+                                  variant="secondary"
+                                />
+                                <IconButton
+                                  size="sm"
+                                  variant="outline"
+                                  label={`Open ${upload.originalName}`}
+                                  href={`/f/${upload.shortCode}`}
+                                  external
+                                >
+                                  <ExternalLink class="h-4 w-4" />
+                                </IconButton>
+                                <RowMenu
+                                  upload={upload}
+                                  onDelete$={$(() => {
+                                    selection.ids = [upload.id];
+                                    deleteOpen.value = true;
+                                  })}
+                                />
+                              </div>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                    </Tbody>
+                  </Table>
+                </Surface>
+
+                {/* Compact rows below md */}
+                <Surface flush class="overflow-hidden md:hidden">
+                  <ul class="divide-edge divide-y">
                     {visible.value.map((upload) => {
                       const selected = selection.ids.includes(upload.id);
                       const expiry = describeExpiry(upload.expiresAt);
                       return (
-                        <Tr key={upload.id} selected={selected}>
-                          <Td class="pr-0">
+                        <li
+                          key={upload.id}
+                          class={selected ? "bg-accent-soft" : undefined}
+                        >
+                          <div class="flex flex-wrap items-start gap-x-2.5 gap-y-2 px-3 py-2.5">
                             <Checkbox
                               checked={selected}
                               label={`Select ${upload.originalName}`}
                               onChange$={(checked) =>
                                 toggleOne(upload.id, checked)
                               }
+                              class="mt-2.5"
                             />
-                          </Td>
-                          <Td>
-                            <div class="flex min-w-0 items-center gap-2.5">
-                              <FileTypeIcon
-                                upload={upload}
-                                size="sm"
-                                onClick$={$(() => openImage(upload))}
-                              />
-                              <div class="min-w-0">
-                                <p
-                                  class="text-ink truncate font-medium"
-                                  title={upload.originalName}
-                                >
-                                  {upload.originalName}
-                                </p>
-                                <p class="text-ink-muted truncate text-xs">
-                                  {fileTypeLabel(upload.mimeType)} ·{" "}
-                                  <span class="font-mono">
-                                    /{upload.shortCode}
+                            <FileTypeIcon
+                              upload={upload}
+                              size="sm"
+                              onClick$={$(() => openImage(upload))}
+                            />
+                            <div class="min-w-[9rem] flex-1">
+                              <p class="text-ink truncate text-[13px] font-medium">
+                                {upload.originalName}
+                              </p>
+                              <p class="text-ink-muted mt-0.5 text-xs">
+                                {formatBytes(upload.size, 1)} ·{" "}
+                                {formatRelativeDate(upload.createdAt)}
+                              </p>
+                              <p class="text-ink-muted mt-0.5 flex items-center gap-2.5 text-xs">
+                                <span class="flex items-center gap-1">
+                                  <Eye class="h-3 w-3" aria-hidden="true" />
+                                  {upload.views}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                  <Download
+                                    class="h-3 w-3"
+                                    aria-hidden="true"
+                                  />
+                                  {upload.downloads}
+                                </span>
+                                {expiry && (
+                                  <span
+                                    class={
+                                      expiry === "Expired"
+                                        ? "text-danger"
+                                        : "text-warning"
+                                    }
+                                  >
+                                    {expiry}
                                   </span>
-                                </p>
-                              </div>
+                                )}
+                              </p>
                             </div>
-                          </Td>
-                          <TdMeta>{formatBytes(upload.size, 1)}</TdMeta>
-                          <TdMeta>
-                            <span class="flex items-center gap-2.5">
-                              <span
-                                class="flex items-center gap-1"
-                                title={`${upload.views} views`}
-                              >
-                                <Eye class="h-3 w-3" aria-hidden="true" />
-                                {upload.views}
-                              </span>
-                              <span
-                                class="flex items-center gap-1"
-                                title={`${upload.downloads} downloads`}
-                              >
-                                <Download class="h-3 w-3" aria-hidden="true" />
-                                {upload.downloads}
-                              </span>
-                            </span>
-                          </TdMeta>
-                          <TdMeta>
-                            <span title={formatAbsoluteDate(upload.createdAt)}>
-                              {formatRelativeDate(upload.createdAt)}
-                            </span>
-                          </TdMeta>
-                          <Td>
-                            <div class="flex flex-wrap gap-1">
-                              {expiry && (
-                                <Badge
-                                  tone={
-                                    expiry === "Expired" ? "error" : "warning"
-                                  }
-                                >
-                                  {expiry}
-                                </Badge>
-                              )}
-                              {upload.maxViews !== null && (
-                                <Badge
-                                  tone={
-                                    upload.views >= upload.maxViews
-                                      ? "error"
-                                      : "neutral"
-                                  }
-                                >
-                                  {upload.views}/{upload.maxViews} views
-                                </Badge>
-                              )}
-                              {!expiry && upload.maxViews === null && (
-                                <span class="text-ink-muted text-xs">None</span>
-                              )}
-                            </div>
-                          </Td>
-                          <Td class="text-right">
-                            <div class="flex items-center justify-end gap-1">
+                            <div class="ml-auto flex shrink-0 items-center gap-1">
                               <CopyButton
                                 value={`${data.value.origin}/f/${upload.shortCode}`}
-                                label="Copy link"
+                                title={`Copy link to ${upload.originalName}`}
                                 variant="secondary"
                               />
                               <IconButton
@@ -676,101 +917,43 @@ export default component$(() => {
                                 })}
                               />
                             </div>
-                          </Td>
-                        </Tr>
+                          </div>
+                        </li>
                       );
                     })}
-                  </Tbody>
-                </Table>
-              </Surface>
-
-              {/* Compact rows below md */}
-              <Surface flush class="overflow-hidden md:hidden">
-                <ul class="divide-edge divide-y">
-                  {visible.value.map((upload) => {
-                    const selected = selection.ids.includes(upload.id);
-                    const expiry = describeExpiry(upload.expiresAt);
-                    return (
-                      <li
-                        key={upload.id}
-                        class={selected ? "bg-accent-soft" : undefined}
-                      >
-                        <div class="flex flex-wrap items-start gap-x-2.5 gap-y-2 px-3 py-2.5">
-                          <Checkbox
-                            checked={selected}
-                            label={`Select ${upload.originalName}`}
-                            onChange$={(checked) =>
-                              toggleOne(upload.id, checked)
-                            }
-                            class="mt-2.5"
-                          />
-                          <FileTypeIcon
-                            upload={upload}
-                            size="sm"
-                            onClick$={$(() => openImage(upload))}
-                          />
-                          <div class="min-w-[9rem] flex-1">
-                            <p class="text-ink truncate text-[13px] font-medium">
-                              {upload.originalName}
-                            </p>
-                            <p class="text-ink-muted mt-0.5 text-xs">
-                              {formatBytes(upload.size, 1)} ·{" "}
-                              {formatRelativeDate(upload.createdAt)}
-                            </p>
-                            <p class="text-ink-muted mt-0.5 flex items-center gap-2.5 text-xs">
-                              <span class="flex items-center gap-1">
-                                <Eye class="h-3 w-3" aria-hidden="true" />
-                                {upload.views}
-                              </span>
-                              <span class="flex items-center gap-1">
-                                <Download class="h-3 w-3" aria-hidden="true" />
-                                {upload.downloads}
-                              </span>
-                              {expiry && (
-                                <span
-                                  class={
-                                    expiry === "Expired"
-                                      ? "text-danger"
-                                      : "text-warning"
-                                  }
-                                >
-                                  {expiry}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div class="ml-auto flex shrink-0 items-center gap-1">
-                            <CopyButton
-                              value={`${data.value.origin}/f/${upload.shortCode}`}
-                              title={`Copy link to ${upload.originalName}`}
-                              variant="secondary"
-                            />
-                            <IconButton
-                              size="sm"
-                              variant="outline"
-                              label={`Open ${upload.originalName}`}
-                              href={`/f/${upload.shortCode}`}
-                              external
-                            >
-                              <ExternalLink class="h-4 w-4" />
-                            </IconButton>
-                            <RowMenu
-                              upload={upload}
-                              onDelete$={$(() => {
-                                selection.ids = [upload.id];
-                                deleteOpen.value = true;
-                              })}
-                            />
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Surface>
-            </>
-          )}
-        </>
+                  </ul>
+                </Surface>
+              </>
+            )}
+          </>
+        )}
+      </div>
+      {files.value.filteredTotal > files.value.pageSize && (
+        <nav
+          aria-label="File pages"
+          class="mt-4 flex flex-wrap items-center justify-between gap-3"
+        >
+          <Button
+            variant="secondary"
+            disabled={loading.value || page.value <= 1}
+            onClick$={() => page.value--}
+          >
+            Previous
+          </Button>
+          <span class="text-ink-muted text-sm" aria-live="polite">
+            {pageLabel.value}
+          </span>
+          <Button
+            variant="secondary"
+            disabled={
+              loading.value ||
+              page.value * files.value.pageSize >= files.value.filteredTotal
+            }
+            onClick$={() => page.value++}
+          >
+            Next
+          </Button>
+        </nav>
       )}
 
       <Dialog
@@ -784,8 +967,8 @@ export default component$(() => {
       >
         <p class="text-ink-muted text-[13px] leading-5">
           {selection.ids.length === 1
-            ? "This file and its link stop working immediately. This cannot be undone."
-            : `These ${selection.ids.length} files and their links stop working immediately. This cannot be undone.`}
+            ? "The link stops working immediately. You can restore this file from trash for 30 days."
+            : `These ${selection.ids.length} links stop working immediately. You can restore the files from trash for 30 days.`}
         </p>
         <ul class="border-edge rounded-surface bg-surface-subtle mt-3 max-h-40 overflow-y-auto border px-3 py-2">
           {selectedFiles.value.slice(0, 50).map((u) => (
@@ -841,6 +1024,7 @@ const RowMenu = component$<{
     <MenuItem href={`/f/${upload.shortCode}`} external icon={ExternalLink}>
       Open in new tab
     </MenuItem>
+    <MenuItem href={`/dashboard/files/${upload.id}`}>File settings</MenuItem>
     <MenuItem onClick$={onDelete$} icon={Trash2} tone="danger">
       Delete file
     </MenuItem>

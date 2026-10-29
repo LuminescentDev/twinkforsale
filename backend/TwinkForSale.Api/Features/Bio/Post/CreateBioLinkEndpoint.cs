@@ -1,12 +1,10 @@
 using FastEndpoints;
-using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Domain.Entities;
 using TwinkForSale.Api.Infrastructure.Auth;
-using TwinkForSale.Api.Infrastructure.Database;
 
 namespace TwinkForSale.Api.Features.Bio.Post;
 
-public sealed class CreateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<CreateBioLinkRequest, BioLinkMutationResponse>
+public sealed class CreateBioLinkEndpoint(BioDraftService drafts) : Endpoint<CreateBioLinkRequest, BioLinkMutationResponse>
 {
     public override void Configure()
     {
@@ -25,19 +23,18 @@ public sealed class CreateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<Cre
             return;
         }
 
-        var nextOrder = (await dbContext.BioLinks.Where(x => x.UserId == userId).MaxAsync(x => (int?)x.Order, ct) ?? -1) + 1;
-        var link = new BioLink
-        {
-            UserId = userId,
-            Title = req.Title.Trim(),
-            Url = uri.ToString(),
-            Icon = req.Icon,
-            Order = req.Order ?? nextOrder,
-            IsActive = req.IsActive ?? true
-        };
-        dbContext.BioLinks.Add(link);
-        await dbContext.SaveChangesAsync(ct);
-        await SendAsync(new BioLinkMutationResponse(true, link.Id), StatusCodes.Status201Created, ct);
+        if (string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 120 || req.Url.Length > 4000)
+        { await SendAsync(new BioLinkMutationResponse(false, Error: "Invalid link title or URL."), 400, ct); return; }
+        await using var tx = await drafts.LockAsync(userId, ct);
+        var document = await drafts.ReadAsync(userId, ct);
+        var id = EntityIds.NewId();
+        var link = new Get.BioLinkDto(id, req.Title.Trim(), uri.ToString(), req.Icon, req.Order ?? (document.Links.Select(x => x.Order).DefaultIfEmpty(-1).Max() + 1), req.IsActive ?? true, 0);
+        var next = document with { Links = document.Links.Append(link).ToArray() };
+        var error = await drafts.ValidateAsync(userId, next, ct);
+        if (error is not null) { await SendAsync(new BioLinkMutationResponse(false, Error: error), 400, ct); return; }
+        await drafts.SaveAsync(userId, next, ct);
+        await tx.CommitAsync(ct);
+        await SendAsync(new BioLinkMutationResponse(true, id), 201, ct);
     }
 }
 

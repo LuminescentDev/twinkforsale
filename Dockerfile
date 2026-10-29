@@ -16,11 +16,7 @@ RUN npm install -g pnpm@10.13.1
 
 COPY . .
 
-RUN pnpm install
-
-# Set environment variables needed for Prisma during build
-ENV UPLOADS_DIR=/app/uploads
-ENV DATABASE_URL=file:/app/data/prod.db
+RUN pnpm install --frozen-lockfile
 
 RUN pnpm run deploy
 

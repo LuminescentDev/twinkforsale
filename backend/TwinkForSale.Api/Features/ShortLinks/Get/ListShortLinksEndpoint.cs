@@ -35,7 +35,7 @@ public sealed class ListShortLinksEndpoint(AppDbContext dbContext) : EndpointWit
                 x.MaxClicks,
                 x.CreatedAt,
                 x.ExpiresAt,
-                x.LastClicked))
+                x.LastClicked, x.IsPaused))
             .ToListAsync(ct);
 
         await SendOkAsync(new ListShortLinksResponse(links), ct);
@@ -52,4 +52,5 @@ public sealed record ShortLinkListItem(
     int? MaxClicks,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ExpiresAt,
-    DateTimeOffset? LastClicked);
+    DateTimeOffset? LastClicked,
+    bool IsPaused);

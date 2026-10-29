@@ -1,5 +1,6 @@
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.Security.Claims;
 using TwinkForSale.Api.Domain.Entities;
 using TwinkForSale.Api.Infrastructure.Auth;
@@ -39,6 +40,14 @@ public sealed class CreateShortLinkEndpoint(
             return;
         }
 
+        if (req.ExpiresDays is <= 0 or > 36500 || req.MaxClicks is <= 0)
+        {
+            await SendAsync(new CreateShortLinkResponse(Error: "Expiration and click limits must be positive."), StatusCodes.Status400BadRequest, ct);
+            return;
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        await dbContext.Users.FromSqlInterpolated($"SELECT * FROM users WHERE \"Id\" = {userId} FOR UPDATE").ToListAsync(ct);
         var user = await dbContext.Users
             .Include(x => x.Settings)
             .FirstAsync(x => x.Id == userId, ct);
@@ -90,7 +99,16 @@ public sealed class CreateShortLinkEndpoint(
         };
 
         dbContext.ShortLinks.Add(link);
-        await dbContext.SaveChangesAsync(ct);
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            await SendAsync(new CreateShortLinkResponse(Error: "Code already in use."), StatusCodes.Status409Conflict, ct);
+            return;
+        }
+        await transaction.CommitAsync(ct);
 
         var origin = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
         await SendAsync(new CreateShortLinkResponse(Code: code, Url: $"{origin}/l/{code}", Target: link.Url, ExpiresAt: expiresAt), StatusCodes.Status201Created, ct);

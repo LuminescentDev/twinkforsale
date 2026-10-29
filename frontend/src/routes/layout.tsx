@@ -85,6 +85,9 @@ export default component$(() => {
     (r) => pathname === r || pathname.startsWith(r + "/"),
   );
 
+  // The landing page renders its own navigation and footer.
+  const isHome = pathname === "/";
+
   const imagePreviewStore = useStore({
     state: { isOpen: false, imageUrl: "", imageName: "" },
   });
@@ -135,7 +138,12 @@ export default component$(() => {
         }`}
       />
 
-      {isBioPage ? (
+      {isHome ? (
+        <div class="bg-canvas text-ink min-h-screen">
+          <Slot />
+          {previewModal}
+        </div>
+      ) : isBioPage ? (
         <div class="min-h-screen">
           <Slot />
           {previewModal}

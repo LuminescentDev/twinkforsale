@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using NpgsqlTypes;
+using TwinkForSale.Api.Infrastructure.Auth;
 using static SqlNames;
 
 internal static class Program
@@ -230,7 +231,13 @@ internal sealed class SqliteToPostgresMigration(
             object? value;
             var key = $"{table}.{destinationColumn.Name}";
 
-            if (table.Equals("users", StringComparison.OrdinalIgnoreCase) &&
+            if (table.Equals("api_keys", StringComparison.OrdinalIgnoreCase) &&
+                destinationColumn.Name is "Key" or "MaskedKey")
+            {
+                var secret = reader.GetString(reader.GetOrdinal(sourceColumns["key"]));
+                value = destinationColumn.Name == "Key" ? ApiKeySecrets.Hash(secret) : ApiKeySecrets.Mask(secret);
+            }
+            else if (table.Equals("users", StringComparison.OrdinalIgnoreCase) &&
                 destinationColumn.Name.Equals("approvedById", StringComparison.OrdinalIgnoreCase))
             {
                 value = null;

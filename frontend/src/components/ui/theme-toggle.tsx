@@ -72,6 +72,8 @@ export const ThemeSwatch = component$<{ theme: ThemeName; class?: string }>(
 export interface ThemeToggleProps {
   /** `menu` for the shell; `list` for the Appearance settings section. */
   variant?: "menu" | "list";
+  /** Menu trigger size; `lg` gives a 44px touch target. */
+  size?: "sm" | "lg";
   class?: string;
 }
 
@@ -80,7 +82,7 @@ export interface ThemeToggleProps {
  * previews show each palette's real surface and accent relationship.
  */
 export const ThemeToggle = component$<ThemeToggleProps>(
-  ({ variant = "menu", class: className }) => {
+  ({ variant = "menu", size = "sm", class: className }) => {
     const current = useSignal<ThemeName>("auto");
 
     // eslint-disable-next-line qwik/no-use-visible-task
@@ -145,7 +147,10 @@ export const ThemeToggle = component$<ThemeToggleProps>(
         class={className}
         menuClass="w-56"
         triggerLabel="Change theme"
-        triggerClass="text-ink-muted hover:bg-surface-hover hover:text-ink h-8 w-8 justify-center border border-transparent"
+        triggerClass={cn(
+          "text-ink-muted hover:bg-surface-hover hover:text-ink justify-center border border-transparent",
+          size === "lg" ? "h-11 w-11" : "h-8 w-8",
+        )}
       >
         <CurrentIcon q:slot="trigger" class="h-4 w-4" />
         <div role="radiogroup" aria-label="Theme">

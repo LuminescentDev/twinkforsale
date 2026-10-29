@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "@luminescent/ui";
 @plugin "@luminescent/ui/lum-bg";
@@ -49,6 +48,8 @@
   --radius-surface: 8px;
   --radius-dialog: 12px;
 
+  --font-display: "Syne", "Inter", system-ui, sans-serif;
+
   /* Elevation is reserved for menus, dialogs, sheets and temporary bars. */
   --shadow-pop: 0 8px 24px -6px var(--ui-shadow),
     0 2px 6px -2px var(--ui-shadow);
@@ -86,6 +87,24 @@
   --color-theme-error: var(--ui-danger);
   --color-theme-warning: var(--ui-warning);
   --color-theme-info: var(--ui-info);
+}
+
+/* Self-hosted variable fonts (OFL, see public/fonts). Syne is the landing
+   page's display face; Inter is the interface face everywhere. */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Syne";
+  src: url("/fonts/Syne-Variable.ttf") format("truetype");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* Dark role tokens are the boot default; the theme store overwrites them on

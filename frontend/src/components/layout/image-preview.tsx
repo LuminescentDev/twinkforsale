@@ -2,6 +2,7 @@ import {
   $,
   component$,
   useSignal,
+  useTask$,
   useVisibleTask$,
   type QRL,
 } from "@builder.io/qwik";
@@ -23,7 +24,15 @@ export interface ImagePreviewProps {
 export const ImagePreview = component$<ImagePreviewProps>(
   ({ isOpen, imageUrl, imageName, onClose }) => {
     const imageLoaded = useSignal(false);
+    const imageFailed = useSignal(false);
     const dialogRef = useSignal<HTMLDialogElement>();
+
+    useTask$(({ track }) => {
+      track(() => imageUrl);
+      track(() => isOpen);
+      imageLoaded.value = false;
+      imageFailed.value = false;
+    });
 
     // eslint-disable-next-line qwik/no-use-visible-task
     useVisibleTask$(
@@ -39,7 +48,10 @@ export const ImagePreview = component$<ImagePreviewProps>(
 
     const handleDownload = $(() => {
       const link = document.createElement("a");
-      link.href = imageUrl;
+      const url = new URL(imageUrl, window.location.origin);
+      url.searchParams.delete("preview");
+      url.searchParams.set("download", "true");
+      link.href = url.href;
       link.download = imageName || "image";
       document.body.appendChild(link);
       link.click();
@@ -95,7 +107,7 @@ export const ImagePreview = component$<ImagePreviewProps>(
         </div>
 
         <div class="bg-surface-subtle relative flex min-h-72 items-center justify-center">
-          {!imageLoaded.value && (
+          {!imageLoaded.value && !imageFailed.value && (
             <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <span
                 class="border-accent h-7 w-7 animate-spin rounded-full border-2 border-t-transparent"
@@ -104,16 +116,24 @@ export const ImagePreview = component$<ImagePreviewProps>(
               <p class="text-ink-muted text-sm">Loading image…</p>
             </div>
           )}
-          {/* eslint-disable-next-line qwik/jsx-img */}
-          <img
-            src={imageUrl}
-            alt={imageName || "Preview"}
-            class={`max-h-[78vh] max-w-full object-contain transition-opacity duration-150 ${
-              imageLoaded.value ? "opacity-100" : "opacity-0"
-            }`}
-            onLoad$={() => (imageLoaded.value = true)}
-            onError$={() => (imageLoaded.value = true)}
-          />
+          {imageFailed.value && (
+            <p role="alert" class="text-ink-muted p-4 text-sm">
+              This image could not be loaded. It may have expired or been
+              deleted.
+            </p>
+          )}
+          {isOpen && imageUrl && (
+            // eslint-disable-next-line qwik/jsx-img
+            <img
+              src={`${imageUrl}${imageUrl.includes("?") ? "&" : "?"}preview=true`}
+              alt={imageName || "Preview"}
+              class={`max-h-[78vh] max-w-full object-contain transition-opacity duration-150 ${
+                imageLoaded.value ? "opacity-100" : "opacity-0"
+              }`}
+              onLoad$={() => (imageLoaded.value = true)}
+              onError$={() => (imageFailed.value = true)}
+            />
+          )}
         </div>
       </dialog>
     );

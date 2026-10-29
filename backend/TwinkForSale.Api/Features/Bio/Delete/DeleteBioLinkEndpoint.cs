@@ -1,11 +1,9 @@
 using FastEndpoints;
-using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Infrastructure.Auth;
-using TwinkForSale.Api.Infrastructure.Database;
 
 namespace TwinkForSale.Api.Features.Bio.Delete;
 
-public sealed class DeleteBioLinkEndpoint(AppDbContext dbContext) : EndpointWithoutRequest<DeleteBioLinkResponse>
+public sealed class DeleteBioLinkEndpoint(BioDraftService drafts) : EndpointWithoutRequest<DeleteBioLinkResponse>
 {
     public override void Configure()
     {
@@ -20,11 +18,11 @@ public sealed class DeleteBioLinkEndpoint(AppDbContext dbContext) : EndpointWith
         var id = Route<string>("id");
         if (string.IsNullOrWhiteSpace(userId)) { await SendUnauthorizedAsync(ct); return; }
 
-        var link = await dbContext.BioLinks.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
-        if (link is null) { await SendNotFoundAsync(ct); return; }
-
-        dbContext.BioLinks.Remove(link);
-        await dbContext.SaveChangesAsync(ct);
+        await using var tx = await drafts.LockAsync(userId, ct);
+        var document = await drafts.ReadAsync(userId, ct);
+        if (!document.Links.Any(x => x.Id == id)) { await SendNotFoundAsync(ct); return; }
+        await drafts.SaveAsync(userId, document with { Links = document.Links.Where(x => x.Id != id).ToArray() }, ct);
+        await tx.CommitAsync(ct);
         await SendOkAsync(new DeleteBioLinkResponse(true), ct);
     }
 }

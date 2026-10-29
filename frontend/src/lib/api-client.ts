@@ -64,10 +64,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const baseUrl =
-    API_BASE_URL || typeof window !== "undefined"
-      ? API_BASE_URL
-      : SERVER_API_BASE_URL;
+  const baseUrl = typeof window !== "undefined" ? API_BASE_URL : SERVER_API_BASE_URL;
   const base = `${baseUrl}${normalizedPath}`;
   return appendQuery(base, query);
 }
@@ -178,6 +175,13 @@ export interface UploadListItem {
   expiresAt: string | null;
   /** View limit after which the file stops being served. Null = unlimited. */
   maxViews: number | null;
+  isFavorite: boolean;
+  tags: string[];
+  accessMode: string;
+  isRevoked: boolean;
+  deletedAt: string | null;
+  isPending: boolean;
+  fileRequestId: string | null;
 }
 
 export interface ShortLinkListItem {
@@ -189,6 +193,7 @@ export interface ShortLinkListItem {
   createdAt: string;
   expiresAt: string | null;
   lastClicked: string | null;
+  isPaused: boolean;
 }
 
 export interface ApiKeyListItem {
@@ -283,6 +288,7 @@ export interface BioResponse {
   showDiscord: boolean;
   discordConfig: string | null;
   links: BioLinkDto[];
+  limits?: { maxBioLinks: number; maxUsernameLength: number; maxDisplayNameLength: number; maxDescriptionLength: number; maxUrlLength: number; maxLinkTitleLength: number; maxIconLength: number } | null;
 }
 
 export interface UpdateBioRequest {
@@ -477,6 +483,27 @@ export interface UploadAnalyticsResponse {
 /** Options that only carry SSR pass-through context (cookie/token/signal). */
 type CallOpts = Pick<RequestOptions, "cookie" | "token" | "signal">;
 
+export interface UploadListResponse {
+  uploads: UploadListItem[];
+  total: number;
+  filteredTotal: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface UploadListQuery {
+  search?: string;
+  kind?: string;
+  sort?: string;
+  direction?: string;
+  page?: number;
+  pageSize?: number;
+  tag?: string;
+  favoritesOnly?: boolean;
+  period?: string;
+  state?: string;
+}
+
 export const api = {
   auth: {
     me: (o?: CallOpts) => apiFetch<MeResponse>("/auth/me", o),
@@ -490,15 +517,15 @@ export const api = {
   dashboard: {
     summary: (o?: CallOpts) =>
       apiFetch<DashboardSummary>("/dashboard/summary", o),
-    uploads: (o?: CallOpts) =>
-      apiFetch<{ uploads: UploadListItem[] }>("/dashboard/uploads", o),
+    uploads: (o?: CallOpts, query?: UploadListQuery) =>
+      apiFetch<UploadListResponse>("/dashboard/uploads", { ...o, query: { ...query } }),
     deleteUpload: (id: string, o?: CallOpts) =>
       apiFetch<void>(`/dashboard/uploads/${id}`, { ...o, method: "DELETE" }),
   },
 
   uploads: {
-    list: (o?: CallOpts) =>
-      apiFetch<{ uploads: UploadListItem[] }>("/uploads", o),
+    list: (o?: CallOpts, query?: UploadListQuery) =>
+      apiFetch<UploadListResponse>("/uploads", { ...o, query: { ...query } }),
     get: (id: string, o?: CallOpts) =>
       apiFetch<UploadListItem>(`/uploads/${id}`, o),
     delete: (id: string, o?: CallOpts) =>

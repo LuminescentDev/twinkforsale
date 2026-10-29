@@ -5,7 +5,7 @@ using TwinkForSale.Api.Infrastructure.Database;
 
 namespace TwinkForSale.Api.Features.Bio.Get;
 
-public sealed class GetMyBioEndpoint(AppDbContext dbContext) : EndpointWithoutRequest<BioResponse>
+public sealed class GetMyBioEndpoint(AppDbContext dbContext, BioDraftService drafts) : EndpointWithoutRequest<BioResponse>
 {
     public override void Configure()
     {
@@ -20,13 +20,8 @@ public sealed class GetMyBioEndpoint(AppDbContext dbContext) : EndpointWithoutRe
         if (string.IsNullOrWhiteSpace(userId)) { await SendUnauthorizedAsync(ct); return; }
 
         var settings = await dbContext.UserSettings.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId, ct);
-        var links = await dbContext.BioLinks.AsNoTracking()
-            .Where(x => x.UserId == userId)
-            .OrderBy(x => x.Order)
-            .Select(x => new BioLinkDto(x.Id, x.Title, x.Url, x.Icon, x.Order, x.IsActive, x.Clicks))
-            .ToListAsync(ct);
-
-        await SendOkAsync(BioResponse.From(settings, links), ct);
+        var response = await drafts.ReadAsync(userId, ct);
+        await SendOkAsync(response with { Limits = Admin.Get.BioLimitsDto.FromSettings(settings, Admin.Get.BioLimitDefaults.Value) }, ct);
     }
 }
 
@@ -48,7 +43,8 @@ public sealed record BioResponse(
     string? DiscordUserId,
     bool ShowDiscord,
     string? DiscordConfig,
-    IReadOnlyList<BioLinkDto> Links)
+    IReadOnlyList<BioLinkDto> Links,
+    Admin.Get.BioLimitsDto? Limits = null)
 {
     public static BioResponse From(Domain.Entities.UserSettings? settings, IReadOnlyList<BioLinkDto> links) => new(
         settings?.BioUsername,

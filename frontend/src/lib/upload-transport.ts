@@ -62,14 +62,16 @@ export function uploadFileWithProgress(
       }
 
       if (xhr.status >= 200 && xhr.status < 300) {
-        // The backend answers 200 with an `error` field for rejected uploads
-        // (size, quota, mime type), so success is not status alone.
         const body = parsed as CreateUploadResponse | undefined;
         if (body?.error) {
           reject(new ApiError(xhr.status, body.error, body));
           return;
         }
-        resolve(body ?? { url: null, deletionUrl: null, thumbnailUrl: null, error: null });
+        if (!body || typeof body.url !== "string" || !body.url) {
+          reject(new Error("The server did not return an upload link. Please try again."));
+          return;
+        }
+        resolve(body);
         return;
       }
 

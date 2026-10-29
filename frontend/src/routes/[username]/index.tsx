@@ -10,6 +10,7 @@ import {
   getGradientCSS,
   type GradientConfig,
 } from "~/components/ui/gradient-config-panel";
+import { library } from "~/lib/library-api";
 import { api } from "~/lib/api-client";
 
 export const useBioPage = routeLoader$(async (requestEvent) => {
@@ -27,6 +28,7 @@ export const useBioPage = routeLoader$(async (requestEvent) => {
 
   return {
     bioPage,
+    albums: (await library.bioAlbums(username)).albums,
     username,
   };
 });
@@ -59,7 +61,7 @@ export default component$(() => {
 
   const handleLinkClick = $(async (linkId: string) => {
     // Track the click using the route action
-    if (linkId) {
+    if (linkId && !linkId.startsWith("album-")) {
       linkClickAction.submit({ linkId }).catch(console.error);
     }
   });
@@ -97,7 +99,19 @@ export default component$(() => {
     discordUserId: bioPage.discordUserId,
     showDiscord: bioPage.showDiscord,
     discordConfig: bioPage.discordConfig,
-    bioLinks: bioPage.links.map((link) => ({
+    bioLinks: [
+      ...bioPage.links,
+      ...bioData.value.albums.map((album, index) => ({
+        id: "album-" + album.code,
+        title: album.title,
+        url: `/a/${album.code}`,
+        icon: "photo",
+        order:
+          Math.max(-1, ...bioPage.links.map((link) => link.order)) + index + 1,
+        isActive: true,
+        clicks: 0,
+      })),
+    ].map((link) => ({
       id: link.id,
       title: link.title,
       url: link.url,

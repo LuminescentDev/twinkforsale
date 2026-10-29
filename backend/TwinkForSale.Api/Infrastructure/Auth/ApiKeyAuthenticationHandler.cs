@@ -34,10 +34,11 @@ public sealed class ApiKeyAuthenticationHandler(
 
     private async Task<AuthenticateResult> AuthenticateApiKeyAsync(string apiKey)
     {
+        var keyHash = ApiKeySecrets.Hash(apiKey);
         var keyRecord = await dbContext.ApiKeys
             .AsNoTracking()
             .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.Key == apiKey && x.IsActive, Context.RequestAborted);
+            .FirstOrDefaultAsync(x => x.KeyHash == keyHash && x.IsActive, Context.RequestAborted);
 
         if (keyRecord?.User is null)
         {

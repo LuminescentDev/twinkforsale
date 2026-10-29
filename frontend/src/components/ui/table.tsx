@@ -139,6 +139,9 @@ export const TdMeta = component$<{ title?: string; class?: string }>(
 
 export interface CheckboxProps {
   checked: boolean;
+  name?: string;
+  showLabel?: boolean;
+  disabled?: boolean;
   indeterminate?: boolean;
   /** Names the specific row or the whole collection. */
   label: string;
@@ -152,7 +155,16 @@ export interface CheckboxProps {
  * rather than as an attribute.
  */
 export const Checkbox = component$<CheckboxProps>(
-  ({ checked, indeterminate, label, onChange$, class: className }) => {
+  ({
+    checked,
+    name,
+    showLabel,
+    disabled,
+    indeterminate,
+    label,
+    onChange$,
+    class: className,
+  }) => {
     const ref = useSignal<HTMLInputElement>();
 
     // eslint-disable-next-line qwik/no-use-visible-task
@@ -161,10 +173,12 @@ export const Checkbox = component$<CheckboxProps>(
       if (ref.value) ref.value.indeterminate = !!partial;
     });
 
-    return (
+    const input = (
       <input
         ref={ref}
         type="checkbox"
+        name={name}
+        disabled={disabled}
         checked={checked}
         aria-label={label}
         onChange$={(_, el) => onChange$(el.checked)}
@@ -173,6 +187,14 @@ export const Checkbox = component$<CheckboxProps>(
           className,
         )}
       />
+    );
+    return showLabel ? (
+      <label class="text-ink inline-flex items-center gap-2 text-sm">
+        {input}
+        <span>{label}</span>
+      </label>
+    ) : (
+      input
     );
   },
 );

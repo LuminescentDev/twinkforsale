@@ -38,9 +38,20 @@ const API_INTERNAL_BASE_URL = (
 // `/upload` is handled separately below because it collides with a frontend
 // page.
 const backendProxyPrefixes = [
+  "/auth/",
   "/f/",
   "/l/",
+  "/delete/",
   "/uploads",
+  "/albums",
+  "/saved-filters",
+  "/upload-presets",
+  "/file-requests",
+  "/public/albums/",
+  "/public/file-requests/",
+  "/public/bio/",
+  "/bio/",
+  "/short-links",
   "/api/admin",
   "/api/upload",
   "/api/uploads",
@@ -51,7 +62,13 @@ function shouldProxyToBackend(req: IncomingMessage): boolean {
   const url = req.url;
   if (!url) return false;
   const path = url.split("?")[0];
-  if (backendProxyPrefixes.some((prefix) => path.startsWith(prefix))) {
+  if (
+    backendProxyPrefixes.some((prefix) =>
+      prefix.endsWith("/")
+        ? path.startsWith(prefix)
+        : path === prefix || path.startsWith(`${prefix}/`),
+    )
+  ) {
     return true;
   }
   // ShareX posts uploads to `/upload` (see sharex-config.ts), which is the same
@@ -73,9 +90,11 @@ function shouldProxyToBackend(req: IncomingMessage): boolean {
 function proxyToBackend(req: IncomingMessage, res: ServerResponse) {
   return new Promise<void>((resolve, reject) => {
     const targetUrl = new URL(req.url ?? "/", `${API_INTERNAL_BASE_URL}/`);
-    const forwardedProto = req.headers["x-forwarded-proto"] ?? "https";
+    const forwardedProto = req.headers["x-forwarded-proto"] ?? "http";
     const forwardedHost = req.headers["x-forwarded-host"] ?? req.headers.host;
-    const proxyRequest = (targetUrl.protocol === "https:" ? httpsRequest : httpRequest)(
+    const proxyRequest = (
+      targetUrl.protocol === "https:" ? httpsRequest : httpRequest
+    )(
       targetUrl,
       {
         method: req.method,
@@ -117,8 +136,7 @@ const { router, notFound, staticFile } = createQwikCity({
     cacheControl: "public, max-age=31536000, immutable",
   },
   origin: process.env.BASE_URL || "https://twink.forsale",
-  // Disable CSRF protection to allow ShareX uploads with null origin
-  checkOrigin: false,
+  checkOrigin: true,
 });
 
 const server = createServer();
@@ -153,7 +171,7 @@ server.on("request", (req, res) => {
   // Log requests in production
   if (process.env.NODE_ENV === "production") {
     console.log(
-      `${new Date().toISOString()} ${req.method} ${req.url} - Host: ${req.headers.host} - Proto: ${forwardedProto || "http"}`,
+      `${new Date().toISOString()} ${req.method} ${req.url?.startsWith("/delete/") ? "/delete/[redacted]" : req.url?.split("?")[0]} - Host: ${req.headers.host} - Proto: ${forwardedProto || "http"}`,
     );
   }
 

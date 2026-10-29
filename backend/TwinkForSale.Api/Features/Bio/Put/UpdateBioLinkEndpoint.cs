@@ -1,11 +1,9 @@
 using FastEndpoints;
-using Microsoft.EntityFrameworkCore;
 using TwinkForSale.Api.Infrastructure.Auth;
-using TwinkForSale.Api.Infrastructure.Database;
 
 namespace TwinkForSale.Api.Features.Bio.Put;
 
-public sealed class UpdateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<UpdateBioLinkRequest, UpdateBioLinkResponse>
+public sealed class UpdateBioLinkEndpoint(BioDraftService drafts) : Endpoint<UpdateBioLinkRequest, UpdateBioLinkResponse>
 {
     public override void Configure()
     {
@@ -20,21 +18,19 @@ public sealed class UpdateBioLinkEndpoint(AppDbContext dbContext) : Endpoint<Upd
         var id = Route<string>("id");
         if (string.IsNullOrWhiteSpace(userId)) { await SendUnauthorizedAsync(ct); return; }
 
-        var link = await dbContext.BioLinks.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+        if (string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 120 || req.Url?.Length > 4000 ||
+            !Uri.TryCreate(req.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        { await SendAsync(new UpdateBioLinkResponse(false, "Invalid link title or URL."), 400, ct); return; }
+        await using var tx = await drafts.LockAsync(userId, ct);
+        var document = await drafts.ReadAsync(userId, ct);
+        var link = document.Links.FirstOrDefault(x => x.Id == id);
         if (link is null) { await SendNotFoundAsync(ct); return; }
-        if (!Uri.TryCreate(req.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
-        {
-            await SendAsync(new UpdateBioLinkResponse(false, "Invalid URL."), StatusCodes.Status400BadRequest, ct);
-            return;
-        }
-
-        link.Title = req.Title.Trim();
-        link.Url = uri.ToString();
-        link.Icon = req.Icon;
-        link.Order = req.Order;
-        link.IsActive = req.IsActive;
-        link.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(ct);
+        var updated = link with { Title = req.Title.Trim(), Url = uri.ToString(), Icon = req.Icon, Order = req.Order, IsActive = req.IsActive };
+        var next = document with { Links = document.Links.Select(x => x.Id == id ? updated : x).ToArray() };
+        var error = await drafts.ValidateAsync(userId, next, ct);
+        if (error is not null) { await SendAsync(new UpdateBioLinkResponse(false, error), 400, ct); return; }
+        await drafts.SaveAsync(userId, next, ct);
+        await tx.CommitAsync(ct);
         await SendOkAsync(new UpdateBioLinkResponse(true), ct);
     }
 }

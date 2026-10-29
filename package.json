@@ -1,13 +1,15 @@
 {
   "name": "twinkforsale-workspace",
   "private": true,
+  "packageManager": "pnpm@10.13.1",
   "scripts": {
+    "test": "pnpm --filter twink-for-sale test",
     "build": "pnpm --filter twink-for-sale build",
     "build.client": "pnpm --filter twink-for-sale build.client",
     "build.preview": "pnpm --filter twink-for-sale build.preview",
     "build.server": "pnpm --filter twink-for-sale build.server",
     "build.types": "pnpm --filter twink-for-sale build.types",
-    "deploy": "pnpm --filter twink-for-sale deploy",
+    "deploy": "pnpm --filter twink-for-sale run deploy",
     "dev": "pnpm --filter twink-for-sale dev",
     "dev.debug": "pnpm --filter twink-for-sale dev.debug",
     "fmt": "pnpm --filter twink-for-sale fmt",
