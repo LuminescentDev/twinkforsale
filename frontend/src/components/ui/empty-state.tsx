@@ -33,7 +33,7 @@ export const EmptyState = component$<EmptyStateProps>(
           )}
         />
       )}
-      <p class="text-ink text-[15px] font-semibold">{title}</p>
+      <p class="font-pixel text-ink text-base font-semibold">{title}</p>
       {description && (
         <p class="text-ink-muted mt-1.5 max-w-sm text-[13px] leading-5">
           {description}

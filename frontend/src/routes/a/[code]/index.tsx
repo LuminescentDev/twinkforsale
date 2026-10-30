@@ -19,6 +19,7 @@ export default component$(() => {
     <Page>
       <PageHeader
         title={data.value.title}
+        plainTitle
         description={data.value.description || undefined}
       />
       {data.value.items.length === 0 && (

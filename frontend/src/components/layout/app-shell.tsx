@@ -35,13 +35,17 @@ import {
 const Wordmark = component$<{ collapsed?: boolean }>(({ collapsed }) => (
   <Link
     href="/dashboard"
-    class="focus-ring rounded-control text-ink flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em]"
+    aria-label={collapsed ? "twink.forsale" : undefined}
+    class="focus-ring rounded-control flex items-center"
   >
-    <Heart
-      class="text-accent h-4 w-4 shrink-0 fill-current"
-      aria-hidden="true"
-    />
-    {!collapsed && <span class="truncate">twink.forsale</span>}
+    {collapsed ? (
+      <Heart
+        class="text-accent-text h-5 w-5 shrink-0 fill-current"
+        aria-hidden="true"
+      />
+    ) : (
+      <span class="retro-banner truncate text-xl font-bold">twink.forsale</span>
+    )}
   </Link>
 ));
 
@@ -78,7 +82,7 @@ const railLink = (active: boolean, collapsed?: boolean) =>
     "focus-ring rounded-control relative flex items-center text-[13px] transition-colors duration-150",
     collapsed ? "h-9 w-9 justify-center" : "h-8 gap-2.5 px-2.5",
     active
-      ? "bg-surface-hover text-ink font-medium"
+      ? "bg-accent-soft text-accent-text font-semibold"
       : "text-ink-muted hover:bg-surface-hover hover:text-ink",
   );
 
@@ -137,7 +141,7 @@ export const AppShell = component$(() => {
       {/* ---------------------------------------------------------------- */}
       <aside
         class={cn(
-          "border-edge bg-nav sticky top-0 hidden h-screen shrink-0 flex-col border-r transition-[width] duration-150 lg:flex",
+          "border-accent-text bg-nav sticky top-0 hidden h-screen shrink-0 flex-col border-r-[3px] border-double transition-[width] duration-150 lg:flex",
           collapsed.value ? "w-16" : "w-60",
         )}
       >
@@ -156,7 +160,7 @@ export const AppShell = component$(() => {
             aria-label={collapsed.value ? "Upload" : undefined}
             title={collapsed.value ? "Upload" : undefined}
             class={cn(
-              "focus-ring rounded-control bg-accent text-on-accent hover:bg-accent-hover flex items-center justify-center gap-2 text-[13px] font-medium transition-colors duration-150",
+              "focus-ring rounded-control retro-bevel border-accent bg-accent text-on-accent hover:bg-accent-hover flex items-center justify-center gap-2 text-[13px] font-semibold transition-colors duration-150",
               collapsed.value ? "h-9 w-10" : "h-9 w-full",
             )}
           >
@@ -195,7 +199,7 @@ export const AppShell = component$(() => {
             })}
           </ul>
 
-          <hr class="border-edge my-3 border-t" />
+          <hr class="retro-rule my-3" />
 
           <ul class="space-y-0.5">
             {secondaryNav.map((item) => {
@@ -245,7 +249,7 @@ export const AppShell = component$(() => {
 
         <div
           class={cn(
-            "border-edge flex shrink-0 items-center gap-1 border-t p-2",
+            "border-accent-text/55 flex shrink-0 items-center gap-1 border-t-2 border-dotted p-2",
             collapsed.value && "flex-col",
           )}
         >
@@ -314,7 +318,7 @@ export const AppShell = component$(() => {
       <div class="flex min-w-0 flex-1 flex-col">
         {/* Quiet mobile bar: wordmark + account. Breadcrumbs join it for
             nested views on every width. */}
-        <header class="border-edge bg-nav sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 sm:px-6 lg:hidden">
+        <header class="border-accent-text bg-nav sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b-[3px] border-double px-4 sm:px-6 lg:hidden">
           <Wordmark />
           <div class="ml-auto flex items-center gap-1">
             <ThemeToggle />
@@ -325,7 +329,7 @@ export const AppShell = component$(() => {
         {crumbs.length > 0 && (
           <nav
             aria-label="Breadcrumb"
-            class="border-edge bg-nav sticky top-14 z-20 flex h-9 shrink-0 items-center border-b px-4 text-[13px] sm:px-6 lg:top-0 lg:px-8"
+            class="border-accent-text/45 bg-nav sticky top-14 z-20 flex h-9 shrink-0 items-center border-b-2 border-dotted px-4 text-[13px] sm:px-6 lg:top-0 lg:px-8"
           >
             <ol class="flex min-w-0 items-center gap-1">
               {crumbs.map((crumb, i) => (
@@ -339,7 +343,7 @@ export const AppShell = component$(() => {
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      class="focus-ring text-ink-muted hover:text-ink truncate rounded-[4px]"
+                      class="focus-ring retro-link truncate"
                     >
                       {crumb.label}
                     </Link>
@@ -367,7 +371,7 @@ export const AppShell = component$(() => {
       {/* ---------------------------------------------------------------- */}
       <nav
         aria-label="Main"
-        class="border-edge bg-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] lg:hidden"
+        class="border-accent-text bg-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t-[3px] border-double pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         <BottomItem
           href={filesItem.href}
@@ -421,7 +425,7 @@ export const AppShell = component$(() => {
                   class={cn(
                     "focus-ring rounded-control flex items-center gap-3 px-2 py-2.5 text-sm transition-colors duration-150",
                     active
-                      ? "bg-surface-hover text-ink font-medium"
+                      ? "bg-accent-soft text-accent-text font-semibold"
                       : "text-ink hover:bg-surface-hover",
                   )}
                 >
@@ -433,7 +437,7 @@ export const AppShell = component$(() => {
           })}
         </ul>
 
-        <hr class="border-edge my-3 border-t" />
+        <hr class="retro-rule my-3" />
 
         <div class="mb-3">
           <p class="text-ink-muted mb-1.5 text-xs font-medium tracking-wide uppercase">
@@ -444,7 +448,7 @@ export const AppShell = component$(() => {
 
         {user.value && (
           <>
-            <hr class="border-edge my-3 border-t" />
+            <hr class="retro-rule my-3" />
             <div class="flex items-center gap-2.5 px-1 py-1.5">
               <Avatar user={user.value} size="md" />
               <div class="min-w-0 flex-1">
@@ -498,7 +502,7 @@ const BottomItem = component$<{
     )}
   >
     {emphasis ? (
-      <span class="bg-accent text-on-accent flex h-6 w-9 items-center justify-center rounded-[5px]">
+      <span class="retro-bevel border-accent bg-accent text-on-accent flex h-6 w-9 items-center justify-center">
         <Icon class="h-4 w-4" aria-hidden="true" />
       </span>
     ) : (

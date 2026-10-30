@@ -1,258 +1,213 @@
-/* Landing page only. Every rule resolves to the active theme's --ui-* roles,
-   so the page follows whichever palette the visitor picked. */
+/* Landing page only: an early-2000s personal homepage. It has its own palette
+   and switches to a night version whenever the active theme is dark. */
 
 .lp-root {
-  /* Interactive borders need 3:1 against their surface; the decorative
-     divider token is too faint for that job. */
-  --lp-control-border: color-mix(in srgb, var(--ui-ink-muted) 70%, var(--ui-canvas));
-}
+  --c-tile-a: #ffdcef;
+  --c-tile-b: #ffc8e4;
+  --c-box: #fffaf2;
+  --c-box-alt: #fff0f7;
+  --c-frame: #b0306f;
+  --c-title: #c42b7d;
+  --c-on-title: #ffffff;
+  --c-ink: #301030;
+  --c-muted: #6a3a5e;
+  --c-link: #b0206a;
+  --c-link-visited: #7a2bb0;
+  --c-banner: #ff3d8b;
+  --c-banner-shadow: #301030;
+  --c-new: #d4145a;
+  --c-btn-top: #ffeef7;
+  --c-btn-bottom: #ffbadd;
+  --c-btn-edge: #ff8cc6;
+  --c-go-top: #ff7ab8;
+  --c-go-bottom: #d62f7c;
+  --c-go-edge: #ff5aa5;
+  --c-on-go: #ffffff;
+  --c-counter: #1a0b1c;
+  --c-counter-digit: #7dffa8;
 
-/* Hero entrance: plays from first paint, so nothing is hidden after the
-   page has already rendered. */
-@keyframes lp-rise {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-}
-
-@keyframes lp-tile {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
-
-.lp-hero-in {
-  animation: lp-rise 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
-}
-
-.lp-hero-tile {
-  animation: lp-tile 500ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
-}
-
-.lp-hero-scrim {
-  background:
-    radial-gradient(
-      ellipse 60% 58% at 50% 48%,
-      color-mix(in srgb, var(--ui-canvas) 90%, transparent),
-      color-mix(in srgb, var(--ui-canvas) 72%, transparent)
+  background-color: var(--c-tile-a);
+  background-image: linear-gradient(
+      45deg,
+      var(--c-tile-b) 25%,
+      transparent 25% 75%,
+      var(--c-tile-b) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--c-tile-b) 25%,
+      transparent 25% 75%,
+      var(--c-tile-b) 75%
     );
+  background-size: 24px 24px;
+  background-position:
+    0 0,
+    12px 12px;
+  color: var(--c-ink);
+  font-family: "Inter", system-ui, sans-serif;
 }
 
-.lp-ghost {
+:root[data-theme="dark"] .lp-root {
+  --c-tile-a: #24122b;
+  --c-tile-b: #2d1735;
+  --c-box: #1c0f22;
+  --c-box-alt: #261530;
+  --c-frame: #ff79bd;
+  --c-title: #8f2266;
+  --c-on-title: #ffffff;
+  --c-ink: #fbe6f3;
+  --c-muted: #cfa7c3;
+  --c-link: #ff8cc8;
+  --c-link-visited: #c9a2ff;
+  --c-banner: #ff79bd;
+  --c-banner-shadow: #000000;
+  --c-new: #ff8cc8;
+  --c-btn-top: #4a2550;
+  --c-btn-bottom: #2f1636;
+  --c-btn-edge: #a2457f;
+  --c-go-top: #ff7ab8;
+  --c-go-bottom: #c42b7d;
+  --c-go-edge: #ff9ccc;
+  --c-counter: #000000;
+}
+
+.lp-root ::selection {
+  background: var(--c-banner);
+  color: #ffffff;
+}
+
+.lp-pixel {
+  font-family: "Pixelify Sans", "Inter", system-ui, sans-serif;
+}
+
+.lp-banner {
+  color: var(--c-banner);
+  text-shadow: 3px 3px 0 var(--c-banner-shadow);
+}
+
+.lp-box {
+  background: var(--c-box);
+  border: 3px double var(--c-frame);
+}
+
+.lp-box-title {
+  background: var(--c-title);
+  color: var(--c-on-title);
+}
+
+.lp-alt {
+  background: var(--c-box-alt);
+}
+
+.lp-frame {
+  border: 2px solid var(--c-ink);
+}
+
+.lp-hr {
+  border: 0;
+  border-top: 2px dotted var(--c-frame);
+}
+
+.lp-ink {
+  color: var(--c-ink);
+}
+.lp-muted {
+  color: var(--c-muted);
+}
+.lp-new {
+  color: var(--c-new);
+}
+
+.lp-link {
+  color: var(--c-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lp-link:visited {
+  color: var(--c-link-visited);
+}
+
+.lp-link:hover {
+  text-decoration-style: wavy;
+}
+
+.lp-focus {
+  outline: none;
+}
+
+.lp-focus:focus-visible,
+.lp-link:focus-visible {
+  outline: 2px dashed var(--c-link);
+  outline-offset: 2px;
+}
+
+/* Bevelled buttons, the way the browser drew them in 2003. */
+.lp-btn {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid var(--lp-control-border);
-  border-radius: var(--radius-control);
-  padding-inline: 1.25rem;
-  color: var(--ui-ink);
+  border: 3px outset var(--c-btn-edge);
+  background: linear-gradient(var(--c-btn-top), var(--c-btn-bottom));
+  padding: 0.25rem 1rem;
+  color: var(--c-ink);
+  font-family: "Pixelify Sans", "Inter", system-ui, sans-serif;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.lp-btn-go {
+  border-color: var(--c-go-edge);
+  background: linear-gradient(var(--c-go-top), var(--c-go-bottom));
+  color: var(--c-on-go);
+}
+
+.lp-btn:hover {
+  filter: brightness(1.05);
+}
+
+.lp-btn:active:not(:disabled) {
+  border-style: inset;
+}
+
+.lp-88 {
+  display: grid;
+  width: 88px;
+  height: 31px;
+  place-items: center;
+  border: 1px solid var(--c-ink);
+  color: #301030;
+  font-family: "Pixelify Sans", "Inter", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.lp-counter {
+  background: var(--c-counter);
+  color: var(--c-counter-digit);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.lp-table th,
+.lp-table td {
+  border: 1px solid color-mix(in srgb, var(--c-frame) 45%, transparent);
+}
+
+.lp-table thead th {
+  background: var(--c-box-alt);
+}
+
+.lp-embed-accent {
   transition:
-    background-color 150ms ease-out,
-    border-color 150ms ease-out;
-}
-
-.lp-ghost:hover {
-  background-color: var(--ui-surface-hover);
-  border-color: var(--ui-ink-muted);
-}
-
-.lp-ghost:focus-visible {
-  outline: 2px solid var(--ui-accent-text);
-  outline-offset: 2px;
-}
-
-.lp-control {
-  border: 1px solid var(--lp-control-border);
-  border-radius: var(--radius-control);
-}
-
-.lp-press {
-  transition-property: background-color, border-color, color, transform;
-  transition-duration: 150ms, 150ms, 150ms, 120ms;
-  transition-timing-function: ease-out;
-}
-
-.lp-press:active:not(:disabled) {
-  transform: translateY(1px);
+    background-color 200ms ease-out,
+    color 200ms ease-out;
 }
 
 .lp-swap {
   transition: opacity 180ms ease-out;
-}
-
-.lp-plus {
-  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.lp-example {
-  position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 1;
-  border-radius: 4px;
-  background: var(--ui-canvas);
-  padding: 0.125rem 0.5rem;
-  color: var(--ui-ink-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.lp-inline-link {
-  color: var(--ui-accent-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  border-radius: 2px;
-}
-
-.lp-inline-link:hover {
-  text-decoration-thickness: 2px;
-}
-
-.lp-inline-link:focus-visible {
-  outline: 2px solid var(--ui-accent-text);
-  outline-offset: 2px;
-}
-
-/* Disclosure panels animate their height through grid rows. Closed panels
-   are hidden from focus once they finish collapsing. */
-.lp-disclosure {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 250ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.lp-disclosure > div {
-  min-height: 0;
-  visibility: hidden;
-  transition: visibility 0s linear 250ms;
-}
-
-.lp-disclosure[data-open="true"] {
-  grid-template-rows: 1fr;
-}
-
-.lp-disclosure[data-open="true"] > div {
-  visibility: visible;
-  transition-delay: 0s;
-}
-
-@media (max-width: 767px) {
-  .lp-disclosure-compact-open {
-    grid-template-rows: 1fr;
-  }
-
-  .lp-disclosure-compact-open > div {
-    visibility: visible;
-  }
-}
-
-/* The signature tilt card: picked out of the stack on wide screens only. */
-@media (min-width: 1024px) {
-  .lp-tilt {
-    position: relative;
-    z-index: 1;
-    margin-right: -2%;
-    transform: translateY(-4%) rotate(-3deg);
-    box-shadow: 0 24px 48px rgb(0 0 0 / 0.35);
-  }
-}
-
-.lp-embed-bar {
-  transition: background-color 200ms ease-out;
-}
-
-.lp-embed-title {
-  transition: color 200ms ease-out;
-}
-
-/* Theme preview cards read the selected palette from --p-* variables. */
-.lp-preview-card,
-.lp-p-row,
-.lp-p-subtle,
-.lp-p-button {
-  transition:
-    background-color 200ms ease-out,
-    border-color 200ms ease-out,
-    color 200ms ease-out;
-}
-
-.lp-preview-card {
-  background: var(--p-canvas);
-  border-color: var(--p-edge);
-}
-
-.lp-p-ink {
-  color: var(--p-ink);
-}
-
-.lp-p-muted {
-  color: var(--p-muted);
-}
-
-.lp-p-accent {
-  color: var(--p-accent-text);
-}
-
-.lp-p-subtle {
-  background: var(--p-subtle);
-}
-
-.lp-p-row {
-  background: var(--p-surface);
-  color: var(--p-muted);
-}
-
-.lp-p-selected {
-  background: color-mix(in srgb, var(--p-accent) 20%, var(--p-surface));
-}
-
-.lp-p-button {
-  background: var(--p-accent);
-  color: var(--p-on-accent);
-}
-
-.lp-scroll-x {
-  scrollbar-width: thin;
-}
-
-.lp-footer-cta {
-  border-color: var(--ui-ink);
-}
-
-/* The one textured type moment: horizontal stripes clipped to the wordmark. */
-/* Sized against its own container so the wide display face always fits. */
-.lp-wordmark-fit {
-  container-type: inline-size;
-}
-
-.lp-wordmark {
-  font-size: 10cqi;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--ui-ink-muted) 0 6px,
-    transparent 6px 10px,
-    var(--ui-accent-text) 10px 16px,
-    transparent 16px 20px
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-hero-in,
-  .lp-hero-tile {
-    animation: none;
-  }
-
-  .lp-press:active:not(:disabled) {
-    transform: none;
-  }
 }

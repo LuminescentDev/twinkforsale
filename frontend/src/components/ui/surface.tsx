@@ -32,7 +32,7 @@ export const Section = component$<SectionProps>(
               {title && (
                 <h2
                   id={headingId}
-                  class="text-ink text-lg leading-6 font-semibold"
+                  class="font-pixel text-ink text-lg leading-6 font-semibold"
                 >
                   {title}
                 </h2>
@@ -70,15 +70,15 @@ const paddingMap: Record<NonNullable<SurfaceProps["padding"]>, string> = {
 };
 
 /**
- * A bordered container for a genuine object or tool — a table, a queue, a
- * cohesive configuration group. 1px border, 8px radius, no shadow. Never nest
- * one inside another.
+ * A boxed container for a genuine object or tool — a table, a queue, a
+ * cohesive configuration group. Double-ruled frame, square corners, no
+ * shadow. Never nest one inside another.
  */
 export const Surface = component$<SurfaceProps>(
   ({ tone = "default", flush, padding = "md", class: className }) => (
     <div
       class={cn(
-        "border-edge rounded-surface min-w-0 border",
+        "retro-frame rounded-surface min-w-0",
         tone === "subtle" ? "bg-surface-subtle" : "bg-surface",
         !flush && paddingMap[padding],
         className,
@@ -95,19 +95,19 @@ export interface SurfaceHeaderProps {
   class?: string;
 }
 
-/** Header row for a flush `Surface`. Sits on the subtle fill above the body. */
+/** Title bar for a flush `Surface`, drawn in the accent like a window caption. */
 export const SurfaceHeader = component$<SurfaceHeaderProps>(
   ({ title, description, class: className }) => (
     <div
       class={cn(
-        "border-edge flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3",
+        "retro-title flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-3 py-1.5",
         className,
       )}
     >
       <div class="min-w-0">
-        <h3 class="text-ink truncate text-sm font-semibold">{title}</h3>
+        <h3 class="truncate text-[15px] leading-5 font-semibold">{title}</h3>
         {description && (
-          <p class="text-ink-muted mt-0.5 text-xs">{description}</p>
+          <p class="mt-0.5 font-sans text-xs opacity-85">{description}</p>
         )}
       </div>
       <div class="flex flex-wrap items-center gap-2 empty:hidden">
@@ -135,13 +135,13 @@ export const PreviewPane = component$<PreviewPaneProps>(
   ({ label, note, class: className, bodyClass }) => (
     <div
       class={cn(
-        "border-edge rounded-dialog bg-surface-subtle overflow-hidden border",
+        "retro-frame rounded-dialog bg-surface-subtle overflow-hidden",
         className,
       )}
     >
-      <div class="border-edge text-ink-muted flex items-center justify-between gap-3 border-b px-3 py-2 text-xs">
-        <span class="font-medium tracking-wide uppercase">{label}</span>
-        {note && <span class="truncate">{note}</span>}
+      <div class="retro-title flex items-center justify-between gap-3 px-3 py-1 text-[13px]">
+        <span class="font-semibold">{label}</span>
+        {note && <span class="truncate font-sans text-xs">{note}</span>}
       </div>
       <div class={cn("overflow-hidden", bodyClass)}>
         <Slot />
@@ -176,13 +176,16 @@ export const Page = component$<PageProps>(
 export interface PageHeaderProps {
   /** 24/30px page title. Concise — no icon medallion, no gradient. */
   title: string;
+  /** Set for user-provided titles (file names, album titles), which stay
+   *  out of the pixel face. */
+  plainTitle?: boolean;
   /** Include only when it changes how the task is understood. */
   description?: string;
   class?: string;
 }
 
 export const PageHeader = component$<PageHeaderProps>(
-  ({ title, description, class: className }) => (
+  ({ title, plainTitle, description, class: className }) => (
     <div
       class={cn(
         "mb-5 flex flex-wrap items-start justify-between gap-x-6 gap-y-3",
@@ -190,7 +193,12 @@ export const PageHeader = component$<PageHeaderProps>(
       )}
     >
       <div class="min-w-0">
-        <h1 class="text-ink text-2xl leading-[30px] font-semibold tracking-[-0.01em]">
+        <h1
+          class={cn(
+            "retro-banner text-2xl leading-[30px] font-bold break-words sm:text-[28px] sm:leading-8",
+            plainTitle && "font-sans tracking-[-0.01em]",
+          )}
+        >
           {title}
         </h1>
         {description && (
@@ -208,7 +216,5 @@ export const PageHeader = component$<PageHeaderProps>(
 
 /** Horizontal rule between sibling regions. Prefer spacing where it suffices. */
 export const Divider = component$<{ class?: string }>(
-  ({ class: className }) => (
-    <hr class={cn("border-edge border-t", className)} />
-  ),
+  ({ class: className }) => <hr class={cn("retro-rule", className)} />,
 );

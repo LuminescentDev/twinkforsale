@@ -459,14 +459,14 @@ export default component$(() => {
           dragging.value = false;
           addFiles(Array.from(event.dataTransfer?.files ?? []));
         }}
-        class={`rounded-surface flex flex-col items-center justify-center border border-dashed px-6 py-10 text-center transition-colors duration-150 ${
+        class={`rounded-surface flex flex-col items-center justify-center border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 ${
           dragging.value
             ? "border-accent bg-accent-soft"
             : "border-edge-strong bg-surface-subtle"
         }`}
       >
         <CloudUpload class="text-ink-muted mb-3 h-7 w-7" aria-hidden="true" />
-        <p class="text-ink text-sm font-medium">
+        <p class="font-pixel text-ink text-base font-semibold">
           Drag files here, or choose them from your device
         </p>
         <p class="text-ink-muted mt-1 text-[13px]">

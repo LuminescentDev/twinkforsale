@@ -1,29 +1,18 @@
-import { component$, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useStyles$ } from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import { api } from "~/lib/api-client";
-import { LandingNav } from "~/components/landing/landing-nav";
-import { Hero } from "~/components/landing/hero";
+import { NavigateBox, SideBoxes } from "~/components/landing/sidebar";
 import {
+  Extras,
+  Faq,
+  HangOut,
   HowItWorks,
-  IntroStatement,
-  ShareXSection,
-  UploadSharing,
-} from "~/components/landing/flow-sections";
-import {
-  BioPagesSection,
-  EmbedsSection,
-  ThemesSection,
-} from "~/components/landing/showcase-sections";
-import {
-  AnalyticsSection,
-  ClosingCta,
-  FaqSection,
   LandingFooter,
-  LinksDomainsSection,
-} from "~/components/landing/closing-sections";
-import { installReveals } from "~/components/landing/reveal";
-import "~/components/landing/landing.css";
+  MakeItYours,
+  Welcome,
+} from "~/components/landing/sections";
+import landingStyles from "~/components/landing/landing.css?inline";
 
 export const usePublicStats = routeLoader$(async (requestEvent) => {
   const stats = await api.stats
@@ -37,36 +26,47 @@ export const usePublicStats = routeLoader$(async (requestEvent) => {
 });
 
 export default component$(() => {
+  useStyles$(landingStyles);
   const publicStats = usePublicStats();
 
-  // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(({ cleanup }) => {
-    cleanup(installReveals(document));
-  });
-
   return (
-    <div class="lp-root">
+    <div class="lp-root min-h-screen px-3 py-6 sm:px-5 sm:py-8">
       <a
         href="#main-content"
-        class="focus-ring bg-surface text-ink rounded-control border-edge fixed top-2 left-2 z-50 inline-flex min-h-11 -translate-y-20 items-center border px-3 text-sm focus:translate-y-0"
+        class="lp-btn lp-focus fixed top-2 left-2 z-50 -translate-y-20 focus:translate-y-0"
       >
         Skip to content
       </a>
-      <LandingNav />
-      <main id="main-content">
-        <Hero />
-        <IntroStatement />
-        <HowItWorks />
-        <UploadSharing />
-        <ShareXSection />
-        <EmbedsSection />
-        <BioPagesSection />
-        <ThemesSection />
-        <LinksDomainsSection />
-        <AnalyticsSection stats={publicStats.value} />
-        <FaqSection />
-        <ClosingCta />
-      </main>
+      <header class="mx-auto max-w-[1100px] text-center">
+        <h1 class="lp-pixel lp-banner text-[clamp(2.5rem,9vw,4.5rem)] leading-none font-bold">
+          twink.forsale
+        </h1>
+        <p class="lp-pixel lp-ink mt-2 text-base sm:text-lg">
+          cute file hosting for the group chat
+        </p>
+      </header>
+      <div class="mx-auto mt-6 grid max-w-[1100px] gap-3 lg:grid-cols-[220px_1fr] lg:grid-rows-[auto_1fr]">
+        <div class="lg:col-start-1 lg:row-start-1">
+          <NavigateBox />
+        </div>
+        <main
+          id="main-content"
+          class="grid gap-3 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+        >
+          <Welcome />
+          <HowItWorks />
+          <MakeItYours />
+          <Extras />
+          <Faq />
+          <HangOut />
+        </main>
+        <aside
+          aria-label="Sidebar"
+          class="lg:col-start-1 lg:row-start-2 lg:self-start"
+        >
+          <SideBoxes stats={publicStats.value} />
+        </aside>
+      </div>
       <LandingFooter />
     </div>
   );

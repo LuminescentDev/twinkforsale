@@ -28,12 +28,12 @@ export const PageHeader = component$<PageHeaderProps>(
         <div class={cn(centered && "flex flex-col items-center")}>
           <h1
             class={cn(
-              "text-ink flex items-center gap-3 text-3xl leading-9 font-semibold tracking-[-0.02em]",
+              "retro-banner flex items-center gap-3 text-3xl leading-9 font-bold",
               centered && "justify-center",
             )}
           >
             {Icon && (
-              <span class="bg-accent-soft text-accent-text rounded-surface inline-flex h-9 w-9 items-center justify-center">
+              <span class="retro-bevel border-accent bg-accent text-on-accent inline-flex h-9 w-9 shrink-0 items-center justify-center">
                 <Icon class="h-5 w-5" />
               </span>
             )}

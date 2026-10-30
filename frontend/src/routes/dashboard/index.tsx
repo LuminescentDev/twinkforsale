@@ -1045,7 +1045,7 @@ const GridView = component$<{
       return (
         <li
           key={upload.id}
-          class={`border-edge rounded-surface bg-surface overflow-hidden border ${
+          class={`border-edge-strong rounded-surface bg-surface overflow-hidden border-2 ${
             selected ? "ring-accent ring-2" : ""
           }`}
         >

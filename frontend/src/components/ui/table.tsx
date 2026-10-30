@@ -32,7 +32,9 @@ export const Table = component$<{
 ));
 
 export const Thead = component$<{ class?: string }>(({ class: className }) => (
-  <thead class={cn("border-edge bg-surface-subtle border-b", className)}>
+  <thead
+    class={cn("bg-surface-subtle border-accent-text/45 border-b-2", className)}
+  >
     <Slot />
   </thead>
 ));
@@ -106,7 +108,7 @@ export const Tr = component$<{
   <tr
     aria-selected={selected}
     class={cn(
-      "border-edge border-b transition-colors duration-150 last:border-b-0",
+      "border-edge border-b border-dotted transition-colors duration-150 last:border-b-0",
       hover && "hover:bg-surface-hover",
       selected && "bg-accent-soft",
       className,

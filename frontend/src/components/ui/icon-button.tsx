@@ -32,7 +32,8 @@ const sizeMap: Record<Size, string> = {
 const variantMap: Record<Variant, string> = {
   ghost:
     "border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink",
-  outline: "border-edge bg-surface text-ink hover:bg-surface-hover",
+  outline:
+    "retro-bevel border-edge-strong bg-surface-subtle text-ink hover:bg-surface-hover",
   danger: "border-transparent text-danger hover:bg-danger-soft",
 };
 
@@ -53,7 +54,7 @@ export const IconButton = component$<IconButtonProps>((props) => {
   } = props;
 
   const classes = cn(
-    "focus-ring rounded-control inline-flex shrink-0 items-center justify-center border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55",
+    "focus-ring rounded-control inline-flex shrink-0 items-center justify-center border-2 transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55",
     sizeMap[size],
     variantMap[variant],
     pressed && "bg-accent-soft text-accent-text",

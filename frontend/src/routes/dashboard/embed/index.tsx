@@ -132,7 +132,7 @@ const PlaceholderRow = component$<{ field: Signal<string>; ids: string }>(
           type="button"
           title={`Inserts ${p.meaning}`}
           onClick$={() => (field.value = `${field.value}${p.token}`)}
-          class="focus-ring border-edge bg-surface-subtle text-ink-muted hover:bg-surface-hover hover:text-ink rounded-full border px-1.5 py-0.5 font-mono text-[11px] transition-colors duration-150"
+          class="focus-ring border-edge bg-surface-subtle text-ink-muted hover:bg-surface-hover hover:text-ink rounded-control border px-1.5 py-0.5 font-mono text-[11px] transition-colors duration-150"
         >
           {p.token}
         </button>

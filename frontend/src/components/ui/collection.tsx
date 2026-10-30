@@ -112,7 +112,7 @@ export const SelectionBar = component$<SelectionBarProps>(
       role="region"
       aria-label="Selection actions"
       class={cn(
-        "border-edge bg-surface rounded-surface shadow-pop flex flex-wrap items-center gap-x-2 gap-y-2 border px-3 py-2",
+        "retro-frame bg-surface rounded-surface shadow-pop flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2",
         className,
       )}
     >

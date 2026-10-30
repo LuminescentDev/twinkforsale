@@ -43,12 +43,12 @@
   --color-info: var(--ui-info);
   --color-info-soft: var(--ui-info-soft);
 
-  /* Geometry: controls 6px, ordinary surfaces 8px, dialogs/previews 12px. */
-  --radius-control: 6px;
-  --radius-surface: 8px;
-  --radius-dialog: 12px;
+  /* Geometry: square corners throughout, like the landing page's boxes. */
+  --radius-control: 0px;
+  --radius-surface: 0px;
+  --radius-dialog: 0px;
 
-  --font-display: "Syne", "Inter", system-ui, sans-serif;
+  --font-pixel: "Pixelify Sans", "Inter", system-ui, sans-serif;
 
   /* Elevation is reserved for menus, dialogs, sheets and temporary bars. */
   --shadow-pop: 0 8px 24px -6px var(--ui-shadow),
@@ -89,8 +89,10 @@
   --color-theme-info: var(--ui-info);
 }
 
-/* Self-hosted variable fonts (OFL, see public/fonts). Syne is the landing
-   page's display face; Inter is the interface face everywhere. */
+/* Self-hosted variable fonts (OFL, see public/fonts). Pixelify Sans is the
+   display face for titles; Inter is the interface face everywhere. Pixelify
+   digits are ambiguous (2/3 read as 8), so keep numbers and user-provided
+   names out of it. */
 @font-face {
   font-family: "Inter";
   src: url("/fonts/Inter-Variable.ttf") format("truetype");
@@ -100,9 +102,9 @@
 }
 
 @font-face {
-  font-family: "Syne";
-  src: url("/fonts/Syne-Variable.ttf") format("truetype");
-  font-weight: 400 800;
+  font-family: "Pixelify Sans";
+  src: url("/fonts/PixelifySans-Variable.ttf") format("truetype");
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
@@ -237,7 +239,7 @@ body,
 }
 
 .focus-ring:focus-visible {
-  outline: 2px solid var(--ui-accent-text);
+  outline: 2px dashed var(--ui-accent-text);
   outline-offset: 2px;
   border-radius: inherit;
 }
@@ -263,13 +265,101 @@ dialog:not([open]) {
   overflow: hidden;
 }
 
-/* Legal sections form one continuous reading surface. */
+/* ---------------------------------------------------------------------------
+   Personal-homepage vocabulary, shared with the landing page: checker tiles,
+   double-ruled boxes with a title bar, bevelled buttons. Built from the role
+   tokens so every theme keeps its own colours. Layered so utilities passed in
+   a `class` prop still win.
+--------------------------------------------------------------------------- */
+@layer components {
+  .retro-tiles {
+    background-color: var(--ui-canvas);
+    background-image: linear-gradient(
+        45deg,
+        var(--retro-tile) 25%,
+        transparent 25% 75%,
+        var(--retro-tile) 75%
+      ),
+      linear-gradient(
+        45deg,
+        var(--retro-tile) 25%,
+        transparent 25% 75%,
+        var(--retro-tile) 75%
+      );
+    background-size: 24px 24px;
+    background-position:
+      0 0,
+      12px 12px;
+    --retro-tile: color-mix(in srgb, var(--ui-accent) 7%, var(--ui-canvas));
+  }
 
+  .retro-frame {
+    border: 3px double var(--ui-accent-text);
+  }
+
+  .retro-title {
+    background: var(--ui-accent);
+    color: var(--ui-on-accent);
+    font-family: var(--font-pixel);
+  }
+
+  .retro-banner {
+    color: var(--ui-accent-text);
+    font-family: var(--font-pixel);
+    text-shadow: 2px 2px 0 color-mix(in srgb, var(--ui-ink) 22%, transparent);
+  }
+
+  .retro-rule {
+    border: 0;
+    border-top: 2px dotted
+      color-mix(in srgb, var(--ui-accent-text) 55%, transparent);
+  }
+
+  /* Outset edges plus a light gloss over whatever fill the variant sets. */
+  .retro-bevel {
+    border-width: 2px;
+    border-style: outset;
+    background-image: linear-gradient(
+      rgb(255 255 255 / 0.24),
+      rgb(255 255 255 / 0) 65%
+    );
+  }
+
+  .retro-bevel:active:not(:disabled) {
+    border-style: inset;
+    background-image: none;
+  }
+
+  .retro-link {
+    color: var(--ui-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .retro-link:hover {
+    text-decoration-style: wavy;
+  }
+}
+
+/* Legal sections: one box per section, its heading drawn as the title bar. */
 .card-cute {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid var(--ui-edge);
+  background: var(--ui-surface);
+  border: 3px double var(--ui-accent-text);
   border-radius: 0;
+}
+
+.card-cute .rounded-lg {
+  border-radius: 0;
+}
+
+.card-cute > h2:first-child {
+  margin: -1.5rem -1.5rem 1.25rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+  font-family: var(--font-pixel);
+  font-size: 1.0625rem;
+  line-height: 1.6rem;
 }
 
 /* Bio link brand marks. The SVG is used as a mask so a single-colour brand

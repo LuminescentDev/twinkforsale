@@ -30,7 +30,7 @@ export const SegmentedControl = component$<SegmentedControlProps>(
       role="radiogroup"
       aria-label={label}
       class={cn(
-        "border-edge bg-surface rounded-control inline-flex border p-0.5",
+        "border-edge-strong bg-surface-subtle rounded-control inline-flex border-2 [border-style:inset] p-0.5",
         className,
       )}
     >
@@ -49,11 +49,11 @@ export const SegmentedControl = component$<SegmentedControlProps>(
               if (onChange$) await onChange$(opt.value);
             })}
             class={cn(
-              "focus-ring inline-flex items-center justify-center gap-1.5 rounded-[4px] font-medium whitespace-nowrap transition-colors duration-150",
+              "focus-ring rounded-control inline-flex items-center justify-center gap-1.5 font-medium whitespace-nowrap transition-colors duration-150",
               size === "sm" ? "h-6 text-xs" : "h-7 text-[13px]",
               opt.iconOnly ? (size === "sm" ? "w-6" : "w-7") : "px-2.5",
               active
-                ? "bg-accent-soft text-accent-text"
+                ? "bg-accent text-on-accent"
                 : "text-ink-muted hover:text-ink hover:bg-surface-hover",
             )}
           >

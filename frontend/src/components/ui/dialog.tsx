@@ -67,22 +67,23 @@ export const Dialog = component$<DialogProps>(
           if (event.target === el) el.close();
         }}
         class={cn(
-          "rounded-dialog border-edge bg-surface text-ink shadow-pop m-auto w-[calc(100vw-2rem)] border p-0 backdrop:backdrop-blur-[2px]",
+          "rounded-dialog retro-frame bg-surface text-ink shadow-pop m-auto w-[calc(100vw-2rem)] p-0 backdrop:backdrop-blur-[2px]",
           sizeMap[size],
           className,
         )}
       >
         <div class="flex max-h-[85vh] flex-col">
-          <div class="border-edge flex items-start justify-between gap-4 border-b px-5 py-4">
+          <div class="retro-title flex items-start justify-between gap-4 px-4 py-2">
             <div class="min-w-0">
+              {/* Inter, not the pixel face: titles often carry names and counts. */}
               <h2
                 id={titleId}
-                class="text-ink text-base leading-6 font-semibold"
+                class="font-sans text-base leading-6 font-semibold"
               >
                 {title}
               </h2>
               {description && (
-                <p class="text-ink-muted mt-1 text-[13px] leading-5">
+                <p class="mt-0.5 font-sans text-[13px] leading-5 opacity-90">
                   {description}
                 </p>
               )}
@@ -91,7 +92,7 @@ export const Dialog = component$<DialogProps>(
               size="sm"
               label="Close"
               onClick$={() => (open.value = false)}
-              class="-mt-1 -mr-1.5"
+              class="text-on-accent hover:bg-on-accent/15 hover:text-on-accent -mr-1.5"
             >
               <X class="h-4 w-4" />
             </IconButton>
@@ -201,7 +202,7 @@ export const Sheet = component$<SheetProps>(
           if (event.target === el) el.close();
         }}
         class={cn(
-          "border-edge bg-surface text-ink shadow-pop max-h-[85vh] border p-0 backdrop:backdrop-blur-[2px]",
+          "border-accent-text bg-surface text-ink shadow-pop max-h-[85vh] border-[3px] border-double p-0 backdrop:backdrop-blur-[2px]",
           side === "bottom"
             ? "rounded-t-dialog mt-auto mb-0 ml-0 w-full max-w-none border-x-0 border-b-0"
             : "rounded-l-dialog my-0 mr-0 ml-auto h-full max-h-none w-80 max-w-[85vw] border-y-0 border-r-0",
@@ -209,15 +210,15 @@ export const Sheet = component$<SheetProps>(
         )}
       >
         <div class="flex max-h-[85vh] flex-col">
-          <div class="border-edge flex items-center justify-between gap-4 border-b px-4 py-3">
-            <h2 id={titleId} class="text-ink text-sm font-semibold">
+          <div class="retro-title flex items-center justify-between gap-4 px-4 py-2">
+            <h2 id={titleId} class="text-base font-semibold">
               {title}
             </h2>
             <IconButton
               size="sm"
               label="Close"
               onClick$={() => (open.value = false)}
-              class="-mr-1"
+              class="text-on-accent hover:bg-on-accent/15 hover:text-on-accent -mr-1"
             >
               <X class="h-4 w-4" />
             </IconButton>

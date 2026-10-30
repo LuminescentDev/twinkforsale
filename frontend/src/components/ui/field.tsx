@@ -8,7 +8,7 @@ import { AlertCircle } from "lucide-icons-qwik";
 import { cn } from "~/lib/utils";
 
 const control =
-  "focus-ring rounded-control border-edge bg-surface text-ink placeholder:text-ink-muted w-full border px-2.5 text-sm transition-colors duration-150 hover:border-edge-strong disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger";
+  "focus-ring rounded-control border-edge-strong bg-surface text-ink placeholder:text-ink-muted w-full border-2 px-2.5 [border-style:inset] text-sm transition-colors duration-150 hover:border-edge-strong disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger";
 
 export interface FieldProps {
   /** Persistent label. Never a placeholder standing in for a label. */
@@ -46,7 +46,7 @@ export const Field = component$<FieldProps>(
         <label
           for={id}
           class={cn(
-            "text-ink mb-1.5 block text-[13px] font-medium",
+            "text-ink mb-1.5 block text-[13px] font-semibold",
             hideLabel && "sr-only",
           )}
         >
@@ -142,7 +142,7 @@ export interface FieldsetProps {
 export const Fieldset = component$<FieldsetProps>(
   ({ legend, help, class: className }) => (
     <fieldset class={cn("min-w-0", className)}>
-      <legend class="text-ink text-[13px] font-medium">{legend}</legend>
+      <legend class="text-ink text-[13px] font-semibold">{legend}</legend>
       {help && <p class="text-ink-muted mt-1 text-xs leading-4">{help}</p>}
       <div class="mt-2">
         <Slot />

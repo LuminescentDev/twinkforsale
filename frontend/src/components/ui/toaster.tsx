@@ -49,7 +49,7 @@ export const Toaster = component$(() => {
             return (
               <div
                 key={toast.id}
-                class="border-edge bg-surface rounded-surface shadow-pop pointer-events-auto flex w-full items-start gap-2.5 border px-3 py-2.5"
+                class="retro-frame bg-surface rounded-surface shadow-pop pointer-events-auto flex w-full items-start gap-2.5 px-3 py-2.5"
               >
                 <Icon
                   class={`mt-0.5 h-4 w-4 shrink-0 ${toneClass[toast.tone]}`}

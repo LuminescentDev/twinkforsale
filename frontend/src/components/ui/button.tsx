@@ -27,7 +27,7 @@ export interface ButtonProps {
 }
 
 const base =
-  "focus-ring rounded-control inline-flex items-center justify-center gap-2 border font-medium whitespace-nowrap transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55";
+  "focus-ring rounded-control inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-55";
 
 const sizeMap: Record<ButtonSize, string> = {
   sm: "h-8 px-2.5 text-[13px]",
@@ -36,18 +36,19 @@ const sizeMap: Record<ButtonSize, string> = {
 };
 
 const variantMap: Record<ButtonVariant, string> = {
-  primary: "border-transparent bg-accent text-on-accent hover:bg-accent-hover",
+  primary:
+    "retro-bevel border-accent bg-accent text-on-accent hover:bg-accent-hover",
   secondary:
-    "border-edge bg-surface text-ink hover:bg-surface-hover hover:border-edge-strong",
+    "retro-bevel border-edge-strong bg-surface-subtle text-ink hover:bg-surface-hover",
   ghost:
-    "border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink",
+    "border-2 border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink",
   danger:
-    "border-transparent bg-danger-fill text-white hover:bg-danger-fill-hover",
+    "retro-bevel border-danger-fill bg-danger-fill text-white hover:bg-danger-fill-hover",
 };
 
 /**
- * The application's one button. Compact rectangles by default (6px radius);
- * hierarchy comes from the variant, never from size or decoration.
+ * The application's one button: a bevelled rectangle that presses in when
+ * clicked. Hierarchy comes from the variant, never from size or decoration.
  */
 export const Button = component$<ButtonProps>((props) => {
   const {

@@ -26,7 +26,7 @@ export const SummaryList = component$<SummaryListProps>(
     <dl
       aria-label={label}
       class={cn(
-        "border-edge divide-edge rounded-surface bg-surface grid max-w-4xl divide-y border sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0",
+        "retro-frame divide-edge rounded-surface bg-surface grid max-w-4xl divide-y divide-dotted sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0",
         className,
       )}
     >

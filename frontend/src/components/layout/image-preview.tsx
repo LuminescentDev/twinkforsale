@@ -70,11 +70,11 @@ export const ImagePreview = component$<ImagePreviewProps>(
         onClick$={(event, dialog) => {
           if (event.target === dialog) dialog.close();
         }}
-        class="rounded-dialog border-edge bg-surface text-ink shadow-pop m-auto max-h-[95vh] w-[calc(100vw-2rem)] max-w-6xl overflow-hidden border p-0 backdrop:backdrop-blur-[2px]"
+        class="rounded-dialog retro-frame bg-surface text-ink shadow-pop m-auto max-h-[95vh] w-[calc(100vw-2rem)] max-w-6xl overflow-hidden p-0 backdrop:backdrop-blur-[2px]"
       >
-        <div class="border-edge flex items-center justify-between gap-3 border-b px-4 py-3">
+        <div class="border-accent-text/45 flex items-center justify-between gap-3 border-b-2 border-dotted px-4 py-3">
           <div class="flex min-w-0 items-center gap-3">
-            <span class="bg-accent-soft text-accent-text rounded-surface flex h-8 w-8 shrink-0 items-center justify-center">
+            <span class="retro-title flex h-8 w-8 shrink-0 items-center justify-center">
               <ImageIcon class="h-4 w-4" aria-hidden="true" />
             </span>
             <h2 class="text-ink truncate text-sm font-semibold">

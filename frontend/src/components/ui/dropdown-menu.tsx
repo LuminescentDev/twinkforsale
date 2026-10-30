@@ -76,7 +76,7 @@ export const DropdownMenu = component$<DropdownMenuProps>(
               role="menu"
               onClick$={() => (open.value = false)}
               class={cn(
-                "rounded-surface border-edge bg-surface shadow-pop absolute z-50 mt-1 min-w-52 border p-1",
+                "rounded-surface retro-frame bg-surface shadow-pop absolute z-50 mt-1 min-w-52 p-1",
                 align === "right" ? "right-0" : "left-0",
                 menuClass,
               )}

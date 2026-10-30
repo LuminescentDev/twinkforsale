@@ -25,12 +25,12 @@ const toneMap: Record<BadgeTone, string> = {
   neutral: "bg-surface-subtle text-ink-muted border-edge",
 };
 
-/** Compact status tag. One of the few places full rounding is correct. */
+/** Compact status tag. */
 export const Badge = component$<BadgeProps>(
   ({ tone = "neutral", icon: Icon, class: className }) => (
     <span
       class={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-4 font-medium whitespace-nowrap",
+        "rounded-control inline-flex items-center gap-1 border px-1.5 py-0.5 text-xs leading-4 font-medium whitespace-nowrap",
         toneMap[tone],
         className,
       )}

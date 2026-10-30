@@ -142,7 +142,7 @@ export default component$(() => {
 
   return (
     <Page>
-      <PageHeader title={upload.originalName}>
+      <PageHeader title={upload.originalName} plainTitle>
         <div q:slot="actions" class="flex flex-wrap gap-2">
           <CopyButton
             value={fileUrl}

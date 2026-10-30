@@ -45,6 +45,7 @@ export default component$(() => {
     <Page width="narrow">
       <PageHeader
         title={data.value.title}
+        plainTitle
         description={data.value.description || undefined}
       />
       <p class="text-ink-muted mb-4 text-sm">

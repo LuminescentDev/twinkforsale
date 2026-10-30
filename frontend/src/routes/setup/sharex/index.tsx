@@ -129,7 +129,7 @@ export default component$(() => {
         <div class="flex gap-3">
           <div class="flex flex-col items-center">
             <span
-              class={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold ${
+              class={`flex h-7 w-7 shrink-0 items-center justify-center border-2 text-[13px] font-bold ${
                 activeKey.value
                   ? "border-accent bg-accent text-on-accent"
                   : "border-edge-strong text-ink-muted"
@@ -200,7 +200,7 @@ export default component$(() => {
         <div class="flex gap-3">
           <div class="flex flex-col items-center">
             <span
-              class={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold ${
+              class={`flex h-7 w-7 shrink-0 items-center justify-center border-2 text-[13px] font-bold ${
                 downloaded.value
                   ? "border-accent bg-accent text-on-accent"
                   : "border-edge-strong text-ink-muted"
@@ -292,7 +292,7 @@ export default component$(() => {
         <div class="flex gap-3">
           <div class="flex flex-col items-center">
             <span
-              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
+              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center border-2 text-[13px] font-bold"
               aria-hidden="true"
             >
               3
@@ -345,7 +345,7 @@ export default component$(() => {
         <div class="flex gap-3">
           <div class="flex flex-col items-center">
             <span
-              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
+              class="border-edge-strong text-ink-muted flex h-7 w-7 shrink-0 items-center justify-center border-2 text-[13px] font-bold"
               aria-hidden="true"
             >
               4

@@ -151,7 +151,7 @@ export default component$(() => {
       ) : isAppPage ? (
         // Signed-in application. Particles sit behind the shell, subdued and
         // non-interactive; the shell owns its own navigation and gutters.
-        <div class="bg-canvas text-ink relative min-h-screen">
+        <div class="retro-tiles text-ink relative min-h-screen">
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
           )}
@@ -161,13 +161,13 @@ export default component$(() => {
           {previewModal}
         </div>
       ) : (
-        <div class="bg-canvas text-ink relative flex min-h-screen flex-col">
+        <div class="retro-tiles text-ink relative flex min-h-screen flex-col">
           {globalParticle.isInitialized && globalParticle.config.enabled && (
             <ParticleBackground config={globalParticle.config} />
           )}
           <a
             href="#main-content"
-            class="focus-ring bg-surface text-ink rounded-control border-edge fixed top-2 left-2 z-50 -translate-y-16 border px-3 py-2 text-sm focus:translate-y-0"
+            class="focus-ring retro-bevel border-edge-strong bg-surface-subtle text-ink fixed top-2 left-2 z-50 -translate-y-16 px-3 py-2 text-sm font-semibold focus:translate-y-0"
           >
             Skip to content
           </a>
