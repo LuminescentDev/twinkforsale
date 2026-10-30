@@ -20,8 +20,8 @@ export interface ActivityChartProps {
   class?: string;
 }
 
-const PAD_L = 34;
-const PAD_R = 8;
+// The plot stretches horizontally (preserveAspectRatio="none"), which would
+// distort SVG text, so axis labels are HTML laid over a fixed-height plot.
 const PAD_T = 8;
 const PAD_B = 20;
 const VIEW_W = 720;
@@ -42,8 +42,7 @@ function pathFor(
   return data
     .map((d, i) => {
       const x =
-        PAD_L +
-        (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW);
+        data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW;
       const y = PAD_T + (1 - d.value / max) * innerH;
       return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -88,7 +87,7 @@ export const ActivityChart = component$<ActivityChartProps>(
       );
     }
 
-    const innerW = VIEW_W - PAD_L - PAD_R;
+    const innerW = VIEW_W;
     const innerH = height - PAD_T - PAD_B;
     const peak = Math.max(
       ...data.map((d) => d.value),
@@ -98,7 +97,7 @@ export const ActivityChart = component$<ActivityChartProps>(
     const max = niceMax(peak);
 
     const line = pathFor(data, max, innerW, innerH);
-    const area = `${line} L${(PAD_L + innerW).toFixed(1)},${(PAD_T + innerH).toFixed(1)} L${PAD_L},${(PAD_T + innerH).toFixed(1)} Z`;
+    const area = `${line} L${innerW},${(PAD_T + innerH).toFixed(1)} L0,${(PAD_T + innerH).toFixed(1)} Z`;
     const compareLine = compare?.length
       ? pathFor(compare, max, innerW, innerH)
       : null;
@@ -124,96 +123,89 @@ export const ActivityChart = component$<ActivityChartProps>(
           <span class="text-ink-muted ml-auto text-xs">{rangeLabel}</span>
         </div>
 
-        <svg
-          viewBox={`0 0 ${VIEW_W} ${height}`}
-          width="100%"
-          height={height}
-          role="img"
-          aria-label={`${seriesLabel}, ${rangeLabel}. Peak ${peak}.`}
-          preserveAspectRatio="none"
-          class="overflow-visible"
+        <div
+          class="text-ink-muted relative pr-2 pl-[34px] text-[10px] tabular-nums"
+          style={`height:${height}px`}
         >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stop-color="var(--ui-accent)"
-                stop-opacity="0.16"
-              />
-              <stop
-                offset="100%"
-                stop-color="var(--ui-accent)"
-                stop-opacity="0"
-              />
-            </linearGradient>
-          </defs>
+          {gridRatios.map((ratio) => (
+            <span
+              key={ratio}
+              aria-hidden="true"
+              class="absolute left-0 w-7 -translate-y-1/2 text-right leading-none"
+              style={`top:${PAD_T + ratio * innerH}px`}
+            >
+              {Math.round(max * (1 - ratio))}
+            </span>
+          ))}
+          <svg
+            viewBox={`0 0 ${VIEW_W} ${height}`}
+            width="100%"
+            height={height}
+            role="img"
+            aria-label={`${seriesLabel}, ${rangeLabel}. Peak ${peak}.`}
+            preserveAspectRatio="none"
+            class="block overflow-visible"
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="0%"
+                  stop-color="var(--ui-accent)"
+                  stop-opacity="0.16"
+                />
+                <stop
+                  offset="100%"
+                  stop-color="var(--ui-accent)"
+                  stop-opacity="0"
+                />
+              </linearGradient>
+            </defs>
 
-          {gridRatios.map((ratio) => {
-            const y = PAD_T + ratio * innerH;
-            return (
-              <g key={ratio}>
+            {gridRatios.map((ratio) => {
+              const y = PAD_T + ratio * innerH;
+              return (
                 <line
-                  x1={PAD_L}
+                  key={ratio}
+                  x1={0}
                   y1={y}
-                  x2={PAD_L + innerW}
+                  x2={innerW}
                   y2={y}
                   stroke="var(--ui-edge)"
                   stroke-width="1"
                   vector-effect="non-scaling-stroke"
                 />
-                <text
-                  x={PAD_L - 6}
-                  y={y + 3}
-                  text-anchor="end"
-                  fill="var(--ui-ink-muted)"
-                  style="font-size:10px"
-                >
-                  {Math.round(max * (1 - ratio))}
-                </text>
-              </g>
-            );
-          })}
+              );
+            })}
 
-          <path d={area} fill={`url(#${gradientId})`} />
-          {compareLine && (
+            <path d={area} fill={`url(#${gradientId})`} />
+            {compareLine && (
+              <path
+                d={compareLine}
+                fill="none"
+                stroke="var(--ui-ink-muted)"
+                stroke-width="1.5"
+                stroke-dasharray="4 3"
+                stroke-opacity="0.7"
+                vector-effect="non-scaling-stroke"
+              />
+            )}
             <path
-              d={compareLine}
+              d={line}
               fill="none"
-              stroke="var(--ui-ink-muted)"
-              stroke-width="1.5"
-              stroke-dasharray="4 3"
-              stroke-opacity="0.7"
+              stroke="var(--ui-accent)"
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
               vector-effect="non-scaling-stroke"
             />
-          )}
-          <path
-            d={line}
-            fill="none"
-            stroke="var(--ui-accent)"
-            stroke-width="2"
-            stroke-linejoin="round"
-            stroke-linecap="round"
-            vector-effect="non-scaling-stroke"
-          />
-
-          <text
-            x={PAD_L}
-            y={height - 6}
-            fill="var(--ui-ink-muted)"
-            style="font-size:10px"
-          >
+          </svg>
+          <span aria-hidden="true" class="absolute bottom-1 left-[34px]">
             {shortDate(data[0].date)}
-          </text>
-          <text
-            x={PAD_L + innerW}
-            y={height - 6}
-            text-anchor="end"
-            fill="var(--ui-ink-muted)"
-            style="font-size:10px"
-          >
+          </span>
+          <span aria-hidden="true" class="absolute right-2 bottom-1">
             {shortDate(data[data.length - 1].date)}
-          </text>
-        </svg>
+          </span>
+        </div>
 
         {/* The same numbers, reachable without reading the drawing. */}
         <details class="mt-2">
